@@ -24,9 +24,23 @@ document.addEventListener('DOMContentLoaded', () => {
      content only, so wrapping their text in <p> would be invalid markup. */
   const FLOW_CONTAINERS = new Set(['DIV', 'SECTION', 'ARTICLE', 'ASIDE', 'MAIN', 'BLOCKQUOTE']);
 
+  /* The CMS writes image paths root-absolute (`/images/uploads/…`) because its
+     own preview runs at /admin/ and would otherwise resolve them to
+     /admin/images/… and 404. The live site doesn't want them absolute: that
+     assumes the site sits at a domain root, which breaks the moment it is
+     served from a subdirectory. Strip the leading slash so they match the
+     relative paths already used in the static markup — identical at a root,
+     correct under a subpath. Protocol-relative and absolute URLs are left
+     alone, in case a full CDN URL is ever pasted into the CMS. */
+  const toRelative = (path) => {
+    const value = String(path);
+    if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(value)) return value; // http(s):// or //
+    return value.replace(/^\/+/, '');
+  };
+
   const applyField = (el, rawValue) => {
     if (el.tagName === 'IMG') {
-      el.src = rawValue;
+      el.src = toRelative(rawValue);
       return;
     }
 

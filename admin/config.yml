@@ -1,13 +1,28 @@
+# GitLab backend with PKCE auth.
+#
+# Chosen over git-gateway (Netlify-only) and over `backend: github` (which
+# needs an OAuth broker server holding a client secret) because PKCE runs
+# entirely in the browser. That means the CMS has no server component and no
+# tie to any hosting provider — the site can move between Cloudflare Pages,
+# Vercel, a VPS or anywhere else and the CMS keeps working untouched.
+#
+# SETUP — two values below must be filled in before this works. See the
+# "GitLab OAuth application" section in CLAUDE.md for the exact steps.
 backend:
-  name: git-gateway
+  name: gitlab
+  repo: NAMESPACE/PROJECT       # e.g. tryphonbrooks/coffeeshtab — your GitLab path
   branch: main
+  auth_type: pkce
+  app_id: GITLAB_APPLICATION_ID # the Application ID from the GitLab OAuth app
 
-# Only takes effect on localhost; enables local editing via `npx decap-server`.
+# Only takes effect on localhost; enables local editing via `npx decap-server`,
+# which bypasses auth entirely and works regardless of the backend above.
 local_backend: true
 
-# public_folder must stay root-absolute: the CMS preview runs at /admin/, so a
-# relative path would resolve to /admin/images/... and 404. This assumes the
-# site is served from the domain root, which git-gateway/Netlify implies.
+# public_folder stays root-absolute so the CMS preview (which runs at /admin/)
+# resolves images correctly. render.js strips the leading slash when it injects
+# these into the page, so the live site still works if it is ever served from a
+# subpath rather than a domain root.
 media_folder: "images/uploads"
 public_folder: "/images/uploads"
 

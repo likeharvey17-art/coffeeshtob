@@ -24,24 +24,46 @@ server) to preview.
   is missing.
 - `content/home.json` — the CMS-editable copy. Image paths here are
   **root-absolute** (`/images/…`), and `admin/config.yml`'s `public_folder`
-  must match. Relative paths look tidier but break the CMS: its preview runs
-  at `/admin/`, so `images/x.svg` resolves to `/admin/images/x.svg` and 404s.
-  This assumes the site is served from the domain root, which git-gateway on
-  Netlify implies anyway.
-- `admin/` — Decap CMS (`config.yml` + loader page), `git-gateway` backend.
-  Needs the Netlify Identity widget. `admin/index.html` loads it outright;
-  `index.html` loads it **lazily**, only when the URL carries an
-  `#invitation_token` / `recovery_token` / `confirmation_token` /
-  `email_change_token` (those links land on the site root). Loading it for
-  every visitor meant a third-party request to identity.netlify.com plus
-  sessionStorage writes on an otherwise cookie-free page — see `privacy.html`,
-  which states that the public site sets no cookies. Keep it lazy.
-  `local_backend: true` only applies on localhost — run `npx decap-server` to
-  edit locally. **Netlify Identity login cannot work on localhost** (there is
-  no `/.netlify/identity` endpoint, so sign-in silently bounces back to the
-  login screen); `admin/index.html` detects that case and shows instructions
-  instead. On the deployed site, Identity *and* Git Gateway must both be
-  enabled in Netlify (Site configuration → Identity).
+  must match: the CMS preview runs at `/admin/`, so a relative path would
+  resolve to `/admin/images/…` and 404. The live site does *not* want them
+  absolute — that would assume a domain root — so `render.js` strips the
+  leading slash when injecting them (`toRelative`). Net effect: identical at a
+  domain root, and still correct if the site is ever served from a
+  subdirectory. Verified by serving the site under `/my-repo/`.
+- `admin/` — Decap CMS (`config.yml` + loader page), **GitLab backend with
+  PKCE**. Chosen for host-portability: PKCE runs entirely in the browser, so
+  the CMS needs no server component and nothing ties it to a hosting provider.
+  The site can move between Cloudflare Pages, Vercel, a VPS or anywhere else
+  and the CMS keeps working. There is deliberately **no** Netlify Identity
+  widget anywhere — the public page stays cookie-free, as `privacy.html`
+  states. `local_backend: true` only applies on localhost: run
+  `npx decap-server` to edit locally, which bypasses auth entirely.
+
+### GitLab OAuth application (one-time setup)
+
+`admin/config.yml` has two placeholders that must be filled before the
+deployed CMS will work: `repo` (your `namespace/project` path) and `app_id`.
+To get the `app_id`: GitLab → User Settings → Applications → Add new
+application.
+
+- **Redirect URI** — the full admin URL, e.g. `https://example.pages.dev/admin/`.
+  This is the one host-dependent value. GitLab accepts several URIs, one per
+  line, so register every host you might use (production domain, preview
+  domain) up front and switching hosts needs no code change.
+- **Confidential** — must be **unchecked**. PKCE has no client secret, and
+  leaving this on breaks the flow.
+- **Scopes** — `api`.
+
+Copy the generated Application ID into `app_id`. There is no secret to store,
+which is the whole point: nothing sensitive ever lives in this repo.
+
+Signing in from `localhost` normally fails, because GitLab only redirects back
+to registered URIs. `admin/index.html` detects that case and points at
+`npx decap-server` instead of leaving a login button that silently does
+nothing.
+
+### Remaining files
+
 - `privacy.html` — standalone privacy notice, linked from the footer. Shares
   `style.css` and `script.js` (see the guard note under Responsive behavior).
   Kept deliberately short and free of anything internal: no mention of the
