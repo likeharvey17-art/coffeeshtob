@@ -1,0 +1,27 @@
+backend:
+  name: git-gateway
+  branch: main
+
+# Only takes effect on localhost; enables local editing via `npx decap-server`.
+local_backend: true
+
+# public_folder must stay root-absolute: the CMS preview runs at /admin/, so a
+# relative path would resolve to /admin/images/... and 404. This assumes the
+# site is served from the domain root, which git-gateway/Netlify implies.
+media_folder: "images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+  - name: "home"
+    label: "Главная страница"
+    files:
+      - file: "content/home.json"
+        label: "Контент главной страницы"
+        name: "home"
+        fields:
+          - { label: "Заголовок (Hero)", name: "hero_title", widget: "string" }
+          - { label: "Текст (Hero)", name: "hero_lead", widget: "text" }
+          - { label: "Фото (Hero)", name: "hero_image", widget: "image" }
+          - { label: "Заголовок (О штабе)", name: "about_title", widget: "string" }
+          - { label: "Текст (О штабе)", name: "about_text", widget: "text" }
+          - { label: "Фото (О штабе)", name: "about_image", widget: "image" }

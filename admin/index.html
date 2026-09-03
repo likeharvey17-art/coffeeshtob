@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Content Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    .cms-local-notice {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #fdfbf8;
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #241a13;
+    }
+    .cms-local-notice__card {
+      max-width: 560px;
+      background: #fff;
+      border: 1px solid #e8ddcd;
+      border-radius: 14px;
+      padding: 28px 30px;
+      box-shadow: 0 14px 34px rgba(43, 33, 25, 0.12);
+    }
+    .cms-local-notice h1 { font-size: 1.25rem; margin: 0 0 12px; }
+    .cms-local-notice p { margin: 0 0 14px; }
+    .cms-local-notice code {
+      background: #f6f0e7;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.92em;
+    }
+    .cms-local-notice pre {
+      background: #241a13;
+      color: #fdfbf8;
+      border-radius: 10px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 0 0 14px;
+    }
+    .cms-local-notice small { color: #7a6a58; }
+  </style>
+</head>
+<body>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <script>
+    /* The git-gateway backend authenticates through Netlify Identity, which only
+       exists on a deployed Netlify site — on localhost `/.netlify/identity`
+       404s, so "Login with Netlify Identity" appears to sign in and then drops
+       straight back to the login screen. Local editing is meant to go through
+       decap-server (`local_backend: true`) instead. Detect that situation and
+       say so, rather than leaving a login loop with no explanation. */
+    (function () {
+      var host = location.hostname;
+      var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+      if (!isLocal) return;
+
+      Promise.all([
+        fetch('/.netlify/identity/settings').then(function (r) { return r.ok; }).catch(function () { return false; }),
+        fetch('http://localhost:8081/api/v1', { method: 'HEAD' }).then(function () { return true; }).catch(function () { return false; })
+      ]).then(function (res) {
+        var identityWorks = res[0];
+        var proxyRunning = res[1];
+        if (identityWorks || proxyRunning) return; // one of the two paths works — leave the CMS alone
+
+        var el = document.createElement('div');
+        el.className = 'cms-local-notice';
+        el.innerHTML =
+          '<div class="cms-local-notice__card">' +
+            '<h1>Локальный режим: нужен decap-server</h1>' +
+            '<p>Вы открыли админку на <code>' + host + '</code>. Вход через Netlify Identity ' +
+            'здесь не работает — он существует только на опубликованном сайте Netlify, ' +
+            'поэтому вход «проходит» и сразу возвращает на этот экран.</p>' +
+            '<p>Для локального редактирования запустите в папке проекта:</p>' +
+            '<pre>npx decap-server</pre>' +
+            '<p>и обновите страницу — вход не потребуется.</p>' +
+            '<p><small>На опубликованном сайте нужно включить Identity и Git Gateway ' +
+            'в настройках Netlify (Site configuration → Identity).</small></p>' +
+          '</div>';
+        document.body.appendChild(el);
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Editor / tooling state that is specific to one machine
+.claude/settings.local.json
+.vscode/
+.idea/
+
+# Dependencies — this project has no build step, but `npx decap-server`
+# can leave these behind if it is ever run with a local install
+node_modules/
+package-lock.json
+
+# Netlify CLI local state
+.netlify/
+
+# Logs
+*.log
