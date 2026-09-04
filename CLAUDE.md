@@ -214,6 +214,22 @@ generation and will bite again:
 `og-image.jpg` (1200×630) is generated too, in Georgia — which is the CSS
 fallback for Playfair Display, so the social card matches the site.
 
+**Cloudflare trims `.html` from asset URLs.** `/privacy.html` returns a 307 to
+`/privacy`, and `/index.html` a 307 to `/`. Every internal link, `canonical`,
+`og:url` and sitemap entry therefore uses the **extensionless** form — a
+canonical or sitemap URL that redirects is one search engines disregard, and it
+put a needless redirect on every footer click. Adding a page means linking it
+without the extension too.
+
+`404.html` exists and is styled, and carries `noindex, follow`. Whether
+Cloudflare actually serves it depends on the Worker's `not_found_handling`
+setting; if a missing path returns a bare 404 body, that is the setting, not the
+file.
+
+`llms.txt` is a plain-language summary for assistants and crawlers — hours,
+address, phone, what the place does. Keep it in step with the page; it is the
+one file that repeats content rather than linking to it.
+
 Absolute URLs live in four places: `<link rel="canonical">`, the `og:`/`twitter:`
 tags and the JSON-LD in `index.html`, the same in `privacy.html`, plus
 `robots.txt` and `sitemap.xml`. **They all point at the current production host
