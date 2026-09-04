@@ -302,32 +302,49 @@ p { margin: 0; }
 /* ===== Hero ===== */
 .hero {
   position: relative;
-  /* Fills the viewport below the header exactly, at every width and every window
-     height. This replaced a flat 88vh, which could only be right at one window
-     height: the header sits above the hero in flow, so the leftover strip below
-     the hero is `0.12 * height - header`. That is negative on a short window
-     (hero overshoots, harmless) and positive on a tall one — around 8px of cream
-     showing under the hero at 900px tall, 20px at 1000px. It read as a stray
-     white line along the bottom of the photo. Subtracting the measured header
-     instead makes the strip zero at any size.
+  /* Fills the viewport exactly, at every width and every window height. This
+     replaced a flat 88vh, which could only be right at one window height and
+     otherwise left a stray cream strip under the photo — around 8px at 900px
+     tall, 20px at 1000px.
 
-     `dvh` with a `vh` fallback: on mobile Safari and Chrome `100vh` is the
-     *large* viewport — the height with the address bar hidden — so a 100vh hero
-     is taller than the screen actually is while the bar is showing. `dvh` tracks
-     the bar. On desktop the two are identical. The `vh` line is for browsers
-     without `dvh`; it errs slightly tall, which is the harmless direction.
+     **`svh`, never `dvh`.** `dvh` is the *dynamic* viewport: it re-resolves as
+     the mobile address bar collapses and expands, so the hero grew mid-scroll
+     and the cover-fitted photo rescaled with it — a visible, janky zoom on every
+     iOS scroll, made worse by the 4px blur having to repaint. `svh` is the
+     *small* viewport (the height with the bar showing) and is constant for the
+     life of the page, so nothing reflows while scrolling. It is also the safe
+     end of the range: the hero can never be taller than what is on screen, so
+     #about stays hidden at rest whatever the bar is doing. Once the bar
+     collapses mid-scroll a sliver of the next section appears at the bottom,
+     which is correct — the reader is already scrolling by then.
+
+     The `vh` line is the fallback for browsers without `svh`; on iOS it resolves
+     to the *large* viewport and so errs tall, which is the harmless direction.
 
      `min-height`, not `height`: a short window must still be able to grow the
      hero rather than clip the copy. */
-  min-height: calc(100vh - var(--header-h));
-  min-height: calc(100dvh - var(--header-h));
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* No bottom padding: the auto-margin block below divides the content box, and
-     padding here would sit outside that and push the buttons half of it too
-     high. The bottom third provides the clearance instead. */
-  padding: 26px 0 0;
+  /* The hero starts at the very top of the document, behind the sticky header,
+     rather than below it — so the photo runs under the header instead of leaving
+     a band of cream page background above it. That band read as a bright strip
+     cutting the top off the image; the photo reaching the top blends by
+     definition, and the white header pill gains contrast by sitting on a
+     darkened photo rather than on near-white.
+
+     The pull-up is exactly cancelled by the matching top padding, so the content
+     box is identical to what it was when the hero began below the header — which
+     is why the auto-margin thirds below need no adjustment. Change one of these
+     two and you must change the other.
+
+     No bottom padding: the auto margins divide the content box, and padding here
+     would sit outside that and push the buttons half of it too high. The bottom
+     third provides the clearance instead. */
+  margin-top: calc(-1 * var(--header-h));
+  padding: calc(var(--header-h) + 26px) 0 0;
   background:
     radial-gradient(ellipse at top right, rgba(201, 168, 136, 0.16), transparent 55%),
     radial-gradient(ellipse at 10% 90%, rgba(90, 64, 50, 0.34), transparent 60%),
@@ -348,8 +365,20 @@ p { margin: 0; }
   z-index: 1;
   /* Darker than a photo alone would need, because the hero image is supplied
      through the CMS — it could be a bright snowy embankment or a dim interior,
-     and the white headline has to stay readable over either. */
-  background: linear-gradient(180deg, rgba(26, 18, 11, 0.46) 0%, rgba(21, 14, 9, 0.84) 100%);
+     and the white headline has to stay readable over either.
+
+     The extra-dark first stop covers the band the sticky header sits over, now
+     that the photo runs to the top of the page. It keeps the white header pill
+     contrasting against whatever the top of the photo happens to be — in the
+     current one, a pale dusk sky. The stop is positioned in `calc()` off the
+     measured header rather than as a percentage, so it tracks the header's real
+     height instead of drifting with the hero's. */
+  background: linear-gradient(
+    180deg,
+    rgba(20, 13, 8, 0.74) 0,
+    rgba(26, 18, 11, 0.46) calc(var(--header-h) + 24px),
+    rgba(21, 14, 9, 0.84) 100%
+  );
   pointer-events: none;
 }
 .hero-inner {
@@ -965,8 +994,11 @@ p { margin: 0; }
        and it is the only thing standing between the last button and the section
        below on a screen too short to fit the copy — where the free space the
        auto margins divide is zero, so the bottom third provides no clearance.
-       A 320x568 phone is exactly that case. */
-    padding: 22px 0 24px;
+       A 320x568 phone is exactly that case.
+
+       The top half still has to clear the sticky header the hero now sits
+       behind — see the base rule. */
+    padding: calc(var(--header-h) + 22px) 0 24px;
   }
   /* No vertical margin here: the auto-margin block above owns the vertical
      rhythm at this width, and `margin: auto` would fight it. */

@@ -243,24 +243,47 @@ means deciding where the span sits — the class is on the element, not a
 `:nth-child` rule, so move it deliberately.
 
 The hero is a flex **column** with two children: `.hero-top` (the address
-badge, sitting directly under the sticky header) and `.hero-inner` (headline,
-lead, buttons). Both children carry the same `max-width`/`padding`, so the
-badge stays left-aligned with the `h1`; change one and change the other.
+badge, cleared from the header it sits behind by the hero's top padding) and
+`.hero-inner` (headline, lead, buttons). Both children carry the same
+`max-width`/`padding`, so the badge stays left-aligned with the `h1`; change one
+and change the other.
 
-**The hero fills the viewport below the header at every width:**
-`min-height: calc(100dvh - var(--header-h))`, with a `100vh` line above it as
-the fallback. This replaced a flat `88vh`, which could only ever be right at one
-window height — the header sits above the hero in flow, so the leftover strip
-below the hero is `0.12 × height − header`, which showed as a stray cream line
-along the bottom of the photo on any window taller than ~830px (≈8px at 900,
-≈20px at 1000). Subtracting the measured header makes that strip zero at any
-size. `dvh` matters on mobile, where `100vh` is the address-bar-hidden height;
-on desktop the two are identical. Keep it `min-height`, never `height`, so a
-short window grows the hero instead of clipping the copy.
+**The hero fills the viewport at every width: `min-height: 100svh`**, with a
+`100vh` line above it as the fallback. This replaced a flat `88vh`, which could
+only ever be right at one window height and otherwise left a stray cream strip
+under the photo (≈8px at 900px tall, ≈20px at 1000px). Keep it `min-height`,
+never `height`, so a short window grows the hero instead of clipping the copy.
 
-**This makes `--header-h` load-bearing for layout, not just for scroll offsets.**
-It is measured in `script.js`; the `100px` fallback in `:root` is what the hero
-sizes against if JS never runs.
+**`svh`, never `dvh` — this is the important one.** `dvh` is the *dynamic*
+viewport and re-resolves continuously as the mobile address bar collapses and
+expands. With it, the hero grew mid-scroll and the cover-fitted photo rescaled
+with it: a visible zoom-and-jank on every iOS scroll, made worse by the 4px blur
+repainting each frame. That bug was shipped here and reported from a real phone.
+`svh` is the *small* viewport — the height with the bar showing — and is constant
+for the life of the page, so nothing reflows while scrolling. It is also the safe
+end of the range: the hero can never exceed what is on screen, so `#about` stays
+hidden at rest whatever the bar is doing. Once the bar collapses mid-scroll a
+sliver of the next section shows, which is correct — the reader is already
+scrolling.
+
+**The hero starts at the top of the document, behind the sticky header**, via
+`margin-top: calc(-1 * var(--header-h))` and a matching
+`padding-top: calc(var(--header-h) + 26px)`. Before this there was a band of
+cream page background above the photo, which read as a bright strip cutting the
+top off the image. Running the photo to the top blends by definition — no solid
+colour could, since the photo comes from the CMS and could be anything — and the
+white header pill gains contrast from sitting on a darkened photo rather than on
+near-white.
+
+**The pull-up and the top padding must change together.** They cancel exactly, so
+the content box is identical to when the hero began below the header, which is
+why the auto-margin thirds needed no adjustment when this changed. The ≤640px
+block carries its own `calc(var(--header-h) + 22px)` for the same reason.
+
+**This makes `--header-h` load-bearing for layout, not just for scroll offsets**
+— it now drives the hero's offset, its top padding and the overlay's first
+gradient stop. It is measured in `script.js`; the `100px` fallback in `:root` is
+what all of that resolves against if JS never runs.
 
 `.hero-inner` grows to fill the hero (`flex: 1`), and three `auto` margins —
 above the `h1`, above and below `.hero-actions` — split the leftover space into
@@ -457,10 +480,14 @@ ratio (so swapping images later causes no layout shift):
   4px and scaled 1.06, sitting behind the `.hero-overlay` gradient. The scale is
   not decoration: `blur()` feathers an element's own edges, which on a
   full-bleed image shows as a pale halo down the hero's borders, and scaling
-  pushes that edge out of frame. The overlay is deliberately heavy
-  (0.46 → 0.84) because the photo comes from the CMS and could be anything from
-  a bright snowy embankment to a dim interior — the white headline has to stay
-  readable over all of them.
+  pushes that edge out of frame. The overlay is deliberately heavy because the
+  photo comes from the CMS and could be anything from a bright snowy embankment
+  to a dim interior — the white headline has to stay readable over all of them.
+  It runs 0.74 → 0.46 → 0.84: the extra-dark first stop covers the band the
+  sticky header sits over, keeping the white pill contrasting against whatever
+  the top of the photo happens to be. That stop is positioned with
+  `calc(var(--header-h) + 24px)` rather than a percentage, so it tracks the
+  header's real height instead of drifting with the hero's.
 
 To add a real photo: replace the `src` (and ideally the filename) on the
 relevant `<img>`, keep the existing `alt` text (already written to describe
