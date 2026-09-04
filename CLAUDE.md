@@ -75,6 +75,28 @@ nothing.
 - `images/placeholder.svg` — neutral blank placeholder graphic (cream
   background + line-art frame icon) used everywhere a real photo is pending
 
+## Deployment
+
+`.gitlab-ci.yml` mirrors the repo to Beget over FTPS on every push to `main`.
+
+This job is **load-bearing, not a convenience**. Decap commits content edits to
+this repo; Beget is plain file hosting and has no idea the repo changed.
+Without the job, an edit made in `/admin/` reaches GitLab and never reaches
+visitors — silently, with no error anywhere. If content stops updating on the
+live site, check the pipeline before anything else.
+
+Four CI variables must exist (Settings → CI/CD → Variables), with the password
+masked: `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `REMOTE_DIR`. None of them
+belong in the repo. The job fails fast with a readable message if any is
+missing, rather than half-deploying.
+
+The mirror uses `--delete`, so `REMOTE_DIR` ends up matching the repo exactly —
+anything else living in that directory gets removed. Drop the flag if the web
+root is ever shared with something else.
+
+`CLAUDE.md`, `.gitignore`, `.gitlab-ci.yml` and `.claude/` are excluded from
+the upload; everything else (including `admin/` and `content/`) ships.
+
 ## Sections (in DOM order)
 
 `#top` header → hero → `#about` (О штабе) → `#menu` (Меню + Другие напитки)
