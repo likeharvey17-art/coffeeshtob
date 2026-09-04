@@ -5,4 +5,4 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 
-Sitemap: https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/sitemap.xml
+Sitemap: https://coffeeshtob.ru/sitemap.xml

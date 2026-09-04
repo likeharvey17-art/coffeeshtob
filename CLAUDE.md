@@ -99,10 +99,19 @@ is ever recreated: GitLab → the group → Settings → Applications → Add ne
 application (projects have no Applications section — it exists only on groups
 and users).
 
-- **Redirect URI** — the full admin URL, currently
-  `https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/admin/`. This is the
-  one host-dependent value. GitLab accepts several URIs, one per line, so
-  register any new domain here *before* switching to it and no code changes.
+- **Redirect URI** — the full admin URL. This is the one host-dependent value,
+  and it is the thing that breaks when the domain changes. GitLab accepts
+  several URIs, one per line, so **keep both** registered:
+
+  ```
+  https://coffeeshtob.ru/admin/
+  https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/admin/
+  ```
+
+  Keeping the old one costs nothing and leaves a working way into the CMS if
+  the domain is ever misconfigured. Register a new domain here *before*
+  switching to it and no code changes are needed.
+
   Cloudflare preview URLs are wildcards and can never match, so the CMS only
   logs in from production — that is expected.
 - **Confidential** — must be **unchecked**. PKCE has no client secret, and
@@ -154,7 +163,12 @@ directory paths, so `/admin/` correctly maps to `admin/index.html`).
 `/privacy.html` also works but 307s to `/privacy`; see the extensionless-URL note
 under Icons and SEO.
 
-Live URL: `https://coffeeshtob-site-cc.haknisvouzizn.workers.dev`. The
+Live URL: `https://coffeeshtob.ru`, with
+`https://coffeeshtob-site-cc.haknisvouzizn.workers.dev` still serving the same
+Worker underneath — the `workers.dev` host does not go away when a custom domain
+is attached, so both resolve. Only the custom domain is advertised: every
+canonical, `og:url`, sitemap entry and `llms.txt` link points at `coffeeshtob.ru`
+so search engines index one host rather than two copies of the site. The
 `workers.dev` *Preview* URL is deliberately left disabled: it is a wildcard,
 so it could never match a GitLab redirect URI, and enabling it would make every
 deployed version publicly reachable.
@@ -362,22 +376,26 @@ Until then the page is reachable at `/404` and does no harm.
 address, phone, what the place does. Keep it in step with the page; it is the
 one file that repeats content rather than linking to it.
 
-Absolute URLs to the production host live in **six files** — verify with
-`grep -rl haknisvouzizn . --exclude-dir=.git`, which is the authoritative list
-rather than this paragraph:
+Absolute URLs to the production host live in **14 places across five files** —
+verify with `grep -rn 'coffeeshtob\.ru' . --exclude-dir=.git`, which is the
+authoritative list rather than this paragraph:
 
-- `index.html` — `canonical`, `og:url`, `og:image`, `twitter:image`, and `url` +
-  `image` in the JSON-LD
-- `privacy.html` — `canonical`, `og:url`, `og:image`
-- `robots.txt` — the `Sitemap:` line
-- `sitemap.xml` — both `<loc>` entries
-- `llms.txt` — the two links at the bottom
-- `CLAUDE.md` — this file (the OAuth Redirect URI and the Live URL note)
+- `index.html` (6) — `canonical`, `og:url`, `og:image`, `twitter:image`, and
+  `url` + `image` in the JSON-LD
+- `privacy.html` (3) — `canonical`, `og:url`, `og:image`
+- `sitemap.xml` (2) — both `<loc>` entries
+- `llms.txt` (2) — the two links at the bottom
+- `robots.txt` (1) — the `Sitemap:` line
 
-**They must all change together** if a custom domain is added, and the new
+**They must all change together** if the host ever changes again, and the new
 `/admin/` URL has to be registered as a GitLab Redirect URI *before* the switch,
-or the CMS login breaks the moment the domain goes live. See "GitLab OAuth
+or the CMS login breaks the moment the new host goes live. See "GitLab OAuth
 application" above.
+
+The move from `workers.dev` to `coffeeshtob.ru` was made in one commit for
+exactly this reason: canonical, `og:url` and `sitemap.xml` disagreeing about
+which host is real is the failure mode, and a split second where half the files
+point one way is not worth the smaller diff.
 
 The JSON-LD is `CafeOrCoffeeShop` and contains only facts that are on the page —
 no invented geo coordinates, no made-up `priceRange`. Its
