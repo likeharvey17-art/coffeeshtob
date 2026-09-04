@@ -672,6 +672,13 @@ p { margin: 0; }
 .footer-phone svg { color: var(--accent-light); flex-shrink: 0; }
 .footer-phone:hover { color: var(--accent-light); }
 
+/* Zero-height marker carrying the #contacts anchor; see index.html. It must
+   not add height, or it would put a gap under the footer. */
+.anchor-end {
+  height: 0;
+  overflow: hidden;
+}
+
 .footer-bottom { padding: 22px 0; }
 .footer-bottom-inner {
   display: flex;

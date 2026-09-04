@@ -130,7 +130,19 @@ ever comes back.
 
 `#top` header → hero → `#about` (О штабе) → `#menu` (Меню + Другие напитки)
 → `#life` (Жизнь штаба) → `#schedule` (includes `#guests` sub-anchor) →
-footer (`#contacts`, `#social`).
+footer (`#social`, and `#contacts` at the very end).
+
+**`#contacts` is a zero-height marker at the end of the footer, not the footer
+element itself.** Anchoring the footer aligned its *top*, and the footer is
+taller than a phone screen, so the contact details and social links stayed below
+the fold — the link looked like it stopped short. A marker at the document end
+makes the browser clamp to the maximum scroll and land at the actual bottom.
+
+This is done with a native anchor rather than JS on purpose: programmatic
+`scrollTo`/`scrollIntoView` with `behavior: 'smooth'` proved unreliable — in the
+test browser it stalled after a few pixels while native anchor navigation worked
+— and an in-app webview is exactly where that sort of thing goes wrong. Keep the
+marker zero-height, or it adds a gap under the footer.
 
 Nav links and footer nav both point at these same anchor IDs — keep them in
 sync if sections are renamed or reordered.
@@ -314,12 +326,19 @@ The header hides on scroll-down and reappears on scroll-up, but by **two
 different mechanisms**, and they must not be merged:
 
 - **Desktop** toggles `.is-hidden` and lets a 0.28s CSS transition play.
-- **Mobile** ignores the class and drives an inline `translateY` straight from
-  the scroll delta, one-to-one with the finger, clamped to `hiddenDistance()`.
-  There is deliberately **no transition below 860px** — a timed animation can
-  only be slow (the bar lingers while the page moves under it) or abrupt (it
-  snaps); both were tried and rejected. Tracking the scroll has no duration to
-  get wrong.
+- **Mobile** ignores the class and moves the header with an inline
+  `translateY`, scroll-driven but **frame-rendered**. The scroll handler only
+  sets `wanted`; a `requestAnimationFrame` loop walks `shown` toward it at 30%
+  per frame. Both halves matter: a timed CSS transition is either laggy or
+  snappy (both were tried and rejected), but writing the transform straight from
+  the scroll delta moved the bar in visible steps, because scroll events fire
+  less often than frames. Interpolating between them is what makes it smooth
+  while still following the scroll rather than a clock.
+
+  When fully up, the header also gets `visibility: hidden`. Translating a
+  sticky element off-screen is **not** the same as it being gone — a webview
+  whose sticky box disagrees with the visual viewport still paints a sliver,
+  which is the strip that stayed on screen in Telegram's in-app browser.
 
 `hiddenDistance()` is measured off the element (`offsetHeight + 16`) rather
 than written as `-100%`. A percentage resolves against the element's own box,

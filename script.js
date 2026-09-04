@@ -144,27 +144,67 @@ document.addEventListener('DOMContentLoaded', () => {
   const DELTA = 4;        // ignore sub-pixel jitter and momentum wobble
   let lastY = window.scrollY;
   let holdVisibleUntil = 0; // timestamp; see the anchor-click handler below
-  let offset = 0;           // px the header is currently pushed up on mobile
 
   /* How far the header must travel to be fully gone, measured off the element
      in pixels rather than written as -100%. A percentage resolves against the
      element's own box, and in some in-app webviews — Telegram's included — the
-     sticky box and the visual viewport disagree, which left a sliver of the bar
-     stranded on screen. A measured distance plus shadow clearance cannot. */
+     sticky box and the visual viewport disagree. */
   const hiddenDistance = () => header.offsetHeight + 16;
+
+  /* Mobile hiding is scroll-driven but frame-rendered, and it has to be both.
+
+     Scroll events fire less often than frames, so writing the transform
+     straight from the scroll delta moved the bar in visible jumps. Instead the
+     scroll handler only sets `wanted`, and a rAF loop walks `shown` towards it
+     one frame at a time. The result still follows the scroll — it is not a
+     timed animation with a duration to get wrong — but it renders on every
+     frame instead of every scroll event, which is what removes the stepping. */
+  let shown = 0;   // px currently rendered
+  let wanted = 0;  // px the scroll position asks for
+  let raf = null;
+
+  const paint = () => {
+    header.style.transform = shown ? `translateY(${-shown}px)` : '';
+    /* Once it is all the way up, stop painting it at all. Translating a sticky
+       element off-screen is not the same as it being gone: a webview whose
+       sticky box disagrees with the visual viewport can still show a sliver of
+       it, which is exactly the strip left hanging in Telegram's browser.
+       visibility removes it from the render without affecting layout. */
+    header.style.visibility = shown >= hiddenDistance() - 0.5 ? 'hidden' : '';
+  };
+
+  const step = () => {
+    const diff = wanted - shown;
+    if (Math.abs(diff) < 0.5) {
+      shown = wanted;
+      paint();
+      raf = null;
+      return;
+    }
+    shown += diff * 0.3;   // catches up in ~3 frames: smooth, still responsive
+    paint();
+    raf = requestAnimationFrame(step);
+  };
+
+  const settle = () => {
+    if (raf === null) raf = requestAnimationFrame(step);
+  };
 
   const setHeaderHidden = (hidden) => {
     header.classList.toggle('is-hidden', hidden);
   };
 
   const clearOffset = () => {
-    offset = 0;
-    header.style.transform = '';
+    wanted = 0;
+    settle();
   };
 
   /* Crossing the breakpoint must not strand the other layout's state. */
   desktop.addEventListener('change', () => {
-    clearOffset();
+    shown = 0;
+    wanted = 0;
+    header.style.transform = '';
+    header.style.visibility = '';
     setHeaderHidden(false);
   });
 
@@ -210,14 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (desktop.matches) {
       clearOffset(); // in case we arrived from the mobile layout
+      header.style.visibility = '';
       setHeaderHidden(!scrollingUp);
     } else {
       /* Mobile: the class stays off and the transform does the work, moving
          the header by exactly as much as the page moved, up to the point where
          it is fully clear. */
       setHeaderHidden(false);
-      offset = Math.max(0, Math.min(hiddenDistance(), offset + movement));
-      header.style.transform = offset ? `translateY(${-offset}px)` : '';
+      wanted = Math.max(0, Math.min(hiddenDistance(), wanted + movement));
+      settle();
     }
 
     lastY = y;
@@ -237,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a[href^="#"]').forEach((link) => {
     link.addEventListener('click', () => {
       setHeaderHidden(false);
+      clearOffset();
       holdVisibleUntil = Date.now() + (prefersReducedMotion.matches ? 150 : 900);
     });
   });

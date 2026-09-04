@@ -371,7 +371,7 @@
 
 </main>
 
-<footer class="site-footer" id="contacts">
+<footer class="site-footer">
   <div class="container footer-grid">
 
     <div class="footer-col footer-brand">
@@ -445,6 +445,15 @@
       <a class="footer-legal-link" href="/privacy">Политика конфиденциальности</a>
     </div>
   </div>
+
+  <!-- The «Контакты» anchor sits at the very end of the document, not on the
+       <footer> element. Anchoring the footer aligned its *top*, which on a
+       footer this tall left the contact details and social links below the
+       fold — the link looked like it hadn't gone far enough. Pointing at a
+       marker here means the browser scrolls its top into view, clamps to the
+       maximum scroll, and lands at the actual bottom. Native anchor navigation
+       does it, so it inherits the page's smooth scrolling and needs no JS. -->
+  <div id="contacts" class="anchor-end" aria-hidden="true"></div>
 </footer>
 
 <button class="to-top" id="toTop" aria-label="Наверх">
