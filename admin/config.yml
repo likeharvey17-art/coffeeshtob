@@ -6,11 +6,11 @@
 # tie to any hosting provider — the site can move between Cloudflare Pages,
 # Vercel, a VPS or anywhere else and the CMS keeps working untouched.
 #
-# SETUP — two values below must be filled in before this works. See the
-# "GitLab OAuth application" section in CLAUDE.md for the exact steps.
+# SETUP — `app_id` below still needs filling in before the deployed CMS will
+# work. See the "GitLab OAuth application" section in CLAUDE.md for the steps.
 backend:
   name: gitlab
-  repo: NAMESPACE/PROJECT       # e.g. tryphonbrooks/coffeeshtab — your GitLab path
+  repo: webtyr-group1/coffeeshtob-site
   branch: main
   auth_type: pkce
   app_id: GITLAB_APPLICATION_ID # the Application ID from the GitLab OAuth app
