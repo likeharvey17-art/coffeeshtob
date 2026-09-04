@@ -312,7 +312,10 @@ p { margin: 0; }
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(180deg, rgba(26, 18, 11, 0.18) 0%, rgba(21, 14, 9, 0.72) 100%);
+  /* Darker than a photo alone would need, because the hero image is supplied
+     through the CMS — it could be a bright snowy embankment or a dim interior,
+     and the white headline has to stay readable over either. */
+  background: linear-gradient(180deg, rgba(26, 18, 11, 0.46) 0%, rgba(21, 14, 9, 0.84) 100%);
   pointer-events: none;
 }
 .hero-inner {
@@ -474,6 +477,12 @@ p { margin: 0; }
   height: 100%;
   object-fit: cover;
   z-index: 0;
+  /* Softened and pushed back so the headline sits clearly in front of it. The
+     scale matters: blur() feathers the edges of the element, which on a
+     full-bleed image shows as a pale halo along the hero's borders. Scaling up
+     slightly pushes that feathered edge out of frame. */
+  filter: blur(4px);
+  transform: scale(1.06);
 }
 
 /* ===== Grids / entries =====

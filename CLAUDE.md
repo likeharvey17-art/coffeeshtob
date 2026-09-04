@@ -111,9 +111,16 @@ repo that shouldn't be world-readable.
 that way rather than to run anything. Deleting it does not give you "no CI" — it
 gives you Auto DevOps, which tries to build an application, finds static files
 with no `package.json` or `Dockerfile`, fails, and mails a failed-pipeline
-notice on every push. `workflow: rules: when: never` stops a pipeline being
-created at all. Turning CI/CD off in the project settings makes the file
-redundant.
+notice on every push. That includes **every CMS edit**, since a content save is
+a push. `workflow: rules: when: never` stops a pipeline being created at all.
+
+**The `no-op` job must stay visible — never give it `rules: when: never`.**
+GitLab requires a config to declare at least one job not excluded by its own
+rules; an unreachable job makes the config invalid, and an invalid config *is* a
+failed pipeline. That exact mistake was made here and produced the very emails
+the file was added to stop. The `workflow` rule is what prevents it running.
+
+Turning CI/CD off in the project settings makes the file redundant entirely.
 
 An earlier version of that file deployed to Beget over FTPS. It was replaced
 when hosting moved to Cloudflare; the FTP version is in git history if Beget
@@ -268,9 +275,14 @@ shift):
 - `.img-frame--square` — feature/menu/drink card thumbnails (1:1)
 - `.img-frame--about` — About section photo (4:3)
 - `.img-frame--wide` — Жизнь штаба cards (16:10)
-- `.hero-bg` — full-bleed hero background image (object-fit: cover, sits
-  behind the dark `.hero-overlay` gradient so hero text stays legible
-  regardless of the photo)
+- `.hero-bg` — full-bleed hero background image (object-fit: cover), blurred
+  4px and scaled 1.06, sitting behind the `.hero-overlay` gradient. The scale is
+  not decoration: `blur()` feathers an element's own edges, which on a
+  full-bleed image shows as a pale halo down the hero's borders, and scaling
+  pushes that edge out of frame. The overlay is deliberately heavy
+  (0.46 → 0.84) because the photo comes from the CMS and could be anything from
+  a bright snowy embankment to a dim interior — the white headline has to stay
+  readable over all of them.
 
 To add a real photo: replace the `src` (and ideally the filename) on the
 relevant `<img>`, keep the existing `alt` text (already written to describe

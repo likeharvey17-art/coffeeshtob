@@ -6,13 +6,19 @@
 #
 # This file exists to stop pipelines, not to run one. With no .gitlab-ci.yml at
 # all, GitLab falls back to Auto DevOps: it tries to detect and build an
-# application, finds a folder of static files with no package.json or
-# Dockerfile, fails, and mails a failed-pipeline notice on every single push.
+# application, finds static files with no package.json or Dockerfile, fails, and
+# mails a failed-pipeline notice on every push — including every CMS edit, since
+# those are pushes too.
 #
-# `workflow: rules: when: never` prevents a pipeline from being created in the
-# first place, so nothing runs and no CI minutes are spent. The job below exists
-# only because GitLab requires the config to define at least one; it is
-# unreachable for the same reason.
+# `workflow: rules: when: never` prevents a pipeline from being created, so
+# nothing runs and no CI minutes are spent.
+#
+# The job below must stay *visible* — do not give it `rules: when: never`.
+# GitLab validates that a config declares at least one job that isn't excluded
+# by its own rules; an unreachable job makes the whole config invalid, and an
+# invalid config is itself a failed pipeline. That mistake was made here once
+# and produced exactly the failure emails this file is meant to prevent.
+# The workflow rule above is what stops it ever running.
 #
 # Cleaner permanent alternative, if you would rather not carry this file:
 # Settings → General → Visibility → turn CI/CD off, or
@@ -24,7 +30,5 @@ workflow:
     - when: never
 
 no-op:
-  rules:
-    - when: never
   script:
     - echo "This project has no CI. See the comments in .gitlab-ci.yml."
