@@ -1,0 +1,30 @@
+# This project deliberately has no CI.
+#
+# The site is static HTML/CSS/JS with no build, test or bundle step, and it is
+# deployed by Cloudflare pulling directly from this repo — GitLab has no part in
+# getting it live. See the Deployment section of CLAUDE.md.
+#
+# This file exists to stop pipelines, not to run one. With no .gitlab-ci.yml at
+# all, GitLab falls back to Auto DevOps: it tries to detect and build an
+# application, finds a folder of static files with no package.json or
+# Dockerfile, fails, and mails a failed-pipeline notice on every single push.
+#
+# `workflow: rules: when: never` prevents a pipeline from being created in the
+# first place, so nothing runs and no CI minutes are spent. The job below exists
+# only because GitLab requires the config to define at least one; it is
+# unreachable for the same reason.
+#
+# Cleaner permanent alternative, if you would rather not carry this file:
+# Settings → General → Visibility → turn CI/CD off, or
+# Settings → CI/CD → Auto DevOps → untick "Default to Auto DevOps pipeline".
+# Either makes this file redundant and it can be deleted.
+
+workflow:
+  rules:
+    - when: never
+
+no-op:
+  rules:
+    - when: never
+  script:
+    - echo "This project has no CI. See the comments in .gitlab-ci.yml."

@@ -107,8 +107,16 @@ reachable — including `CLAUDE.md` at `/CLAUDE.md`. Nothing here is secret (the
 CMS `app_id` is public by design under PKCE), but don't add anything to the
 repo that shouldn't be world-readable.
 
-An earlier commit carried a `.gitlab-ci.yml` that deployed to Beget over FTPS.
-It was removed when hosting moved to Cloudflare; it is in git history if Beget
+**GitLab CI is deliberately disabled**, and `.gitlab-ci.yml` exists to keep it
+that way rather than to run anything. Deleting it does not give you "no CI" — it
+gives you Auto DevOps, which tries to build an application, finds static files
+with no `package.json` or `Dockerfile`, fails, and mails a failed-pipeline
+notice on every push. `workflow: rules: when: never` stops a pipeline being
+created at all. Turning CI/CD off in the project settings makes the file
+redundant.
+
+An earlier version of that file deployed to Beget over FTPS. It was replaced
+when hosting moved to Cloudflare; the FTP version is in git history if Beget
 ever comes back.
 
 ## Sections (in DOM order)
