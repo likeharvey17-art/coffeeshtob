@@ -293,7 +293,10 @@ p { margin: 0; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 26px 0 80px;
+  /* No bottom padding: the auto-margin block below divides the content box, and
+     padding here would sit outside that and push the buttons half of it too
+     high. The bottom third provides the clearance instead. */
+  padding: 26px 0 0;
   background:
     radial-gradient(ellipse at top right, rgba(201, 168, 136, 0.16), transparent 55%),
     radial-gradient(ellipse at 10% 90%, rgba(90, 64, 50, 0.34), transparent 60%),
@@ -374,35 +377,40 @@ p { margin: 0; }
   flex-wrap: wrap;
 }
 
-/* Desktop only: sit the hero buttons midway between the lead text and the
-   bottom of the hero, instead of tucked right under the copy.
+/* Sit the hero buttons midway between the lead text and the bottom of the hero,
+   instead of tucked right under the copy.
 
    Done with auto margins rather than a fixed offset. .hero-inner grows to fill
    the hero (flex: 1), then the three `auto` margins below — above the heading,
    above the buttons, below the buttons — split the leftover space into equal
    thirds. Equal thirds is exactly the condition for the buttons to be centred
    between the lead and the hero's bottom edge, and it re-solves itself at any
-   viewport height, so nothing needs retuning when the 88vh hero changes size.
-   Below 861px the hero is content-height and this whole idea is moot. */
-@media (min-width: 861px) {
-  /* The auto margins divide the *content* box, so the hero's bottom padding
-     would sit outside the calculation and push the buttons half that padding
-     too high. Fold it into the free space instead; the bottom third keeps the
-     buttons clear of the edge. */
-  .hero { padding-bottom: 0; }
-  .hero-inner {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    margin: 0 auto; /* height now fills, so no vertical auto-centring */
-  }
-  .hero-inner h1 { margin-top: auto; }
-  .hero-inner .hero-lead { margin-bottom: 0; }
-  .hero-inner .hero-actions {
-    margin-top: auto;
-    margin-bottom: auto;
-    flex: 0 0 auto; /* don't let it stretch to fill the free space */
-  }
+   viewport height, so nothing needs retuning when the hero changes size.
+
+   This is unconditional, and the hero's bottom padding is zeroed above to suit
+   it: the auto margins divide the *content* box, so bottom padding sits outside
+   the calculation and pushes the buttons half of it too high. The bottom third
+   is what keeps them clear of the edge instead. (The ≤640px block re-adds a
+   small padding for a reason spelled out there.)
+
+   It used to be ≥861px only, back when the phone hero was content-height and
+   there was no space to divide. That stopped being true when the hero grew to
+   fill the screen, and scoping it by width was always incidental — the real
+   condition is "the hero is taller than its content", which is now every width.
+   Leaving the 641–860px band out made tablets the one place where the buttons
+   sat tucked under the lead with 300px of empty photo beneath them. */
+.hero-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto; /* height now fills, so no vertical auto-centring */
+}
+.hero-inner h1 { margin-top: auto; }
+.hero-inner .hero-lead { margin-bottom: 0; }
+.hero-inner .hero-actions {
+  margin-top: auto;
+  margin-bottom: auto;
+  flex: 0 0 auto; /* don't let it stretch to fill the free space */
 }
 
 /* ===== Sections ===== */
@@ -936,18 +944,17 @@ p { margin: 0; }
   .hero {
     min-height: calc(100vh - var(--header-h));
     min-height: calc(100dvh - var(--header-h));
-    /* Near-symmetric top/bottom so `margin: auto` below centres the copy for
-       real. The old 56px bottom was sized for a content-height hero; at full
-       height it offsets the centring and leaves a visible gap under the
-       buttons. Slightly less at the bottom keeps the block a touch above true
-       centre, which is where it wants to sit optically. */
-    padding: 22px 0 32px;
+    /* Unlike desktop this keeps a small bottom padding rather than zeroing it.
+       It biases the buttons ~12px above true centre, which is imperceptible,
+       and it is the only thing standing between the last button and the section
+       below on a screen too short to fit the copy — where the free space the
+       auto margins divide is zero, so the bottom third provides no clearance.
+       A 320x568 phone is exactly that case. */
+    padding: 22px 0 24px;
   }
-  /* Centre the copy in whatever the badge leaves, rather than pinning it near
-     the top — at full height that would strand it against the header with the
-     whole lower screen empty. `margin: auto` on a flex child does this and
-     re-solves at any screen height, so no fixed offset needs retuning. */
-  .hero-inner { padding: 0 20px; margin: auto; }
+  /* No vertical margin here: the auto-margin block above owns the vertical
+     rhythm at this width, and `margin: auto` would fight it. */
+  .hero-inner { padding: 0 20px; }
   .hero-top { padding: 0 20px; }
   .section { padding: 64px 0; }
   .section-head { margin-bottom: 40px; }
