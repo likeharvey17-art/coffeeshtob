@@ -129,53 +129,97 @@ document.addEventListener('DOMContentLoaded', () => {
      The header slides away while reading downwards and comes straight back on
      any upward scroll. Near the top it is always shown, so the resting state
      above the hero is unchanged. */
-  /* How far down the page the header stays pinned before it may hide.
-     On desktop it holds through the top of the hero. On mobile that reads as
-     lag — the header sits there while the page moves under it — so it lets go
-     almost immediately and travels away with the content instead. Both keep it
-     visible at rest above the hero. */
+  /* Desktop and mobile hide the header by different mechanisms.
+
+     Desktop toggles `.is-hidden` and lets a CSS transition play — the header
+     is a fixed chrome element there, and animating it reads fine.
+
+     Mobile drives an inline transform straight from the scroll delta instead,
+     one-to-one with the finger. A timed transition can only be slow (the bar
+     lingers while the page moves under it) or fast (it snaps); neither is what
+     a header scrolling away with the content looks like. Tracking the scroll
+     has no duration to get wrong. */
   const desktop = window.matchMedia('(min-width: 861px)');
   const hideAfter = () => (desktop.matches ? 220 : 12);
-  const DELTA = 6;        // ignore sub-pixel jitter and momentum wobble
+  const DELTA = 4;        // ignore sub-pixel jitter and momentum wobble
   let lastY = window.scrollY;
   let holdVisibleUntil = 0; // timestamp; see the anchor-click handler below
+  let offset = 0;           // px the header is currently pushed up on mobile
+
+  /* How far the header must travel to be fully gone, measured off the element
+     in pixels rather than written as -100%. A percentage resolves against the
+     element's own box, and in some in-app webviews — Telegram's included — the
+     sticky box and the visual viewport disagree, which left a sliver of the bar
+     stranded on screen. A measured distance plus shadow clearance cannot. */
+  const hiddenDistance = () => header.offsetHeight + 16;
 
   const setHeaderHidden = (hidden) => {
     header.classList.toggle('is-hidden', hidden);
   };
+
+  const clearOffset = () => {
+    offset = 0;
+    header.style.transform = '';
+  };
+
+  /* Crossing the breakpoint must not strand the other layout's state. */
+  desktop.addEventListener('change', () => {
+    clearOffset();
+    setHeaderHidden(false);
+  });
 
   const onScroll = () => {
     const y = window.scrollY;
     header.classList.toggle('is-scrolled', y > 12);
 
     const movement = y - lastY;
-    if (Math.abs(movement) < DELTA) return; // too small to count as a direction
-
+    const moved = Math.abs(movement) >= DELTA;
     const scrollingUp = movement < 0;
 
     /* Back-to-top rides the same gesture as the header: it appears only once
        the reader starts heading back up, and only far enough down the page to
        be worth offering. Scrolling down again puts it away. */
-    if (toTopBtn) toTopBtn.classList.toggle('is-visible', scrollingUp && y > 480);
+    if (moved && toTopBtn) {
+      toTopBtn.classList.toggle('is-visible', scrollingUp && y > 480);
+    }
 
-    if (Date.now() < holdVisibleUntil) {
-      /* Mid-jump from an in-page link: that travel is downward, but the reader
-         didn't scroll — don't treat it as a hide gesture. */
+    /* Reasons the header must stay put regardless of scroll direction: it is
+       resting above the hero, a panel is open under it, or an in-page link is
+       mid-jump (that travel is downward, but the reader didn't scroll).
+
+       This is checked *before* the small-movement bail below, and deliberately
+       so: pinning is a fact about where the page is, not about how far it just
+       travelled. Testing it after meant a jump straight to the top — or a slow
+       drift up in sub-threshold increments — never reset the header, stranding
+       it off-screen at y=0. */
+    const pinned =
+      y <= hideAfter() ||
+      isNavOpen() || isSocialOpen() ||
+      Date.now() < holdVisibleUntil;
+
+    if (pinned) {
       setHeaderHidden(false);
+      clearOffset();
       lastY = y;
       return;
     }
 
-    if (y <= hideAfter()) {
-      /* At and near the top the header always rests in place. */
-      setHeaderHidden(false);
-    } else if (isNavOpen() || isSocialOpen()) {
-      /* A panel is open — hiding the header would yank it out from under the
-         reader mid-interaction. */
-      setHeaderHidden(false);
-    } else {
+    /* Too small to read a direction from. lastY is left alone on purpose, so
+       successive small movements accumulate instead of being discarded. */
+    if (!moved) return;
+
+    if (desktop.matches) {
+      clearOffset(); // in case we arrived from the mobile layout
       setHeaderHidden(!scrollingUp);
+    } else {
+      /* Mobile: the class stays off and the transform does the work, moving
+         the header by exactly as much as the page moved, up to the point where
+         it is fully clear. */
+      setHeaderHidden(false);
+      offset = Math.max(0, Math.min(hiddenDistance(), offset + movement));
+      header.style.transform = offset ? `translateY(${-offset}px)` : '';
     }
+
     lastY = y;
   };
 

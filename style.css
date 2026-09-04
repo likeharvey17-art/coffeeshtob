@@ -135,13 +135,17 @@ p { margin: 0; }
 .site-header.is-hidden {
   transform: translateY(calc(-100% - 12px));
 }
-/* On mobile the header should read as scrolling away with the page, not as a
-   panel that lingers and then animates off. It leaves almost immediately (see
-   hideAfter() in script.js) and leaves fast; coming back stays gentle, because
-   a reveal is the header interrupting the reader rather than getting out of
-   their way. */
+/* Below 860px the header is moved by an inline transform driven straight from
+   the scroll position (see script.js), so it travels with the page rather than
+   animating on a timer. A transition here would fight every frame of that and
+   put the lag straight back, so there deliberately isn't one. will-change keeps
+   the bar on its own compositor layer, which also stops in-app webviews
+   repainting it a frame late as you scroll. */
 @media (max-width: 860px) {
-  .site-header.is-hidden { transition-duration: 0.1s; }
+  .site-header {
+    transition: none;
+    will-change: transform;
+  }
 }
 .header-inner {
   position: relative; /* anchors .social-pop */

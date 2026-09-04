@@ -230,15 +230,31 @@ explicitly, so don't reintroduce a border or background on it.
 Checked for text overflow and clipping down to 320px — keep it that way when
 adding copy.
 
-The header hides on scroll-down and reappears on any scroll-up (`.is-hidden`
-on `.site-header`, driven by `script.js`). How long it stays pinned before it
-may hide differs by width — `hideAfter()`: 220px on desktop, 12px on mobile.
-On a phone the desktop hold reads as lag, the header sitting still while the
-page moves under it, so it lets go almost at once and travels away with the
-content. It rests visible above the hero either way. The hide transition is
-also shortened to 0.1s below 860px so it reads as leaving *with* the scroll;
-the reveal stays at 0.28s, because a reveal interrupts the reader rather than
-getting out of their way. It is held visible while
+The header hides on scroll-down and reappears on scroll-up, but by **two
+different mechanisms**, and they must not be merged:
+
+- **Desktop** toggles `.is-hidden` and lets a 0.28s CSS transition play.
+- **Mobile** ignores the class and drives an inline `translateY` straight from
+  the scroll delta, one-to-one with the finger, clamped to `hiddenDistance()`.
+  There is deliberately **no transition below 860px** — a timed animation can
+  only be slow (the bar lingers while the page moves under it) or abrupt (it
+  snaps); both were tried and rejected. Tracking the scroll has no duration to
+  get wrong.
+
+`hiddenDistance()` is measured off the element (`offsetHeight + 16`) rather
+than written as `-100%`. A percentage resolves against the element's own box,
+and in some in-app webviews — Telegram's among them — the sticky box and the
+visual viewport disagree, which left a sliver of the bar stranded on screen.
+
+`hideAfter()` — how far down the page the header stays pinned — is 220px on
+desktop, 12px on mobile. It rests visible above the hero either way.
+
+**The pinned check runs before the small-movement bail, and must stay there.**
+Pinning is a fact about where the page *is*, not about how far it just
+travelled. With the order reversed, a jump straight to the top (the back-to-top
+button, a hash link) or a slow sub-threshold drift never reset the header and
+left it stranded off-screen at `y=0`. Both cases are regression-tested by
+hand: jump-to-top and a 2px-per-frame drift must both land at `transform: 0`. It is held visible while
 either header panel is open, and for 900ms after an in-page link is clicked so
 the smooth-scroll travel doesn't hide it mid-jump.
 
