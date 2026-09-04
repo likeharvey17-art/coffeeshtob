@@ -6,14 +6,16 @@
 # tie to any hosting provider — the site can move between Cloudflare Pages,
 # Vercel, a VPS or anywhere else and the CMS keeps working untouched.
 #
-# SETUP — `app_id` below still needs filling in before the deployed CMS will
-# work. See the "GitLab OAuth application" section in CLAUDE.md for the steps.
+# `app_id` is the public client identifier of the GitLab OAuth application —
+# not a secret. PKCE has no client secret, which is why this file can be served
+# to browsers as-is. The matching Redirect URI is registered in GitLab; see the
+# "GitLab OAuth application" section in CLAUDE.md.
 backend:
   name: gitlab
   repo: webtyr-group1/coffeeshtob-site
   branch: main
   auth_type: pkce
-  app_id: GITLAB_APPLICATION_ID # the Application ID from the GitLab OAuth app
+  app_id: af39ccfbe5bb4ee59709311c190894335b68583141af3d9c3a56fe3dfed3d604
 
 # Only takes effect on localhost; enables local editing via `npx decap-server`,
 # which bypasses auth entirely and works regardless of the backend above.

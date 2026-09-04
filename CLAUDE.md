@@ -41,21 +41,26 @@ server) to preview.
 
 ### GitLab OAuth application (one-time setup)
 
-`admin/config.yml` has two placeholders that must be filled before the
-deployed CMS will work: `repo` (your `namespace/project` path) and `app_id`.
-To get the `app_id`: GitLab → User Settings → Applications → Add new
-application.
+Both `repo` and `app_id` in `admin/config.yml` are filled in and working. The
+application is group-owned under `webtyr-group1` (note: that group's *display
+name* is "webtyr-group", the same as an unrelated second group — the path is
+what disambiguates them).
 
-- **Redirect URI** — the full admin URL, e.g. `https://example.pages.dev/admin/`.
-  This is the one host-dependent value. GitLab accepts several URIs, one per
-  line, so register every host you might use (production domain, preview
-  domain) up front and switching hosts needs no code change.
+The `app_id` is a public client identifier, not a secret: PKCE has no client
+secret, which is why `config.yml` can be served to browsers as-is. If the app
+is ever recreated: GitLab → the group → Settings → Applications → Add new
+application (projects have no Applications section — it exists only on groups
+and users).
+
+- **Redirect URI** — the full admin URL, currently
+  `https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/admin/`. This is the
+  one host-dependent value. GitLab accepts several URIs, one per line, so
+  register any new domain here *before* switching to it and no code changes.
+  Cloudflare preview URLs are wildcards and can never match, so the CMS only
+  logs in from production — that is expected.
 - **Confidential** — must be **unchecked**. PKCE has no client secret, and
   leaving this on breaks the flow.
 - **Scopes** — `api`.
-
-Copy the generated Application ID into `app_id`. There is no secret to store,
-which is the whole point: nothing sensitive ever lives in this repo.
 
 Signing in from `localhost` normally fails, because GitLab only redirects back
 to registered URIs. `admin/index.html` detects that case and points at
