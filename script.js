@@ -302,28 +302,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* Scroll-reveal for content blocks */
-  const revealTargets = document.querySelectorAll(
-    '.feature-card, .menu-card, .life-card, .info-card, .about-text'
-  );
-  revealTargets.forEach((el) => el.classList.add('reveal'));
+  /* Scroll-reveal for content blocks.
 
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
-    );
-    revealTargets.forEach((el) => observer.observe(el));
-  } else {
-    revealTargets.forEach((el) => el.classList.add('is-visible'));
-  }
+     Written as a rescan rather than a one-off, because render.js rebuilds the
+     card grids from the CMS *after* this runs — those are brand new elements
+     the observer has never seen. Without the `cms:rendered` hook below they
+     would keep `.reveal`'s opacity: 0 and the sections would look empty. */
+  const REVEAL_SELECTOR = '.feature-card, .menu-card, .life-card, .info-card, .about-text';
+  const supportsObserver = 'IntersectionObserver' in window;
+
+  const revealObserver = supportsObserver
+    ? new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+      )
+    : null;
+
+  /* Tracked by identity, not by the `.reveal` class. render.js rebuilds the
+     card grids by cloning the nodes already in the page — and by then those
+     nodes have been given `.reveal` here, so the clones arrive carrying it.
+     Using the class as the "already handled" marker therefore skipped every
+     rebuilt card: they kept `.reveal`'s opacity: 0, were never observed, and
+     stayed invisible for good. A WeakSet keys on the element itself, and a
+     clone is a different element. */
+  const revealSeen = new WeakSet();
+
+  const scanReveal = () => {
+    document.querySelectorAll(REVEAL_SELECTOR).forEach((el) => {
+      if (revealSeen.has(el)) return;
+      revealSeen.add(el);
+      el.classList.add('reveal');
+      if (revealObserver) revealObserver.observe(el);
+      else el.classList.add('is-visible');
+    });
+  };
+
+  scanReveal();
+  document.addEventListener('cms:rendered', scanReveal);
 
   /* Active nav link highlighting */
   const sections = ['about', 'menu', 'life', 'schedule', 'guests', 'contacts']

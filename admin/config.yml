@@ -24,10 +24,13 @@ local_backend: true
 # public_folder stays root-absolute so the CMS preview (which runs at /admin/)
 # resolves images correctly. render.js strips the leading slash when it injects
 # these into the page, so the live site still works if it is ever served from a
-# subpath rather than a domain root.
+# subdirectory. Do not "tidy" this into a relative path.
 media_folder: "images/uploads"
 public_folder: "/images/uploads"
 
+# Field names here must match the `data-cms-field` / `data-cms-list` /
+# `data-cms-item` attributes in index.html. Rename one and the other stops
+# being applied — silently, because render.js skips anything it cannot find.
 collections:
   - name: "home"
     label: "Главная страница"
@@ -36,9 +39,86 @@ collections:
         label: "Контент главной страницы"
         name: "home"
         fields:
-          - { label: "Заголовок (Hero)", name: "hero_title", widget: "string" }
-          - { label: "Текст (Hero)", name: "hero_lead", widget: "text" }
-          - { label: "Фото (Hero)", name: "hero_image", widget: "image" }
-          - { label: "Заголовок (О штабе)", name: "about_title", widget: "string" }
-          - { label: "Текст (О штабе)", name: "about_text", widget: "text" }
-          - { label: "Фото (О штабе)", name: "about_image", widget: "image" }
+          # ---- Первый экран -------------------------------------------------
+          - { label: "Заголовок (первый экран)", name: "hero_title", widget: "string" }
+          - { label: "Текст (первый экран)", name: "hero_lead", widget: "text" }
+          - label: "Фото (первый экран)"
+            name: "hero_image"
+            widget: "image"
+            hint: "Тёмная подложка поверх фото довольно плотная, поэтому подойдёт почти любой снимок — светлый или тёмный."
+
+          # ---- О штабе ------------------------------------------------------
+          - { label: "Заголовок «О штабе»", name: "about_title", widget: "string" }
+          - label: "Текст «О штабе»"
+            name: "about_text"
+            widget: "text"
+            hint: "Пустая строка между абзацами разделит их на странице."
+          - { label: "Фото «О штабе»", name: "about_image", widget: "image" }
+
+          - label: "Карточки «О штабе»"
+            name: "features"
+            widget: "list"
+            hint: "Значок у каждой карточки закреплён за её позицией в списке — он не переезжает вместе с карточкой."
+            fields:
+              - { label: "Фото", name: "image", widget: "image" }
+              - { label: "Заголовок", name: "title", widget: "string" }
+              - { label: "Текст", name: "text", widget: "text" }
+
+          # ---- Меню ---------------------------------------------------------
+          - { label: "Заголовок «Меню»", name: "menu_title", widget: "string" }
+          - { label: "Подзаголовок «Меню»", name: "menu_sub", widget: "text" }
+          - label: "Позиции меню"
+            name: "menu_items"
+            widget: "list"
+            fields:
+              - { label: "Фото", name: "image", widget: "image" }
+              - { label: "Название", name: "title", widget: "string" }
+              - { label: "Описание", name: "text", widget: "text" }
+
+          - { label: "Заголовок «Другие напитки»", name: "drinks_title", widget: "string" }
+          - { label: "Подзаголовок «Другие напитки»", name: "drinks_sub", widget: "text" }
+          - label: "Другие напитки"
+            name: "drinks_items"
+            widget: "list"
+            fields:
+              - { label: "Фото", name: "image", widget: "image" }
+              - { label: "Название", name: "title", widget: "string" }
+              - { label: "Описание", name: "text", widget: "text" }
+
+          # ---- Жизнь штаба --------------------------------------------------
+          - { label: "Заголовок «Жизнь штаба»", name: "life_title", widget: "string" }
+          - { label: "Подзаголовок «Жизнь штаба»", name: "life_sub", widget: "text" }
+          - label: "Блоки «Жизнь штаба»"
+            name: "life_items"
+            widget: "list"
+            fields:
+              - { label: "Фото", name: "image", widget: "image" }
+              - { label: "Заголовок", name: "title", widget: "string" }
+              - { label: "Текст", name: "text", widget: "text" }
+
+          # ---- График и гостям ----------------------------------------------
+          - { label: "Заголовок раздела «График»", name: "schedule_title", widget: "string" }
+          - { label: "Подзаголовок раздела «График»", name: "schedule_sub", widget: "text" }
+          - { label: "Заголовок «График работы»", name: "hours_title", widget: "string" }
+          - label: "Часы работы"
+            name: "hours"
+            widget: "list"
+            hint: "Если поменяете часы, поправьте их и в разметке для поисковиков — см. CLAUDE.md."
+            fields:
+              - { label: "Дни", name: "label", widget: "string" }
+              - { label: "Время", name: "time", widget: "string" }
+          - { label: "Примечание под графиком", name: "hours_note", widget: "string" }
+
+          - { label: "Заголовок «Гостям города»", name: "guests_title", widget: "string" }
+          - { label: "Текст «Гостям города»", name: "guests_text", widget: "text" }
+          - { label: "Заголовок «Как перебраться»", name: "ferry_title", widget: "string" }
+          - { label: "Текст «Как перебраться»", name: "ferry_text", widget: "text" }
+
+          # ---- Подвал -------------------------------------------------------
+          - { label: "О штабе (в подвале)", name: "footer_about", widget: "text" }
+          - { label: "Адрес", name: "address", widget: "text" }
+          - { label: "Ориентир", name: "address_note", widget: "text" }
+          - label: "Телефон"
+            name: "phone"
+            widget: "string"
+            hint: "Меняет только видимый текст. Сама ссылка «позвонить» правится в index.html."

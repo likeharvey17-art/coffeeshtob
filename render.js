@@ -74,6 +74,49 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tries > 0) requestAnimationFrame(() => restoreHashPosition(tries - 1));
   };
 
+  /* Repeatable sections (features, menu, drinks, Жизнь штаба, opening hours).
+
+     The markup already in the page IS the template: each container's existing
+     children are captured once, then rebuilt from the array. That keeps the
+     static HTML meaningful — it is the no-JS fallback and what a crawler sees —
+     instead of leaving an empty <div> waiting on fetch.
+
+     Templates are captured per index and reused cyclically. That matters for
+     the feature cards: each carries its own inline SVG icon, and cloning only
+     the first would give all four the same one. A fifth item added in the CMS
+     reuses the first icon, which is the sane degradation. */
+  const renderList = (container, items) => {
+    if (!Array.isArray(items) || !items.length) return;
+
+    let templates = container.__cmsTemplates;
+    if (!templates) {
+      templates = Array.from(container.children).map((el) => el.cloneNode(true));
+      container.__cmsTemplates = templates;
+    }
+    if (!templates.length) return;
+
+    const built = items.map((item, i) => {
+      const node = templates[i % templates.length].cloneNode(true);
+      Object.entries(item).forEach(([key, value]) => {
+        if (value == null) return;
+        const slot = node.querySelector(`[data-cms-item="${key}"]`);
+        if (!slot) return;
+        if (slot.tagName === 'IMG') {
+          slot.src = toRelative(value);
+          /* alt text belongs to the picture, not the template it was cloned
+             from — a stale alt is worse than a generic one. */
+          if (item.alt) slot.alt = item.alt;
+          else if (item.title) slot.alt = String(item.title);
+        } else {
+          slot.textContent = String(value);
+        }
+      });
+      return node;
+    });
+
+    container.replaceChildren(...built);
+  };
+
   fetch('content/home.json', { cache: 'no-store' })
     .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
     .then((data) => {
@@ -82,6 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (value == null) return;
         applyField(el, value);
       });
+
+      document.querySelectorAll('[data-cms-list]').forEach((container) => {
+        renderList(container, data[container.dataset.cmsList]);
+      });
+
+      /* script.js sets up scroll-reveal before this fetch resolves, so any card
+         rebuilt above is a new element its IntersectionObserver never saw. Tell
+         it to pick them up, or CMS-rendered cards would sit at opacity 0. */
+      document.dispatchEvent(new CustomEvent('cms:rendered'));
     })
     .catch(() => {
       /* content/home.json missing or unreachable — static fallback markup stays as-is */

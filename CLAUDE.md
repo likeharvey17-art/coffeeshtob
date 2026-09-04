@@ -17,12 +17,29 @@ server) to preview.
   button. Also measures the sticky header and publishes its height as
   `--header-h`, which `scroll-padding-top` uses to keep anchor targets from
   landing underneath the header.
-- `render.js` — swaps CMS copy from `content/home.json` into any element
-  carrying `data-cms-field`, then re-applies the URL hash once fonts and copy
-  have settled (the browser's own anchor jump happens before that and lands
-  in the wrong place). Falls back silently to the static markup if the JSON
-  is missing.
-- `content/home.json` — the CMS-editable copy. Image paths here are
+- `render.js` — applies `content/home.json` to the page, then re-applies the
+  URL hash once fonts and copy have settled (the browser's own anchor jump
+  happens before that and lands in the wrong place). Falls back silently to the
+  static markup if the JSON is missing. Three attributes drive it:
+  - `data-cms-field="name"` — a single value. Text goes in as text; an `<img>`
+    gets its `src` (via `toRelative`).
+  - `data-cms-list="name"` — a repeatable container. **Its existing children are
+    the template**, captured once and rebuilt from the array, so the static HTML
+    stays the meaningful no-JS fallback instead of an empty div awaiting fetch.
+    Templates are reused *by index*, which is what preserves the four different
+    inline SVG icons on the feature cards; a fifth item reuses the first icon.
+  - `data-cms-item="key"` — a slot inside a list child.
+
+  After rendering it fires a `cms:rendered` event, which `script.js` listens for
+  to observe the rebuilt cards (see the scroll-reveal note under Responsive
+  behavior). Without it those cards keep `.reveal`'s `opacity: 0` forever.
+- `content/home.json` — the CMS-editable copy: **the whole page**, not just the
+  hero. Section headings and subtitles, all four feature cards, the menu and
+  drinks lists, both Жизнь штаба blocks, the opening hours, the two info blocks
+  and the footer contact details. Field names must match the `data-cms-*`
+  attributes in `index.html` **and** the field names in `admin/config.yml` —
+  rename one of the three and the value silently stops being applied, because
+  `render.js` skips anything it cannot find. Image paths here are
   **root-absolute** (`/images/…`), and `admin/config.yml`'s `public_folder`
   must match: the CMS preview runs at `/admin/`, so a relative path would
   resolve to `/admin/images/…` and 404. The live site does *not* want them
@@ -362,6 +379,13 @@ different markup. It bails out early if there is no `.site-header`, and every
 reference to an element the legal pages lack (`#toTop`, `#main-nav`,
 `#socialBtn`, `#navToggle`) is guarded — one unguarded null throws on
 `DOMContentLoaded` and silently kills every other behaviour in the file.
+
+Scroll-reveal is a **rescan**, not a one-off pass, and it tracks handled
+elements in a `WeakSet` rather than by the `.reveal` class. `render.js` rebuilds
+the card grids by cloning nodes that by then already carry `.reveal`, so the
+clones arrive with the class — using it as the "already handled" marker skipped
+every rebuilt card, leaving them at `opacity: 0` permanently. A clone is a
+different element, so identity is the only marker that works here.
 
 The back-to-top button rides the same gesture as the header: it appears only
 while scrolling **up** and past 480px, and hides again on any downward scroll.
