@@ -190,6 +190,40 @@ they are the only thing separating entries. `.feature-grid` 34/54px,
 `.menu-grid` 28/46px, `.life-grid` 40/54px, `.info-grid` 44px. Shrinking them
 back toward the old 20px brings back the cramped look the boxes were hiding.
 
+## Icons and SEO
+
+`favicon.svg` is the source of truth for the brand mark at small sizes. It is
+**not** the header's cup: that one is stroked at width 2 and turns to mush in a
+16px tab, so the favicon redraws the same cup in solid silhouette with nothing
+thinner than 5/64 of the canvas. The saucer earns its place — without it the cup
+reads as an anonymous white blob at tab size — and the gap above it is
+deliberate, because closing it makes the two shapes merge when downscaled.
+
+The raster icons (`favicon.ico`, `apple-touch-icon.png`, `icon-192/512.png`)
+are generated from the **same geometry** with Pillow, not traced by hand; if the
+SVG changes they must be regenerated to match. Two things that bit during
+generation and will bite again:
+
+- The working canvas must be **several times** the output size. Drawing at 1:1
+  produces hard jaggies — an early `icon-512.png` came out with 3 distinct
+  colours because the supersample happened to land exactly on 512 and the
+  downscale became a no-op.
+- `apple-touch-icon.png` is deliberately **square with no transparency**. iOS
+  applies its own corner mask, so baked-in rounding leaves dark wedges.
+
+`og-image.jpg` (1200×630) is generated too, in Georgia — which is the CSS
+fallback for Playfair Display, so the social card matches the site.
+
+Absolute URLs live in four places: `<link rel="canonical">`, the `og:`/`twitter:`
+tags and the JSON-LD in `index.html`, the same in `privacy.html`, plus
+`robots.txt` and `sitemap.xml`. **They all point at the current production host
+and must be changed together** if a custom domain is added.
+
+The JSON-LD is `CafeOrCoffeeShop` and contains only facts that are on the page —
+no invented geo coordinates, no made-up `priceRange`. Its
+`openingHoursSpecification` mirrors `#schedule`; change both together or the
+rich result will contradict the page.
+
 ## Image placeholders
 
 Every spot that should eventually carry a real photo already has a real

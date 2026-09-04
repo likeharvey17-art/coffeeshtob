@@ -3,29 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Кофештаб «Романов на Волге»</title>
+<title>Кофештаб — кофейня в Тутаеве (Романов), Волжская набережная</title>
 <meta name="description" content="Кофейня в купеческом доме на Волжской набережной, Романов (Тутаев, левый берег). Хороший кофе, местные продукты, книги, настолки и своя 3D-мастерская.">
 <meta name="theme-color" content="#fdfbf8">
 
-<!-- Favicon: the brand coffee cup in the coffee-brown accent. Inline, so no extra request. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234a3b30'/%3E%3Cg fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' transform='translate(2.4 2.4) scale(0.8)'%3E%3Cpath d='M18 8h1a4 4 0 0 1 0 8h-1'/%3E%3Cpath d='M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z'/%3E%3Cpath d='M6 1v3M10 1v3M14 1v3'/%3E%3C/g%3E%3C/svg%3E">
+<!-- All absolute URLs below point at the current production host. Change them
+     together if the site moves to a custom domain — and register that domain's
+     /admin/ as a GitLab redirect URI first (see CLAUDE.md). -->
+<link rel="canonical" href="https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/">
 
-<!-- Open Graph / Twitter — so links shared in Telegram and ВКонтакте get a preview.
-     TODO: og:url, og:image and rel=canonical need the final production domain;
-     add them once it's known (both must be absolute URLs to work). -->
+<!-- Icons. favicon.svg covers modern browsers at any size; favicon.ico carries
+     16/32/48/64/128/256 for older ones and for crawlers that still fetch
+     /favicon.ico by convention. -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Кофештаб «Романов на Волге»">
 <meta property="og:locale" content="ru_RU">
-<meta property="og:title" content="Кофештаб «Романов на Волге»">
+<meta property="og:title" content="Кофештаб — кофейня в Тутаеве (Романов)">
 <meta property="og:description" content="Кофейня в купеческом доме на Волжской набережной, Романов (Тутаев, левый берег). Хороший кофе, местные продукты, книги, настолки и своя 3D-мастерская.">
+<meta property="og:url" content="https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/">
+<meta property="og:image" content="https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Кофештаб — кофейня в купеческом доме на Волжской набережной">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Кофештаб «Романов на Волге»">
+<meta name="twitter:title" content="Кофештаб — кофейня в Тутаеве (Романов)">
 <meta name="twitter:description" content="Кофейня в купеческом доме на Волжской набережной, Романов (Тутаев, левый берег). Хороший кофе, местные продукты, книги, настолки и своя 3D-мастерская.">
+<meta name="twitter:image" content="https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/og-image.jpg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- Structured data. Only facts that are actually on the page — no invented
+     geo coordinates, no made-up price range. Opening hours mirror #schedule;
+     change both together or the rich result will contradict the page. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  "name": "Кофештаб «Романов на Волге»",
+  "description": "Кофейня в купеческом доме на Волжской набережной, Романов (Тутаев, левый берег). Хороший кофе, местные продукты, книги, настолки и своя 3D-мастерская.",
+  "url": "https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/",
+  "image": "https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/og-image.jpg",
+  "telephone": "+79290786500",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Волжская набережная, 19",
+    "addressLocality": "Тутаев",
+    "addressRegion": "Ярославская область",
+    "addressCountry": "RU"
+  },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+      "opens": "15:15",
+      "closes": "19:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Saturday","Sunday"],
+      "opens": "10:00",
+      "closes": "20:00"
+    }
+  ],
+  "sameAs": [
+    "https://t.me/coffeeshtob",
+    "https://vk.com/coffeeshtob"
+  ]
+}
+</script>
 </head>
 <body>
 

@@ -1,0 +1,6 @@
+# The CMS is a private editing surface, not a page — keep it out of the index.
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://coffeeshtob-site-cc.haknisvouzizn.workers.dev/sitemap.xml
