@@ -221,10 +221,16 @@ canonical or sitemap URL that redirects is one search engines disregard, and it
 put a needless redirect on every footer click. Adding a page means linking it
 without the extension too.
 
-`404.html` exists and is styled, and carries `noindex, follow`. Whether
-Cloudflare actually serves it depends on the Worker's `not_found_handling`
-setting; if a missing path returns a bare 404 body, that is the setting, not the
-file.
+`404.html` exists, is styled and carries `noindex, follow`. **Cloudflare does
+not currently serve it** — an unknown path returns an empty 404 body. Serving it
+needs `assets.not_found_handling`, which lives in `wrangler.jsonc`, and that
+file is inert because this Worker was created through the dashboard and its
+build never runs `wrangler deploy`. Confirmed by `GET /wrangler.jsonc` returning
+200: Cloudflare is treating the config as content.
+
+To switch it on: Worker → Settings → Builds → deploy command `npx wrangler
+deploy`. Nothing in the repo needs to change. Until then the page is reachable
+at `/404` and does no harm.
 
 `llms.txt` is a plain-language summary for assistants and crawlers — hours,
 address, phone, what the place does. Keep it in step with the page; it is the
