@@ -4,6 +4,26 @@ Single-page marketing site for a coffee hub ("Кофештаб") in a historic m
 house on the Volga embankment in Romanov (Tutaev, left bank), Yaroslavl
 region, Russia. Content is entirely in Russian.
 
+## Current state
+
+Live and in the owner's hands. The whole page is CMS-editable, the menu carries
+prices, and most placeholder images have been replaced with real photos. Read
+"Things deliberately not built" before proposing a feature — several obvious
+additions were considered and rejected for reasons that still apply.
+
+Known open items, in rough priority order:
+
+1. **GitLab pipeline failures** — every CMS save may still mail a failed-pipeline
+   notice. Not confirmed fixed; see Deployment.
+2. **Custom domain** — the owner will add one. Six files carry the current host
+   and change together, and the GitLab Redirect URI must be registered *first*.
+3. **`404.html` is not served** by Cloudflare; the fix is risky. See Icons and SEO.
+4. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
+5. **CMS body copy is applied by JS**, which Yandex renders less reliably than
+   Google. The SEO-critical signals (title, meta description, JSON-LD, `llms.txt`)
+   are static HTML and unaffected, but a Yandex indexing complaint would start
+   here.
+
 ## Stack
 
 Plain HTML/CSS/JS. No build step, no framework, no package.json. Open
@@ -50,6 +70,13 @@ server) to preview.
   leading slash when injecting them (`toRelative`). Net effect: identical at a
   domain root, and still correct if the site is ever served from a
   subdirectory. Verified by serving the site under `/my-repo/`.
+
+  Field *names* are the stable identifiers; the visible headings are content and
+  the owner changes them. `drinks_title` currently reads «Также в штабе», not
+  «Другие напитки» — the label in `admin/config.yml` still says the latter, which
+  is cosmetic but worth knowing when matching a heading on the page to a field.
+  Refer to sections by list name (`menu_items`, `drinks_items`) rather than by
+  whatever the heading says today.
 - `admin/` — Decap CMS (`config.yml` + loader page), **GitLab backend with
   PKCE**. Chosen for host-portability: PKCE runs entirely in the browser, so
   the CMS needs no server component and nothing ties it to a hosting provider.
@@ -97,6 +124,19 @@ nothing.
   server access logs. If the operator's legal details (юрлицо/ИП, ОГРН, ИНН,
   e-mail) are ever added, they belong here; they were left out rather than
   invented.
+
+  Currently ~155 words: a lead callout plus four `<h2>` sections — Шрифты,
+  Записи сервера, Ссылки на другие сайты, Если есть вопросы. It was rewritten
+  twice to get there, the second time explicitly to sound less machine-written,
+  so **don't pad it back out** with the usual boilerplate headings ("Правовые
+  основания", "Сроки хранения"). Short is the point.
+
+  **The opening callout is load-bearing beyond this page.** It asserts, in
+  Russian, that the site collects nothing, has no forms, no registration and no
+  visit counters, and sets no cookies. Adding *any* of those — a form, Yandex
+  Metrica, Google Analytics, a chat widget, a consent banner — makes this page
+  factually false, and it must be rewritten in the same commit. See "Things
+  deliberately not built".
 - `images/placeholder.svg` — neutral blank placeholder graphic (cream
   background + line-art frame icon) used everywhere a real photo is pending
 
@@ -109,8 +149,10 @@ no build step, no CI config and no build command; Cloudflare serves the repo
 root as static assets.
 
 Measured: a push went live in ~40s. Verified end to end on the deployed site —
-`/`, `/admin/` and `/privacy.html` all resolve (Worker asset serving handles
+`/`, `/admin/` and `/privacy` all resolve (Worker asset serving handles
 directory paths, so `/admin/` correctly maps to `admin/index.html`).
+`/privacy.html` also works but 307s to `/privacy`; see the extensionless-URL note
+under Icons and SEO.
 
 Live URL: `https://coffeeshtob-site-cc.haknisvouzizn.workers.dev`. The
 `workers.dev` *Preview* URL is deliberately left disabled: it is a wildcard,
@@ -140,7 +182,19 @@ rules; an unreachable job makes the config invalid, and an invalid config *is* a
 failed pipeline. That exact mistake was made here and produced the very emails
 the file was added to stop. The `workflow` rule is what prevents it running.
 
-Turning CI/CD off in the project settings makes the file redundant entirely.
+**Status: not confirmed fixed.** The current version of the file landed in
+`26dc1c1`, and the owner reported another failed-pipeline email *after* that. It
+was never established whether that email belonged to a commit made before the
+fix (GitLab mails asynchronously, and the CMS commits carry author timestamps
+from a different timezone, so ordering by the log is unreliable) or whether the
+config is still wrong. **The actual pipeline error text was never seen** — ask
+for it before theorising, it is on the pipeline page in GitLab.
+
+**Recommended resolution, and the one to push for: turn CI/CD off in the project
+settings** — Settings → General → Visibility → CI/CD off. That removes the whole
+class of problem instead of negotiating with it, and `.gitlab-ci.yml` can then be
+deleted. Two rounds of trying to write a config that does nothing have each cost
+more than the setting would have.
 
 An earlier version of that file deployed to Beget over FTPS. It was replaced
 when hosting moved to Cloudflare; the FTP version is in git history if Beget
@@ -148,7 +202,7 @@ ever comes back.
 
 ## Sections (in DOM order)
 
-`#top` header → hero → `#about` (О штабе) → `#menu` (Меню + Другие напитки)
+`#top` header → hero → `#about` (О штабе) → `#menu` (`menu_items` + `drinks_items`)
 → `#life` (Жизнь штаба) → `#schedule` (includes `#guests` sub-anchor) →
 footer (`#social`, and `#contacts` at the very end).
 
@@ -240,7 +294,7 @@ they are the only thing separating entries. `.feature-grid` 34/54px,
 ## The menu is a list, not a grid
 
 `.menu-list` / `.menu-item` replaced the old four-across photo grid, for both
-«Меню» and «Другие напитки». A grid of large square photos is fine at four items
+both list sections in `#menu`. A grid of large square photos is fine at four items
 and falls apart past that — a fixed column count leaves orphans on the last row,
 and on a phone each item costs a full screen of scrolling. Prices make it a menu
 proper, and a menu reads as rows: small square thumbnail, name and price on one
@@ -308,10 +362,22 @@ Until then the page is reachable at `/404` and does no harm.
 address, phone, what the place does. Keep it in step with the page; it is the
 one file that repeats content rather than linking to it.
 
-Absolute URLs live in four places: `<link rel="canonical">`, the `og:`/`twitter:`
-tags and the JSON-LD in `index.html`, the same in `privacy.html`, plus
-`robots.txt` and `sitemap.xml`. **They all point at the current production host
-and must be changed together** if a custom domain is added.
+Absolute URLs to the production host live in **six files** — verify with
+`grep -rl haknisvouzizn . --exclude-dir=.git`, which is the authoritative list
+rather than this paragraph:
+
+- `index.html` — `canonical`, `og:url`, `og:image`, `twitter:image`, and `url` +
+  `image` in the JSON-LD
+- `privacy.html` — `canonical`, `og:url`, `og:image`
+- `robots.txt` — the `Sitemap:` line
+- `sitemap.xml` — both `<loc>` entries
+- `llms.txt` — the two links at the bottom
+- `CLAUDE.md` — this file (the OAuth Redirect URI and the Live URL note)
+
+**They must all change together** if a custom domain is added, and the new
+`/admin/` URL has to be registered as a GitLab Redirect URI *before* the switch,
+or the CMS login breaks the moment the domain goes live. See "GitLab OAuth
+application" above.
 
 The JSON-LD is `CafeOrCoffeeShop` and contains only facts that are on the page —
 no invented geo coordinates, no made-up `priceRange`. Its
@@ -320,10 +386,26 @@ rich result will contradict the page.
 
 ## Image placeholders
 
-Every spot that should eventually carry a real photo already has a real
-`<img>` tag pointing at `images/placeholder.svg`, wrapped in a `.img-frame`
-div that fixes the aspect ratio (so swapping images later causes no layout
-shift):
+Most spots now carry **real photos**, uploaded through the CMS into
+`images/uploads/` — hero, About, all four feature cards, both Жизнь штаба blocks
+and most menu items. Three list items are still on the placeholder (Романовский
+квас, Горячее какао, Ароматный цикорий); `content/home.json` is the live answer
+to which. That means the "generic AI landing page" risk has largely passed —
+don't reintroduce stock-looking imagery.
+
+Two things learned from those uploads:
+
+- **HEIC does not render in any desktop browser.** An `img_4981.heic` was
+  uploaded and showed as a broken image; it was deleted in `fd2c9e2`. The CMS
+  will happily accept one, so if a photo silently fails to appear, check the
+  extension first.
+- Filenames come straight from the phone (`photo_2026-08-28-23.14.08.jpeg`) and
+  are not worth renaming — the paths live in `content/home.json`, which the CMS
+  rewrites.
+
+Every remaining placeholder spot still has a real `<img>` tag pointing at
+`images/placeholder.svg`, wrapped in a `.img-frame` div that fixes the aspect
+ratio (so swapping images later causes no layout shift):
 
 - `.img-frame--square` — feature/menu/drink card thumbnails (1:1)
 - `.img-frame--about` — About section photo (4:3)
@@ -444,3 +526,69 @@ nothing. The rule keeps a `hidden` declaration first as a Safari < 16 fallback,
 with `clip` inside `@supports`. This is a deliberate safeguard against the
 absolutely-positioned hero background causing horizontal scroll on mobile —
 don't remove it without checking mobile widths again.
+
+## Things deliberately not built
+
+**A review / feedback form.** Discussed and declined. The form itself is trivial;
+what it drags in is not, and all four reasons still stand:
+
+- The site would start processing personal data under Russian **152-ФЗ**. That
+  requires a consent checkbox and a policy naming the operator (юрлицо/ИП, ОГРН,
+  ИНН) — exactly the details deliberately left blank rather than invented.
+- 152-ФЗ also requires personal data of Russian citizens to be stored **on
+  servers in Russia**. Cloudflare KV/D1 is not, so the obvious serverless
+  implementation conflicts with the hosting.
+- It invalidates `privacy.html`'s opening callout (see above).
+- A public form on an indexed site gets bot submissions within days, so it comes
+  with a permanent moderation duty for a small café.
+
+The recommended alternative, if reviews come up again: **link out to Yandex
+Maps**, where reviews already live, are searched, and affect whether the place
+gets found — zero legal exposure, zero moderation. Second-best: curated
+testimonials pasted into the CMS, no form. A third shape that avoids the storage
+problem is form → Worker → Turnstile → email to the owner, nothing persisted.
+
+**Analytics.** Never added, for the same privacy-notice reason. Anything with
+cookies or a visitor counter needs the notice rewritten first.
+
+**Netlify Identity.** Deliberately absent everywhere; the CMS uses GitLab PKCE
+precisely so the public page stays cookie-free.
+
+**`wrangler.jsonc`.** See the 404 note under Icons and SEO — it was tried and
+reverted, and it is suspected (never proven) to have silently stopped deploys.
+
+## Working on this project
+
+Conventions that come from the owner, not from the code:
+
+- **Never invent facts.** Prices, geo coordinates, legal identifiers, e-mail
+  addresses, opening hours. Ask, or leave it out. Several gaps in this project
+  are gaps on purpose.
+- **The owner pushes.** `git push` runs in their own terminal because the
+  credential prompt is interactive. Commit locally and tell them; don't try to
+  push.
+- **The repo root is the web root.** Every file added is world-readable at its
+  path, `CLAUDE.md` included. Nothing secret goes in.
+- **Design direction: fewer boxes, less "AI landing page".** This has come up
+  repeatedly — the rounded-rectangle-per-block look was removed on purpose, and
+  a 20-item checklist of AI-site tells was worked through. Adding a card
+  background, a gradient blob or an icon-in-a-circle walks it back.
+- **Mobile is the priority surface**, and specifically **Telegram's in-app
+  browser** — that webview is where the sticky-header sliver bug appeared and it
+  is a real part of this café's traffic.
+
+Verification habits that were learned the hard way here:
+
+- **Browser memory-cache served stale JS/CSS and produced false test results
+  three separate times.** Spin a *fresh* `python3 -m http.server` on a new port
+  for each verification round rather than reloading the old one.
+- **Assert expected counts before trusting an extraction.** A regex HTML edit
+  once silently produced one item per list instead of four, and only an explicit
+  count assertion caught it.
+- **Measure contrast on rendered elements**, not on the token values — the
+  tightest pairing on the page (`--accent-mid` on `--cream-alt`, 4.69:1) was only
+  visible that way.
+- **Don't conclude a deploy has broken from one stale response.** That call was
+  made once on edge-cache evidence and led to a push on a wrong premise. Check
+  the Cloudflare deployment log.
+- Judge icons on a contact sheet at **real tab sizes**, not at 512px.
