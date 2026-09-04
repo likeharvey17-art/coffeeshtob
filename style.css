@@ -463,60 +463,60 @@ p { margin: 0; }
   z-index: 0;
 }
 
-/* ===== Grids / cards ===== */
+/* ===== Grids / entries =====
+
+   These used to be bordered white boxes on a near-white page — the "every
+   piece of content in its own rounded rectangle" pattern. The photo, the
+   heading and the spacing carry the grouping instead, so entries sit directly
+   on the page and the eye follows the images rather than a grid of frames.
+   Only one thing on the page is still boxed: the opening-hours panel, which
+   earns it by being a table people scan for (see .info-card--panel).
+
+   Without card padding the grids need their own air, so the gaps below are
+   deliberately large — that whitespace IS the separation now. Reducing it
+   brings back the crowded look the boxes were compensating for. */
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-.feature-card, .menu-card, .life-card, .info-card {
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 30px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-.feature-card:hover, .menu-card:hover, .life-card:hover, .info-card:hover {
-  border-color: var(--accent-mid);
-  box-shadow: 0 10px 26px rgba(43, 33, 25, 0.07);
-  transform: translateY(-2px);
-}
-.feature-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: rgba(123, 100, 80, 0.13); /* --accent-mid, washed out */
-  color: var(--accent-dark);
-  margin-bottom: 18px;
+  column-gap: 34px;
+  row-gap: 54px;
 }
 .feature-card h3, .menu-card h3, .life-card h3, .info-card h3 {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
+  line-height: 1.25;
   margin-bottom: 10px;
 }
+.info-card h3 { font-size: 1.15rem; }
 .feature-card p, .menu-card p, .life-card p, .info-card p {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 0.96rem;
+}
+
+/* The icon kept its meaning but lost its chip: a 46px tinted circle behind a
+   line icon is stock landing-page furniture, and with the boxes gone there is
+   nothing for it to sit against. */
+.feature-icon {
+  display: inline-flex;
+  color: var(--accent-mid);
+  margin-bottom: 12px;
 }
 
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  column-gap: 28px;
+  row-gap: 46px;
 }
 .menu-grid-3 { grid-template-columns: repeat(3, 1fr); }
-.menu-card { padding: 26px; }
 
 .subsection { margin-top: 80px; }
 
 .life-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  column-gap: 40px;
+  row-gap: 54px;
 }
-.life-card { padding: 36px; }
 .life-card p + p { margin-top: 14px; }
 
 /* Two cards on the first row, and the short «Как перебраться» card spanning
@@ -527,9 +527,22 @@ p { margin: 0; }
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  column-gap: 44px;
+  row-gap: 44px;
+  align-items: start;
 }
 .info-card--wide { grid-column: 1 / -1; }
+
+/* The one panel left on the page. It keeps a box because it is the only
+   tabular thing here — people scan for opening hours, and the frame is what
+   makes it findable at a glance. Being the sole boxed element is the point:
+   it reads as emphasis rather than as the page's default container. */
+.info-card--panel {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 30px;
+}
 .schedule-list {
   display: flex;
   flex-direction: column;
@@ -827,7 +840,7 @@ p { margin: 0; }
   .section { padding: 48px 0; }
   .section-head { margin-bottom: 32px; }
   .subsection { margin-top: 44px; }
-  .feature-card, .menu-card, .life-card, .info-card { padding: 22px; }
+  .info-card--panel { padding: 22px 24px; }
   .badge {
     font-size: 0.78rem;
     padding: 8px 14px;
@@ -853,8 +866,5 @@ p { margin: 0; }
     scroll-behavior: auto !important;
   }
   .reveal { opacity: 1; transform: none; }
-  .btn:hover,
-  .feature-card:hover, .menu-card:hover, .life-card:hover, .info-card:hover {
-    transform: none;
-  }
+  .btn:hover, .to-top:hover { transform: none; }
 }

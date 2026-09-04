@@ -119,7 +119,7 @@ this applies and the hero stays a plain block.
   - `--accent` / `--accent-dark` — coffee brown, for buttons and links on
     light backgrounds.
   - `--accent-mid` — lighter brown, for small accents on light backgrounds
-    (section eyebrow labels, card hover borders). Its value is pinned at
+    (section eyebrow labels, the feature icons). Its value is pinned at
     4.69:1 against `--cream-alt`, the tightest pairing on the page; darken it
     rather than lighten it if you change it.
   - `--accent-light` — light brown, the only one legible on `--dark`
@@ -132,6 +132,27 @@ this applies and the hero stays a plain block.
   from Google Fonts in `<head>`.
 - Shape language: pill buttons/nav (`--radius-full`), rounded cards
   (`--radius-lg` / `--radius-md`).
+
+## Content is not boxed
+
+Entries in the About, Menu and Жизнь штаба sections (`.feature-card`,
+`.menu-card`, `.life-card` — the class names are historical) sit **directly on
+the page**: no background, border, radius, padding or hover lift. The photo,
+the heading and the whitespace do the grouping. This was a deliberate move away
+from the "every block of content in its own rounded rectangle" look.
+
+Exactly one thing in `<main>` is still framed: `.info-card--panel`, the
+opening-hours table. It keeps a box because it is the only tabular content on
+the page and people scan for it — and being the *only* boxed element is what
+makes it read as emphasis. Its two siblings in `#schedule` («Гостям города»,
+«Как перебраться») are plain text. **Don't re-add box styling to the shared
+`.info-card` selector** — that would silently re-box those two and destroy the
+distinction.
+
+Because there is no card padding any more, the grid gaps are load-bearing:
+they are the only thing separating entries. `.feature-grid` 34/54px,
+`.menu-grid` 28/46px, `.life-grid` 40/54px, `.info-grid` 44px. Shrinking them
+back toward the old 20px brings back the cramped look the boxes were hiding.
 
 ## Image placeholders
 
