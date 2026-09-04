@@ -208,6 +208,19 @@ p { margin: 0; }
 
 .nav-social-btn { padding: 10px 22px; font-size: 0.9rem; flex-shrink: 0; }
 
+/* Legal pages (privacy.html, 404.html) carry a two-item header — brand, then a
+   single "На главную" button — so there is no .main-nav in between to take up
+   the slack with its `margin: 0 auto`, and the button ends up sitting against
+   the brand instead of at the right edge.
+
+   Keyed on the adjacency rather than a modifier class on purpose: it is the
+   *absence of the nav* that needs correcting, and matching that structurally
+   covers both legal pages at once and any future one, with no way to add a page
+   and forget the class. On index.html the nav sits between the two, so this
+   never matches there. Below 860px it is redundant — .nav-social-btn already
+   takes `margin-left: auto` on every page — but harmless, being the same value. */
+.brand + .nav-social-btn { margin-left: auto; }
+
 /* Three plain lines — no circle, no border. Shown only below 860px. */
 .nav-toggle {
   display: none;
@@ -289,7 +302,25 @@ p { margin: 0; }
 /* ===== Hero ===== */
 .hero {
   position: relative;
-  min-height: 88vh;
+  /* Fills the viewport below the header exactly, at every width and every window
+     height. This replaced a flat 88vh, which could only be right at one window
+     height: the header sits above the hero in flow, so the leftover strip below
+     the hero is `0.12 * height - header`. That is negative on a short window
+     (hero overshoots, harmless) and positive on a tall one — around 8px of cream
+     showing under the hero at 900px tall, 20px at 1000px. It read as a stray
+     white line along the bottom of the photo. Subtracting the measured header
+     instead makes the strip zero at any size.
+
+     `dvh` with a `vh` fallback: on mobile Safari and Chrome `100vh` is the
+     *large* viewport — the height with the address bar hidden — so a 100vh hero
+     is taller than the screen actually is while the bar is showing. `dvh` tracks
+     the bar. On desktop the two are identical. The `vh` line is for browsers
+     without `dvh`; it errs slightly tall, which is the harmless direction.
+
+     `min-height`, not `height`: a short window must still be able to grow the
+     hero rather than clip the copy. */
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -928,22 +959,7 @@ p { margin: 0; }
 
 @media (max-width: 640px) {
   .container { padding: 0 18px; }
-  /* The hero fills the phone screen exactly, so #about is not peeking in at the
-     bottom when the site first opens. The header sits above the hero in flow,
-     so subtracting it lands the hero's bottom edge on the fold rather than
-     pushing it a header's height past it.
-
-     `dvh`, not `vh`: on mobile Safari and Chrome `100vh` is the *large* viewport
-     — the height with the address bar hidden — so a 100vh hero is taller than
-     the screen actually is while the bar is showing, and #about peeks in anyway.
-     `dvh` tracks the bar. The `vh` line above is the fallback for browsers
-     without `dvh`; it errs slightly tall, which is the harmless direction.
-
-     `min-height`, not `height`: a short landscape screen must still be able to
-     grow the hero rather than clip the copy. */
   .hero {
-    min-height: calc(100vh - var(--header-h));
-    min-height: calc(100dvh - var(--header-h));
     /* Unlike desktop this keeps a small bottom padding rather than zeroing it.
        It biases the buttons ~12px above true centre, which is imperceptible,
        and it is the only thing standing between the last button and the section

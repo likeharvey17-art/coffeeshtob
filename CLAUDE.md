@@ -247,16 +247,41 @@ badge, sitting directly under the sticky header) and `.hero-inner` (headline,
 lead, buttons). Both children carry the same `max-width`/`padding`, so the
 badge stays left-aligned with the `h1`; change one and change the other.
 
-`.hero-inner` centres itself via `margin: auto` — except above 861px, where a
-desktop-only block re-does the vertical rhythm so the buttons sit midway
-between the lead text and the hero's bottom edge. There, `.hero-inner` grows
-to fill the hero (`flex: 1`) and three `auto` margins — above the `h1`, above
-and below `.hero-actions` — split the leftover space into equal thirds, which
-is exactly the centring condition. It re-solves at any viewport height, so
-don't replace it with fixed pixel offsets. That block also zeroes the hero's
-`padding-bottom`: auto margins divide the *content* box, so leaving the
-padding on would push the buttons half of it too high. Below 861px none of
-this applies and the hero stays a plain block.
+**The hero fills the viewport below the header at every width:**
+`min-height: calc(100dvh - var(--header-h))`, with a `100vh` line above it as
+the fallback. This replaced a flat `88vh`, which could only ever be right at one
+window height — the header sits above the hero in flow, so the leftover strip
+below the hero is `0.12 × height − header`, which showed as a stray cream line
+along the bottom of the photo on any window taller than ~830px (≈8px at 900,
+≈20px at 1000). Subtracting the measured header makes that strip zero at any
+size. `dvh` matters on mobile, where `100vh` is the address-bar-hidden height;
+on desktop the two are identical. Keep it `min-height`, never `height`, so a
+short window grows the hero instead of clipping the copy.
+
+**This makes `--header-h` load-bearing for layout, not just for scroll offsets.**
+It is measured in `script.js`; the `100px` fallback in `:root` is what the hero
+sizes against if JS never runs.
+
+`.hero-inner` grows to fill the hero (`flex: 1`), and three `auto` margins —
+above the `h1`, above and below `.hero-actions` — split the leftover space into
+equal thirds, which is exactly the condition for the buttons to sit midway
+between the lead text and the hero's bottom edge. It re-solves at any viewport
+height, so don't replace it with fixed pixel offsets.
+
+This is **unconditional**. It used to be `≥861px` only, from when the phone hero
+was content-height and had no space to divide; once the hero grew to fill the
+screen that scoping was simply wrong, and while it lasted it left the 641–860px
+band as the one place where the buttons sat tucked under the lead with ~300px of
+empty photo beneath them. The real condition is "the hero is taller than its
+content", which is now every width.
+
+The hero's `padding-bottom` is therefore `0` — auto margins divide the *content*
+box, so padding sits outside the calculation and pushes the buttons half of it
+too high. **The ≤640px block deliberately re-adds 24px.** That biases the buttons
+12px above true centre, which is imperceptible, and it is the only thing between
+the last button and the section below on a screen too short to fit the copy —
+there the free space is zero, so the bottom third provides no clearance at all.
+A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
 
 ## Design tokens (see `:root` in `style.css`)
 
@@ -462,6 +487,16 @@ explicitly, so don't reintroduce a border or background on it.
 
 Checked for text overflow and clipping down to 320px — keep it that way when
 adding copy.
+
+The legal pages (`privacy.html`, `404.html`) carry a **two-item header** — brand,
+then a single «На главную» button — with no `.main-nav` between them to take up
+the slack with its `margin: 0 auto`, so the button would otherwise sit against
+the brand instead of at the right edge. `.brand + .nav-social-btn
+{ margin-left: auto }` fixes it. That is keyed on the adjacency rather than a
+modifier class on purpose: it is the *absence of the nav* that needs correcting,
+and matching it structurally covers both legal pages and any future one with no
+way to add a page and forget the class. On `index.html` the nav sits between the
+two, so it never matches there.
 
 The header hides on scroll-down and reappears on scroll-up, but by **two
 different mechanisms**, and they must not be merged:
