@@ -920,8 +920,34 @@ p { margin: 0; }
 
 @media (max-width: 640px) {
   .container { padding: 0 18px; }
-  .hero { min-height: auto; padding: 22px 0 56px; }
-  .hero-inner { padding: 0 20px; margin-top: 34px; }
+  /* The hero fills the phone screen exactly, so #about is not peeking in at the
+     bottom when the site first opens. The header sits above the hero in flow,
+     so subtracting it lands the hero's bottom edge on the fold rather than
+     pushing it a header's height past it.
+
+     `dvh`, not `vh`: on mobile Safari and Chrome `100vh` is the *large* viewport
+     — the height with the address bar hidden — so a 100vh hero is taller than
+     the screen actually is while the bar is showing, and #about peeks in anyway.
+     `dvh` tracks the bar. The `vh` line above is the fallback for browsers
+     without `dvh`; it errs slightly tall, which is the harmless direction.
+
+     `min-height`, not `height`: a short landscape screen must still be able to
+     grow the hero rather than clip the copy. */
+  .hero {
+    min-height: calc(100vh - var(--header-h));
+    min-height: calc(100dvh - var(--header-h));
+    /* Near-symmetric top/bottom so `margin: auto` below centres the copy for
+       real. The old 56px bottom was sized for a content-height hero; at full
+       height it offsets the centring and leaves a visible gap under the
+       buttons. Slightly less at the bottom keeps the block a touch above true
+       centre, which is where it wants to sit optically. */
+    padding: 22px 0 32px;
+  }
+  /* Centre the copy in whatever the badge leaves, rather than pinning it near
+     the top — at full height that would strand it against the header with the
+     whole lower screen empty. `margin: auto` on a flex child does this and
+     re-solves at any screen height, so no fixed offset needs retuning. */
+  .hero-inner { padding: 0 20px; margin: auto; }
   .hero-top { padding: 0 20px; }
   .section { padding: 64px 0; }
   .section-head { margin-bottom: 40px; }
