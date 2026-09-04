@@ -229,16 +229,20 @@ canonical or sitemap URL that redirects is one search engines disregard, and it
 put a needless redirect on every footer click. Adding a page means linking it
 without the extension too.
 
-`404.html` exists, is styled and carries `noindex, follow`. **Cloudflare does
-not currently serve it** — an unknown path returns an empty 404 body. Serving it
-needs `assets.not_found_handling`, which lives in `wrangler.jsonc`, and that
-file is inert because this Worker was created through the dashboard and its
-build never runs `wrangler deploy`. Confirmed by `GET /wrangler.jsonc` returning
-200: Cloudflare is treating the config as content.
+`404.html` exists, is styled and carries `noindex, follow`, but **Cloudflare
+does not serve it** — an unknown path returns an empty 404 body. Serving it
+needs `assets.not_found_handling`, which can only be set from a `wrangler.jsonc`
+in the repo.
 
-To switch it on: Worker → Settings → Builds → deploy command `npx wrangler
-deploy`. Nothing in the repo needs to change. Until then the page is reachable
-at `/404` and does no harm.
+**Do not add that file back without watching the next deploy.** It was tried and
+reverted: the first push carrying it deployed fine, but every push after it
+silently stopped deploying — the site kept serving the previous build while
+pushes appeared to succeed. That is the worst failure mode this project has,
+because it also breaks the CMS: an editor saves, the commit lands, and the live
+site never changes. If the 404 page matters more than that risk, add the config
+*and* confirm the very next commit reaches the live site before trusting it.
+
+Until then the page is reachable at `/404` and does no harm.
 
 `llms.txt` is a plain-language summary for assistants and crawlers — hours,
 address, phone, what the place does. Keep it in step with the page; it is the
