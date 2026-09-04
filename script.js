@@ -50,10 +50,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const isSocialOpen = () => socialPop && !socialPop.hidden;
   const isNavOpen = () => mainNav && mainNav.classList.contains('is-open');
 
-  /* focus() scrolls the target into view, and `scroll-padding-top` reserves a
+  /* Two things to get right when a header panel opens.
+
+     focus() scrolls its target into view, and `scroll-padding-top` reserves a
      header-height strip at the top of the viewport — so focusing a link inside
-     a header panel made the page creep upwards by a few pixels on every open.
-     preventScroll keeps the keyboard affordance without moving the page. */
+     a panel made the page creep upwards on every open. preventScroll fixes it.
+
+     And focus is only moved for *keyboard* activation. A pointer click that
+     programmatically focuses a link makes the browser paint its :focus-visible
+     ring, so opening «Соцсети» with the mouse drew a box around the first item.
+     `event.detail === 0` is the standard tell for a click synthesised from
+     Enter/Space rather than a real pointer press. Mouse users lose nothing —
+     each panel sits immediately after its trigger in the DOM, so Tab still
+     walks straight into it. */
+  const cameFromKeyboard = (event) => event.detail === 0;
   if (socialBtn && socialPop) {
     /* The trigger stays an <a href="#social"> so that without JS it still
        falls back to jumping to the footer's social column. */
@@ -62,7 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const willOpen = !isSocialOpen();
       setNavOpen(false);
       setSocialOpen(willOpen);
-      if (willOpen) socialPop.querySelector('a')?.focus({ preventScroll: true });
+      if (willOpen && cameFromKeyboard(event)) {
+        socialPop.querySelector('a')?.focus({ preventScroll: true });
+      }
     });
 
     socialPop.querySelectorAll('a').forEach((link) => {
@@ -76,7 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const willOpen = !isNavOpen();
       setSocialOpen(false);
       setNavOpen(willOpen);
-      if (willOpen) mainNav.querySelector('a')?.focus({ preventScroll: true });
+      if (willOpen && cameFromKeyboard(event)) {
+        mainNav.querySelector('a')?.focus({ preventScroll: true });
+      }
     });
 
     /* Tapping a section link should close the menu behind it. */
@@ -115,7 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
      The header slides away while reading downwards and comes straight back on
      any upward scroll. Near the top it is always shown, so the resting state
      above the hero is unchanged. */
-  const HIDE_AFTER = 220; // don't start hiding until clear of the hero's top
+  /* How far down the page the header stays pinned before it may hide.
+     On desktop it holds through the top of the hero. On mobile that reads as
+     lag — the header sits there while the page moves under it — so it lets go
+     almost immediately and travels away with the content instead. Both keep it
+     visible at rest above the hero. */
+  const desktop = window.matchMedia('(min-width: 861px)');
+  const hideAfter = () => (desktop.matches ? 220 : 12);
   const DELTA = 6;        // ignore sub-pixel jitter and momentum wobble
   let lastY = window.scrollY;
   let holdVisibleUntil = 0; // timestamp; see the anchor-click handler below
@@ -146,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (y <= HIDE_AFTER) {
+    if (y <= hideAfter()) {
       /* At and near the top the header always rests in place. */
       setHeaderHidden(false);
     } else if (isNavOpen() || isSocialOpen()) {

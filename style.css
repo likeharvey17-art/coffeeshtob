@@ -135,6 +135,14 @@ p { margin: 0; }
 .site-header.is-hidden {
   transform: translateY(calc(-100% - 12px));
 }
+/* On mobile the header should read as scrolling away with the page, not as a
+   panel that lingers and then animates off. It leaves almost immediately (see
+   hideAfter() in script.js) and leaves fast; coming back stays gentle, because
+   a reveal is the header interrupting the reader rather than getting out of
+   their way. */
+@media (max-width: 860px) {
+  .site-header.is-hidden { transition-duration: 0.1s; }
+}
 .header-inner {
   position: relative; /* anchors .social-pop */
   max-width: var(--container);

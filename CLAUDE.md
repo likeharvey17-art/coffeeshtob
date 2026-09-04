@@ -231,8 +231,14 @@ Checked for text overflow and clipping down to 320px — keep it that way when
 adding copy.
 
 The header hides on scroll-down and reappears on any scroll-up (`.is-hidden`
-on `.site-header`, driven by `script.js`). It always rests visible within the
-top 220px, so its state above the hero is unchanged. It is held visible while
+on `.site-header`, driven by `script.js`). How long it stays pinned before it
+may hide differs by width — `hideAfter()`: 220px on desktop, 12px on mobile.
+On a phone the desktop hold reads as lag, the header sitting still while the
+page moves under it, so it lets go almost at once and travels away with the
+content. It rests visible above the hero either way. The hide transition is
+also shortened to 0.1s below 860px so it reads as leaving *with* the scroll;
+the reveal stays at 0.28s, because a reveal interrupts the reader rather than
+getting out of their way. It is held visible while
 either header panel is open, and for 900ms after an in-page link is clicked so
 the smooth-scroll travel doesn't hide it mid-jump.
 
@@ -256,6 +262,12 @@ Two scroll traps worth knowing about, both caused by `scroll-padding-top`:
 - Every `focus()` call in `script.js` passes `{ preventScroll: true }`. Without
   it, focusing a link inside a header panel makes the browser scroll the page
   up by the scroll-padding to "reveal" it.
+- Focus is only moved into a panel for **keyboard** activation
+  (`cameFromKeyboard`, i.e. `event.detail === 0`). Focusing a link after a
+  *pointer* click makes the browser paint its `:focus-visible` ring, which drew
+  a box around the first item every time «Соцсети» was opened with the mouse.
+  Pointer users lose nothing: each panel follows its trigger in the DOM, so Tab
+  still walks straight into it.
 - `id="top"` sits on the sticky header, so once the header is stuck the browser
   treats it as already in view and an `href="#top"` jump only scrolls by the
   scroll-padding instead of returning to the top. Both logo links are therefore
