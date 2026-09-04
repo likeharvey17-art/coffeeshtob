@@ -82,17 +82,25 @@ nothing.
 
 ## Deployment
 
-Cloudflare Pages, connected directly to this GitLab repo. Every push to `main`
-triggers a deploy — there is no build step, no CI config and no build command;
-Cloudflare just serves the repo root as static files.
+**Cloudflare Worker with static assets** (project `coffeeshtob-site-cc`), not
+a Pages project — Cloudflare now steers new static sites to Workers. Connected
+directly to this GitLab repo; every push to `main` triggers a deploy. There is
+no build step, no CI config and no build command; Cloudflare serves the repo
+root as static assets.
+
+Measured: a push went live in ~40s. Verified end to end on the deployed site —
+`/`, `/admin/` and `/privacy.html` all resolve (Worker asset serving handles
+directory paths, so `/admin/` correctly maps to `admin/index.html`).
+
+Live URL: `https://coffeeshtob-site-cc.haknisvouzizn.workers.dev`. The
+`workers.dev` *Preview* URL is deliberately left disabled: it is a wildcard,
+so it could never match a GitLab redirect URI, and enabling it would make every
+deployed version publicly reachable.
 
 That direct connection is what makes the CMS work end to end: a content edit in
 `/admin/` is a commit to this repo, which Cloudflare picks up and publishes. If
 edits stop appearing on the live site, check the Cloudflare deployment log
 first.
-
-Cloudflare Pages settings: framework preset **None**, build command **empty**,
-build output directory **`/`**.
 
 Because the repo root *is* the web root, every tracked file is publicly
 reachable — including `CLAUDE.md` at `/CLAUDE.md`. Nothing here is secret (the
