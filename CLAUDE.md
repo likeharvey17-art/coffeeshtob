@@ -13,16 +13,29 @@ additions were considered and rejected for reasons that still apply.
 
 Known open items, in rough priority order:
 
-1. **GitLab pipeline failures** — every CMS save may still mail a failed-pipeline
-   notice. Not confirmed fixed; see Deployment.
-2. **Custom domain** — the owner will add one. Six files carry the current host
-   and change together, and the GitLab Redirect URI must be registered *first*.
+1. **The site loads badly from inside Russia, and hosting is moving because of
+   it.** The client reported it taking "forever" on both Wi-Fi and mobile, then
+   settling into a stripped-down version with the wrong fonts and unloaded
+   images. Two separate causes were identified; **one is fixed, one is not**:
+   - *Fixed:* Google Fonts was a render-blocking `<link>` in `<head>`, so a slow
+     Google meant a blank page until timeout, then system fonts. Fonts are now
+     self-hosted and the page makes no third-party requests at all.
+   - *Open:* the site is still served from Cloudflare, which RKN throttles. That
+     the page eventually arrives at all says Cloudflare is throttled rather than
+     blocked — but "eventually" is not good enough, and large assets (the
+     photos) are the ones that never finish. **The fix is to move to Russian
+     hosting**; see "Moving to Russian hosting" below.
+2. **GitLab pipeline failures** — every CMS save may still mail a failed-pipeline
+   notice. Not confirmed fixed; see Deployment. Note this stops being a nuisance
+   and becomes *required* if the site moves to a host that needs CI to deploy.
 3. **`404.html` is not served** by Cloudflare; the fix is risky. See Icons and SEO.
+   Ordinary Apache hosting would serve it correctly via `.htaccess`, so a move
+   closes this one for free.
 4. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
 5. **CMS body copy is applied by JS**, which Yandex renders less reliably than
    Google. The SEO-critical signals (title, meta description, JSON-LD, `llms.txt`)
    are static HTML and unaffected, but a Yandex indexing complaint would start
-   here.
+   here. A PHP host could render the JSON server-side and close this too.
 
 ## Stack
 
@@ -86,6 +99,19 @@ server) to preview.
   states. `local_backend: true` only applies on localhost: run
   `npx decap-server` to edit locally, which bypasses auth entirely.
 
+  **Decap itself is vendored** at `admin/vendor/decap-cms-3.16.0.js` (~4.8 MB,
+  the one large binary in the repo) rather than loaded from `unpkg.com`. The
+  editor is in Russia and unpkg is unreliable there; a CDN that does not answer
+  leaves the admin page blank forever with nothing to explain why. The version
+  is pinned in the filename, not by a `^3.0.0` range, so an editor can never be
+  handed a new major version by surprise — to upgrade, add the new file and
+  change the one `<script src>`.
+
+  **This does not make the CMS work offline from gitlab.com.** The PKCE flow and
+  every save still talk to gitlab.com, so if GitLab is throttled or blocked for
+  the editor, `/admin/` still fails — just later in the flow, at login rather
+  than at load. That is the open question behind the hosting migration below.
+
 ### GitLab OAuth application (one-time setup)
 
 Both `repo` and `app_id` in `admin/config.yml` are filled in and working. The
@@ -129,16 +155,22 @@ nothing.
   `style.css` and `script.js` (see the guard note under Responsive behavior).
   Kept deliberately short and free of anything internal: no mention of the
   admin area, the CMS, the hosting provider or staff workflows. It covers only
-  what a visitor is actually affected by — Google Fonts seeing their IP, and
-  server access logs. If the operator's legal details (юрлицо/ИП, ОГРН, ИНН,
-  e-mail) are ever added, they belong here; they were left out rather than
+  what a visitor is actually affected by, which since the fonts were self-hosted
+  is just server access logs. If the operator's legal details (юрлицо/ИП, ОГРН,
+  ИНН, e-mail) are ever added, they belong here; they were left out rather than
   invented.
 
-  Currently ~155 words: a lead callout plus four `<h2>` sections — Шрифты,
-  Записи сервера, Ссылки на другие сайты, Если есть вопросы. It was rewritten
-  twice to get there, the second time explicitly to sound less machine-written,
-  so **don't pad it back out** with the usual boilerplate headings ("Правовые
+  Currently ~126 words: a lead callout plus three `<h2>` sections — Записи
+  сервера, Ссылки на другие сайты, Если есть вопросы. It was rewritten twice to
+  get that short, the second time explicitly to sound less machine-written, so
+  **don't pad it back out** with the usual boilerplate headings ("Правовые
   основания", "Сроки хранения"). Short is the point.
+
+  A fourth section, «Шрифты», was deleted when the fonts stopped coming from
+  Google: the page now makes **no third-party requests at all**, so there is
+  nothing left to disclose but the server logs. Verified — `privacy.html`
+  contains zero external links. If a third party is ever added back, this
+  section comes back with it.
 
   **The opening callout is load-bearing beyond this page.** It asserts, in
   Russian, that the site collects nothing, has no forms, no registration and no
@@ -327,8 +359,8 @@ A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
   layer* on `body` and `.section-alt` (never as an overlay element, which
   would risk painting over cards). Cards stay clean white. Alpha is baked into
   the SVG (`opacity` on its `<rect>`), so adjust it there, not in CSS.
-- Type: `Playfair Display` (serif, headings) + `Inter` (sans, body), loaded
-  from Google Fonts in `<head>`.
+- Type: `Playfair Display` (serif, headings) + `Inter` (sans, body),
+  **self-hosted from `fonts/`** — see "Fonts are self-hosted" below.
 - Shape language: pill buttons/nav (`--radius-full`), rounded cards
   (`--radius-lg` / `--radius-md`).
 
@@ -373,6 +405,63 @@ buys the two-column tablet case; at 310px a 700px screen fell back to one.
 Prices are optional. `render.js` sets `hidden` on any slot whose value is empty,
 so an unpriced item shows no stray gap — the same mechanism blanks a missing
 description.
+
+## Fonts are self-hosted
+
+**Nothing on the public page is fetched from a third party.** Both families live
+in `fonts/` and are declared with `@font-face` at the top of `style.css`. There
+is no `fonts.googleapis.com` link anywhere, and there must not be one again.
+
+The reason is the audience. The client reported the site taking "forever" to
+load in Russia on both Wi-Fi and mobile, then settling into a stripped-down
+version with the wrong fonts. The Google Fonts `<link>` was a **render-blocking
+stylesheet in `<head>`**: when Google is slow or blocked, the browser paints
+*nothing* until that request times out, and then falls back to system fonts.
+That is precisely what was described.
+
+- Both families are **variable** (one file per subset spans every weight used)
+  and split by `unicode-range`, so a subset downloads only if the page actually
+  contains a character in its range.
+- Subsets kept: `latin`, `cyrillic`, `latin-ext` for both, plus `cyrillic-ext`
+  for Inter (Playfair does not ship one). Greek and Vietnamese were dropped.
+- **`latin-ext` is not optional, despite the name.** The ruble sign `₽` is
+  U+20BD, which falls in that subset's range, so the menu prices pull it. It is
+  85 KB of Inter for effectively one glyph — subsetting it down with `fonttools`
+  is an easy win nobody has taken yet (`fonttools` is not installed here).
+- Both are SIL Open Font License, which permits self-hosting and redistribution.
+
+To regenerate — after a weight change, or to refresh the files:
+
+```
+python3 - <<'PY'
+import re, os, subprocess
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+REQUIRED, OPTIONAL = ["latin", "cyrillic"], ["latin-ext", "cyrillic-ext"]
+FAMILIES = {
+  "Inter": "https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap",
+  "Playfair Display": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..800&display=swap",
+}
+def fetch(u, b=False):
+    r = subprocess.run(["curl","-sSfL","-A",UA,u], capture_output=True, timeout=60)
+    assert r.returncode == 0, r.stderr.decode()[:300]
+    return r.stdout if b else r.stdout.decode()
+blocks = []
+for fam, url in FAMILIES.items():
+    found = dict(re.findall(r"/\*\s*([a-z-]+)\s*\*/\s*(@font-face\s*\{.*?\})", fetch(url), re.S))
+    for s in REQUIRED: assert s in found, f"{fam} lacks {s}"
+    for sub in REQUIRED + [s for s in OPTIONAL if s in found]:
+        m = re.search(r"url\((https://fonts\.gstatic\.com/[^)]+\.woff2)\)", found[sub])
+        fn = f"{fam.lower().replace(' ','-')}-{sub}.woff2"
+        open(os.path.join("fonts", fn), "wb").write(fetch(m.group(1), True))
+        assert os.path.getsize(f"fonts/{fn}") > 2000
+        blocks.append(found[sub].replace(m.group(1), f"fonts/{fn}").strip())
+print("\n\n".join(blocks))   # paste over the @font-face block in style.css
+PY
+```
+
+Note that Python's `urllib` fails on this machine with a certificate error —
+hence `curl`. Assert the subset list and the file sizes; a silent 404 from
+gstatic otherwise writes an HTML error page into a `.woff2`.
 
 ## Icons and SEO
 

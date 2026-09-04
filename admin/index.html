@@ -46,7 +46,15 @@
   </style>
 </head>
 <body>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <!-- Decap is served from this repo, not from unpkg.com. The editor is a
+       Russian business owner, and unpkg is unreliable from there — a CDN that
+       does not answer means the admin page loads its chrome and then sits blank
+       forever, with nothing to explain why. The version is pinned in the
+       filename rather than by a `^3.0.0` range, so the editor cannot be handed
+       a new major version by surprise; to upgrade, drop the new file in and
+       change this line. ~4.8 MB, which is why it is the one large binary in the
+       repo. -->
+  <script src="vendor/decap-cms-3.16.0.js"></script>
   <script>
     /* The GitLab PKCE backend redirects to gitlab.com and back, and the URL it
        returns to must exactly match a Redirect URI registered on the GitLab
