@@ -97,20 +97,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const built = items.map((item, i) => {
       const node = templates[i % templates.length].cloneNode(true);
-      Object.entries(item).forEach(([key, value]) => {
-        if (value == null) return;
-        const slot = node.querySelector(`[data-cms-item="${key}"]`);
-        if (!slot) return;
+
+      /* Iterate the template's slots, not the item's keys. A key the item
+         simply doesn't have — an unpriced item, say — must clear the slot,
+         because otherwise the value cloned from the template stays put and the
+         item silently inherits another item's price. */
+      node.querySelectorAll('[data-cms-item]').forEach((slot) => {
+        const key = slot.dataset.cmsItem;
+        const value = item[key];
+
         if (slot.tagName === 'IMG') {
-          slot.src = toRelative(value);
+          if (value) slot.src = toRelative(value);
           /* alt text belongs to the picture, not the template it was cloned
              from — a stale alt is worse than a generic one. */
-          if (item.alt) slot.alt = item.alt;
-          else if (item.title) slot.alt = String(item.title);
-        } else {
-          slot.textContent = String(value);
+          slot.alt = item.alt || (item.title ? String(item.title) : '');
+          return;
         }
+
+        const text = value == null ? '' : String(value).trim();
+        slot.textContent = text;
+        /* An empty slot must not leave its padding, gap or separator behind. */
+        slot.hidden = text === '';
       });
+
       return node;
     });
 

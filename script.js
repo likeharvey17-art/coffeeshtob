@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
      card grids from the CMS *after* this runs — those are brand new elements
      the observer has never seen. Without the `cms:rendered` hook below they
      would keep `.reveal`'s opacity: 0 and the sections would look empty. */
-  const REVEAL_SELECTOR = '.feature-card, .menu-card, .life-card, .info-card, .about-text';
+  const REVEAL_SELECTOR = '.feature-card, .menu-item, .life-card, .info-card, .about-text';
   const supportsObserver = 'IntersectionObserver' in window;
 
   const revealObserver = supportsObserver

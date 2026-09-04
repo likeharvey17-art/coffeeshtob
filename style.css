@@ -503,13 +503,13 @@ p { margin: 0; }
   column-gap: 34px;
   row-gap: 54px;
 }
-.feature-card h3, .menu-card h3, .life-card h3, .info-card h3 {
+.feature-card h3, .life-card h3, .info-card h3 {
   font-size: 1.2rem;
   line-height: 1.25;
   margin-bottom: 10px;
 }
 .info-card h3 { font-size: 1.15rem; }
-.feature-card p, .menu-card p, .life-card p, .info-card p {
+.feature-card p, .life-card p, .info-card p {
   color: var(--ink-soft);
   font-size: 0.96rem;
 }
@@ -523,13 +523,69 @@ p { margin: 0; }
   margin-bottom: 12px;
 }
 
-.menu-grid {
+/* The menu is a list, not a photo grid.
+
+   A grid of big square photos looks fine at four items and falls apart past
+   that: fixed column counts leave orphans on the last row, and on a phone every
+   item costs a full screen of scrolling. Prices make it a menu proper, and a
+   menu reads as rows.
+
+   `auto-fill` + `minmax` means the column count follows the *available width*,
+   never a hardcoded number, so any quantity of items lays itself out — one
+   column on a phone, two or three on a wide screen, with a short last row
+   looking normal rather than broken. Nothing here needs changing when items are
+   added or removed in the CMS. */
+.menu-list {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  column-gap: 28px;
-  row-gap: 46px;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  column-gap: 44px;
+  row-gap: 0;
 }
-.menu-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+.menu-item {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+
+.menu-thumb {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--cream-alt);
+  border: 1px solid rgba(123, 100, 80, 0.22);
+}
+.menu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.menu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+.menu-item h3 {
+  font-size: 1.02rem;
+  line-height: 1.3;
+  margin: 0;
+}
+/* Prices are optional — render.js hides the slot when an item has none, so an
+   unpriced item shows no empty gap. Tabular figures keep the column steady. */
+.menu-price {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.menu-item p {
+  margin-top: 5px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
 
 .subsection { margin-top: 80px; }
 
@@ -805,8 +861,6 @@ p { margin: 0; }
 @media (max-width: 960px) {
   .about-grid { grid-template-columns: 1fr; gap: 28px; }
   .feature-grid { grid-template-columns: 1fr 1fr; }
-  .menu-grid { grid-template-columns: 1fr 1fr; }
-  .menu-grid-3 { grid-template-columns: 1fr 1fr; }
   /* .info-grid is already 1fr 1fr at every width — see its base rule. */
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -872,8 +926,6 @@ p { margin: 0; }
   .section { padding: 64px 0; }
   .section-head { margin-bottom: 40px; }
   .feature-grid,
-  .menu-grid,
-  .menu-grid-3,
   .life-grid,
   .info-grid,
   .footer-grid {

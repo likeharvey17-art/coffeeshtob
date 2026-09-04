@@ -28,7 +28,10 @@ server) to preview.
     stays the meaningful no-JS fallback instead of an empty div awaiting fetch.
     Templates are reused *by index*, which is what preserves the four different
     inline SVG icons on the feature cards; a fifth item reuses the first icon.
-  - `data-cms-item="key"` — a slot inside a list child.
+  - `data-cms-item="key"` — a slot inside a list child. Slots are iterated from
+    the *template*, not from the item's keys: a key the item lacks must clear
+    the slot, or the value cloned from the template stays and the item silently
+    inherits another item's price.
 
   After rendering it fires a `cms:rendered` event, which `script.js` listens for
   to observe the rebuilt cards (see the scroll-reveal note under Responsive
@@ -231,8 +234,29 @@ distinction.
 
 Because there is no card padding any more, the grid gaps are load-bearing:
 they are the only thing separating entries. `.feature-grid` 34/54px,
-`.menu-grid` 28/46px, `.life-grid` 40/54px, `.info-grid` 44px. Shrinking them
-back toward the old 20px brings back the cramped look the boxes were hiding.
+`.life-grid` 40/54px, `.info-grid` 44px. Shrinking them back toward the old
+20px brings back the cramped look the boxes were hiding.
+
+## The menu is a list, not a grid
+
+`.menu-list` / `.menu-item` replaced the old four-across photo grid, for both
+«Меню» and «Другие напитки». A grid of large square photos is fine at four items
+and falls apart past that — a fixed column count leaves orphans on the last row,
+and on a phone each item costs a full screen of scrolling. Prices make it a menu
+proper, and a menu reads as rows: small square thumbnail, name and price on one
+line, description beneath.
+
+**The column count follows the available width, never the item count**:
+`repeat(auto-fill, minmax(272px, 1fr))`. Measured against the 1140px container:
+1 column up to ~600px, 2 from ~700px, 3 from ~1000px and it stays at 3 — wider
+never gets narrower rows. Any number of items lays itself out, and a short last
+row reads as a normal list rather than a broken grid. **Nothing needs changing
+in CSS when items are added or removed in the CMS.** The 272px minimum is what
+buys the two-column tablet case; at 310px a 700px screen fell back to one.
+
+Prices are optional. `render.js` sets `hidden` on any slot whose value is empty,
+so an unpriced item shows no stray gap — the same mechanism blanks a missing
+description.
 
 ## Icons and SEO
 

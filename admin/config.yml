@@ -74,6 +74,11 @@ collections:
               - { label: "Фото", name: "image", widget: "image" }
               - { label: "Название", name: "title", widget: "string" }
               - { label: "Описание", name: "text", widget: "text" }
+              - label: "Цена"
+                name: "price"
+                widget: "string"
+                required: false
+                hint: "Например: 180 ₽ или «от 150 ₽». Оставьте пустым — цена просто не покажется."
 
           - { label: "Заголовок «Другие напитки»", name: "drinks_title", widget: "string" }
           - { label: "Подзаголовок «Другие напитки»", name: "drinks_sub", widget: "text" }
@@ -84,6 +89,11 @@ collections:
               - { label: "Фото", name: "image", widget: "image" }
               - { label: "Название", name: "title", widget: "string" }
               - { label: "Описание", name: "text", widget: "text" }
+              - label: "Цена"
+                name: "price"
+                widget: "string"
+                required: false
+                hint: "Например: 180 ₽ или «от 150 ₽». Оставьте пустым — цена просто не покажется."
 
           # ---- Жизнь штаба --------------------------------------------------
           - { label: "Заголовок «Жизнь штаба»", name: "life_title", widget: "string" }
