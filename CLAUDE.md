@@ -77,25 +77,26 @@ nothing.
 
 ## Deployment
 
-`.gitlab-ci.yml` mirrors the repo to Beget over FTPS on every push to `main`.
+Cloudflare Pages, connected directly to this GitLab repo. Every push to `main`
+triggers a deploy — there is no build step, no CI config and no build command;
+Cloudflare just serves the repo root as static files.
 
-This job is **load-bearing, not a convenience**. Decap commits content edits to
-this repo; Beget is plain file hosting and has no idea the repo changed.
-Without the job, an edit made in `/admin/` reaches GitLab and never reaches
-visitors — silently, with no error anywhere. If content stops updating on the
-live site, check the pipeline before anything else.
+That direct connection is what makes the CMS work end to end: a content edit in
+`/admin/` is a commit to this repo, which Cloudflare picks up and publishes. If
+edits stop appearing on the live site, check the Cloudflare deployment log
+first.
 
-Four CI variables must exist (Settings → CI/CD → Variables), with the password
-masked: `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `REMOTE_DIR`. None of them
-belong in the repo. The job fails fast with a readable message if any is
-missing, rather than half-deploying.
+Cloudflare Pages settings: framework preset **None**, build command **empty**,
+build output directory **`/`**.
 
-The mirror uses `--delete`, so `REMOTE_DIR` ends up matching the repo exactly —
-anything else living in that directory gets removed. Drop the flag if the web
-root is ever shared with something else.
+Because the repo root *is* the web root, every tracked file is publicly
+reachable — including `CLAUDE.md` at `/CLAUDE.md`. Nothing here is secret (the
+CMS `app_id` is public by design under PKCE), but don't add anything to the
+repo that shouldn't be world-readable.
 
-`CLAUDE.md`, `.gitignore`, `.gitlab-ci.yml` and `.claude/` are excluded from
-the upload; everything else (including `admin/` and `content/`) ships.
+An earlier commit carried a `.gitlab-ci.yml` that deployed to Beget over FTPS.
+It was removed when hosting moved to Cloudflare; it is in git history if Beget
+ever comes back.
 
 ## Sections (in DOM order)
 
