@@ -1,0 +1,27 @@
+{
+  // Deployment config for the Cloudflare Worker that serves this site.
+  //
+  // This file exists for exactly one reason: `not_found_handling`. Without it
+  // Cloudflare answers an unknown path with a bare 404 and never looks at
+  // 404.html, however nice that page is.
+  //
+  // `name` must match the existing Worker exactly. A typo here does not error —
+  // it deploys to a *different* Worker, leaving the live site silently stale.
+  "name": "coffeeshtob-site-cc",
+  "compatibility_date": "2026-09-03",
+
+  "assets": {
+    // The repo root is the web root. There is no build step, so nothing is
+    // compiled into a dist/ directory first.
+    "directory": "./",
+
+    // Serve 404.html for unknown paths, with a real 404 status.
+    "not_found_handling": "404-page",
+
+    // Cloudflare's default, stated explicitly because it has a visible
+    // consequence: it 307s /privacy.html to /privacy and /index.html to /.
+    // Every internal link, canonical, og:url and sitemap entry uses the
+    // extensionless form to avoid pointing at a redirect.
+    "html_handling": "auto-trim"
+  }
+}
