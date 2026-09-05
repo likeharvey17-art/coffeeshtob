@@ -1,0 +1,163 @@
+name: Deploy to Beget
+
+# Replaces the GitLab FTPS job, which died with the GitLab account. Beget is
+# plain file hosting — it has no idea the repo changed — so without this, an
+# edit lands in git and never reaches visitors.
+#
+# SETUP — repo Settings > Secrets and variables > Actions > New repository secret:
+#   FTP_HOST      tryphopx.beget.tech
+#   FTP_USER      the FTP account login
+#   FTP_PASSWORD  its password
+#   REMOTE_DIR    /coffeeshtob.ru/public_html
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys interleave over the same FTP tree. Queue instead of
+# cancelling: a half-finished mirror that gets cancelled leaves the site in a
+# mixed state, which is worse than waiting.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the secrets exist
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          missing=
+          for v in FTP_HOST FTP_USER FTP_PASSWORD REMOTE_DIR; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing repository secret(s):$missing"
+            echo "Add them under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      # Built from `git ls-files` rather than mirroring the checkout, so the
+      # upload set is exactly what is tracked — no .git, no runner droppings,
+      # and nothing that happens to be lying around.
+      - name: Assemble the upload set
+        run: |
+          set -euo pipefail
+          rm -rf _deploy && mkdir _deploy
+          git ls-files \
+            | grep -vE '^(CLAUDE\.md|\.gitignore|\.github/|\.claude/)' \
+            | while IFS= read -r f; do
+                mkdir -p "_deploy/$(dirname "$f")"
+                cp "$f" "_deploy/$f"
+              done
+
+          # Assert rather than hope. A silently empty or half-built set would
+          # be mirrored with --delete and would take the live site with it.
+          test -f _deploy/index.html            || { echo "no index.html"; exit 1; }
+          test -f _deploy/.htaccess             || { echo "no root .htaccess"; exit 1; }
+          test -f _deploy/images/uploads/.htaccess || { echo "no uploads .htaccess"; exit 1; }
+          test ! -e _deploy/CLAUDE.md           || { echo "CLAUDE.md leaked"; exit 1; }
+          test ! -e _deploy/.git                || { echo ".git leaked"; exit 1; }
+          n=$(find _deploy -type f | wc -l)
+          [ "$n" -ge 40 ] || { echo "only $n files assembled — refusing to deploy"; exit 1; }
+          echo "assembled $n files"
+
+      # nginx serves static files on Beget and ignores .htaccess, so its own
+      # cache headers win (style.css comes back with a week-long max-age). No
+      # filename here carries a content hash, so the URL carries the version
+      # instead. Stamping it from the commit means a deploy always reaches
+      # people who have already visited, without anyone remembering to bump it.
+      - name: Stamp asset version from the commit
+        run: |
+          set -euo pipefail
+          V="${GITHUB_SHA::7}"
+          # An empty V is the dangerous case, not a missing one: sed would
+          # happily write "?v=" and the count check below would still see seven
+          # matches and pass, shipping an unversioned site that looks fine. This
+          # was caught in a local dry run where GITHUB_SHA happened to be unset.
+          [ -n "$V" ] || { echo "GITHUB_SHA is empty — refusing to stamp"; exit 1; }
+          for f in index.html privacy.html 404.html; do
+            sed -i -E "s/\?v=[A-Za-z0-9_.-]+/?v=$V/g" "_deploy/$f"
+          done
+          n=$(grep -ho "?v=$V" _deploy/index.html _deploy/privacy.html _deploy/404.html | wc -l)
+          [ "$n" -eq 7 ] || { echo "expected 7 versioned refs, stamped $n"; exit 1; }
+          echo "stamped ?v=$V on $n references"
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Mirror to Beget over FTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          # --delete makes the server match the repo exactly, so a file deleted
+          # here disappears there and stale assets cannot accumulate. That is
+          # also what makes the two excludes below load-bearing:
+          #
+          #   cgi-bin/     Beget creates it in every docroot. It is not in the
+          #                repo, so --delete would remove it.
+          #   .well-known/ where Let's Encrypt writes its ACME challenge. Wiping
+          #                it mid-renewal breaks certificate renewal every 90
+          #                days, and the failure would look like nothing to do
+          #                with deploys.
+          #
+          # WHEN GRAV LANDS: content will be edited on the server rather than
+          # committed, at which point --delete will destroy the client's work on
+          # the next push. Add --exclude user/ (or whatever holds content and
+          # uploads) then, or drop --delete.
+          lftp -c "
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            set net:timeout 20;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --delete --verbose --parallel=4 \
+              --exclude-glob cgi-bin/ \
+              --exclude-glob .well-known/ \
+              _deploy/ '$REMOTE_DIR';
+          "
+
+      # The mirror can report success while .htaccess never arrived — some FTP
+      # servers quietly refuse dotfiles. Its absence breaks /privacy, the 404
+      # page and the HTTPS redirect all at once, so check rather than assume.
+      - name: Verify the deploy landed
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            cd '$REMOTE_DIR';
+            ls .htaccess;
+            ls index.html;
+          " || { echo 'FAILED: .htaccess or index.html missing on the server'; exit 1; }
+
+      - name: Confirm the live site is serving this commit
+        run: |
+          V="${GITHUB_SHA::7}"
+          sleep 5
+          got=$(curl -sS --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID" \
+                | grep -o "style.css?v=[A-Za-z0-9_.-]*" | head -1 || true)
+          echo "live: ${got:-<nothing>}   expected: style.css?v=$V"
+          [ "$got" = "style.css?v=$V" ] || {
+            echo "The live site is not serving this commit yet."
+            echo "If everything else passed, this is usually caching — check manually."
+            exit 1
+          }
