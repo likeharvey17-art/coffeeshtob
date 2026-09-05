@@ -139,30 +139,29 @@ jobs:
           #                days, and the failure would look like nothing to do
           #                with deploys.
           #
-          #   og-image.jpg IS A KNOWN UNSOLVED BUG, not a design decision.
+          #   og-image.jpg is parked behind this exclude, and the CAUSE IS NOW
+          #     KNOWN — it is a transfer failure, not anything about the file.
           #
-          #     lftp will not upload this one file to this one host. It is a
-          #     valid 42 KB JPEG, it is in the upload set (verified by
-          #     assembling it locally), and uploading it by hand through Beget's
-          #     File Manager works first time and serves 200. But `mirror` skips
-          #     it while exiting 0, AND an explicit `put` of it also fails —
-          #     two different lftp code paths, same file. Every other
-          #     root-level binary (favicon.ico, favicon.svg, apple-touch-icon,
-          #     icon-192, icon-512) uploads fine, as does images/uploads/*.jpg,
-          #     so it is not .jpg files and not root-level files as a class.
+          #     The repair script printed it:
           #
-          #     Three theories were tried and all were wrong: a parallel-transfer
-          #     race, Beget rejecting the file, and a malformed repair command.
+          #       put: _deploy/fonts/inter-latin.woff2: Fatal error: max-retries exceeded
           #
-          #     Excluding it stops --delete removing the hand-uploaded copy, so
-          #     the file survives deploys. IT MUST BE UPLOADED MANUALLY once, and
-          #     again if it ever changes. It is the Open Graph card, so its
-          #     absence shows up as a broken Telegram or VK link preview.
+          #     A second file, fonts/inter-latin.woff2, started failing the same
+          #     way. Both are ordinary files that upload fine by hand; an 85 KB
+          #     font sitting beside the failing 48 KB one goes up without
+          #     complaint, so it was never size, type or location. lftp simply
+          #     exhausts its retries on some transfers against this server.
           #
-          #     Grav will replace this deploy layout entirely, which is the real
-          #     reason this is parked rather than solved — the bug may not
-          #     survive the migration. If it does, read the repair script the
-          #     verify step prints rather than guessing a fourth time.
+          #     Hence --parallel=1 and the raised retry/timeout settings above:
+          #     the most likely trigger is a per-account concurrent-connection
+          #     limit on Beget's FTP, with the mirror and the verification pass
+          #     both opening sockets.
+          #
+          #     The exclude stays only until a run proves inter-latin.woff2
+          #     transfers reliably. If it does, remove this exclude — the
+          #     manifest check will then say plainly whether og-image.jpg
+          #     follows. Until then the file must be uploaded by hand, and this
+          #     exclude is what stops --delete removing that copy.
           #
           # WHEN GRAV LANDS: content will be edited on the server rather than
           # committed, at which point --delete will destroy the client's work on
@@ -186,10 +185,11 @@ jobs:
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
             set ssl:verify-certificate no;
-            set net:max-retries 3;
-            set net:timeout 20;
+            set net:max-retries 8;
+            set net:timeout 40;
+            set net:reconnect-interval-base 5;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --no-perms --verbose --parallel=2 \
+            mirror --reverse --delete --no-perms --verbose --parallel=1 \
               --exclude-glob cgi-bin/ \
               --exclude-glob .well-known/ \
               --exclude-glob og-image.jpg \
