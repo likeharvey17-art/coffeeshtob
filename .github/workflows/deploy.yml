@@ -256,55 +256,81 @@ jobs:
 
           echo "missing after mirror — repairing:"
           sed 's/^/  /' /tmp/missing.txt
-          {
-            echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
-            echo "set ssl:verify-certificate no;"
-            echo "set net:max-retries 3; set net:timeout 20;"
-            # Keep going if a command fails. mkdir on a directory that already
-            # exists is an error in lftp, and by default that aborts the rest of
-            # the script — taking the puts with it. The re-check below is what
-            # decides success, so tolerating individual failures here is safe.
-            echo "set cmd:fail-exit false;"
-            echo "open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';"
-            while IFS= read -r f; do
-              d=$(dirname "$f")
-              if [ "$d" = "." ]; then
-                # A root-level file. dirname gives "." and naively appending it
-                # produced `put -O '$REMOTE_DIR/.'`, which lftp would not accept
-                # — so the one file that has ever gone missing here, og-image.jpg,
-                # was also the one the repair could not fix.
-                echo "put -O '$REMOTE_DIR' '_deploy/$f';"
-              else
-                echo "mkdir -p '$REMOTE_DIR/$d';"
-                echo "put -O '$REMOTE_DIR/$d' '_deploy/$f';"
-              fi
-            done < /tmp/missing.txt
-          } > /tmp/repair.lftp
-          echo "--- repair script ---"
-          grep -v "^open " /tmp/repair.lftp | sed 's/^/  /'
-          echo "---------------------"
-          lftp -f /tmp/repair.lftp || echo "(repair reported errors; the re-check below decides)"
+
+          # THE SERVER FINALLY NAMED IT (run #16, via debug 3):
+          #
+          #   <--- 250 Directory successfully changed.
+          #   <--- 426 Failure reading network stream.
+          #
+          # 426 is the data connection dying mid-transfer — not a permission,
+          # not a refusal, not a missing path. `du -hs` in the same run reported
+          # 11M, so quota is out too; that was the last standing guess.
+          #
+          # It is also deterministic. The same file fails on every attempt while
+          # its neighbours transfer, which is not what flakiness looks like.
+          # Something about this particular data stream is being dropped.
+          #
+          # So stop guessing which layer drops it and try the ways around it in
+          # order, reporting which works: the data channel unencrypted (PROT C),
+          # the connection direction reversed (active mode), and EPSV off. The
+          # one that succeeds is the setting the mirror itself should carry.
+          #
+          # CAUTION for whoever extends this: each attempt deletes the remote
+          # file before writing. That is deliberate — a half-written or
+          # broken-inode remote file would otherwise defeat every retry — but it
+          # means this must never be pointed at a file whose ONLY copy lives on
+          # the server. og-image.jpg is exactly that today (hand-uploaded, and
+          # excluded from the expected list above), which is why it stays out.
+          attempt() {
+            mode=$1; settings=$2; f=$3
+            d=$(dirname "$f"); base=$(basename "$f")
+            [ "$d" = "." ] && rd="$REMOTE_DIR" || rd="$REMOTE_DIR/$d"
+            lftp -c "
+              set ftp:ssl-allow true; set ftp:ssl-force true;
+              set ssl:verify-certificate no;
+              set net:max-retries 2; set net:timeout 25;
+              set cmd:fail-exit false;
+              $settings
+              open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+              mkdir -p '$rd';
+              rm -f '$rd/$base';
+              put -O '$rd' '_deploy/$f';
+            " </dev/null >/dev/null 2>&1
+            # Existence on the server is the only verdict worth trusting. lftp's
+            # exit code has been wrong on this host since the first deploy — it
+            # returned 1 through every run that transferred perfectly — so it is
+            # not consulted here at all.
+            if lftp -c "
+                 set ftp:ssl-allow true; set ftp:ssl-force true;
+                 set ssl:verify-certificate no; set cmd:fail-exit false;
+                 open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+                 cls -1 '$rd/$base';
+               " </dev/null 2>/dev/null | grep -q .; then
+              echo "  $mode: OK"
+              return 0
+            fi
+            echo "  $mode: failed"
+            return 1
+          }
+
+          while IFS= read -r f; do
+            echo "repairing $f ($(wc -c < "_deploy/$f") bytes)"
+            attempt "encrypted data channel (current setting)" "" "$f" && continue
+            attempt "plaintext data channel"  "set ftp:ssl-protect-data false;" "$f" && continue
+            attempt "active mode"             "set ftp:passive-mode false;"     "$f" && continue
+            attempt "passive, no EPSV"        "set ftp:prefer-epsv false;"      "$f" && continue
+            echo "  every transport failed for $f"
+          done < /tmp/missing.txt
 
           remote_list > /tmp/remote2.txt
           still=$(comm -23 /tmp/expected.txt /tmp/remote2.txt || true)
           if [ -n "$still" ]; then
-            echo "STILL MISSING after repair — failing the deploy:"
+            echo "STILL MISSING after every transport — failing the deploy:"
             echo "$still" | sed 's/^/  /'
 
-            # Four theories about this have each been wrong: a parallel-transfer
-            # race, something about the file, a malformed repair command, and a
-            # per-account connection limit. Every one of them was a guess, and
-            # they were all guesses because "Fatal error: max-retries exceeded"
-            # reports only that lftp gave up — never what the server said.
-            #
-            # debug 3 prints the FTP dialogue, so the server gives its own
-            # reason instead: 552 is quota, 550 is permission or a refused
-            # write, 421 is a connection limit. `du` alongside it shows what the
-            # account is actually using, which settles the quota case outright.
-            #
-            # max-retries is dropped to 1 here so the log is one clean exchange
-            # rather than eight. Credentials are redacted below, and Actions
-            # masks the secrets again on top of that.
+            # Keep printing the dialogue. It is what turned this from four
+            # rounds of guessing into a named cause, and if all four transports
+            # fail then the reason has changed again and will be in here.
             one=$(echo "$still" | head -1)
             dir=$(dirname "$one")
             [ "$dir" = "." ] && dest="$REMOTE_DIR" || dest="$REMOTE_DIR/$dir"
@@ -312,7 +338,6 @@ jobs:
             {
               echo "debug -o /tmp/ftp.log 3;"
               echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
-              echo "set ftp:ssl-protect-data true;"
               echo "set ssl:verify-certificate no;"
               echo "set net:max-retries 1; set net:timeout 20;"
               echo "set cmd:fail-exit false;"
