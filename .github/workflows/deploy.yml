@@ -243,6 +243,15 @@ jobs:
           # og-image.jpg is deliberately not expected here — see the mirror step.
           # It is excluded from the mirror so --delete stops removing it, and
           # therefore cannot be checked for or repaired by this step either.
+          #
+          # KNOWN LIMIT: this compares names, not sizes. A file that arrived
+          # truncated counts as present and passes. That has never been observed
+          # here — the failure mode on this host is a file that is wholly absent
+          # — but it is the reason og-image.jpg is not simply folded back in:
+          # STOR truncates the remote file when it opens it, so a mirror that
+          # tried and failed would leave a 0-byte social card that this check
+          # would call fine. Fix the mirror's transport first, or compare sizes
+          # (the live site serves them, so a HEAD per file would do it).
           ( cd _deploy && find . -type f | sed 's|^\./||' ) \
             | grep -v '^og-image\.jpg$' | sort > /tmp/expected.txt
           remote_list > /tmp/remote.txt
@@ -307,12 +316,20 @@ jobs:
                  cls -1 '$rd/$base';
                " </dev/null 2>/dev/null | grep -q .; then
               echo "  $mode: OK"
+              # Surface the winning rung on the run's summary page. Which
+              # transport works is the one fact needed to fix the mirror itself,
+              # and it should not have to be dug out of a 300-line log — the
+              # first time it was found, it wasn't, and the mirror kept the
+              # broken setting for another two runs.
+              echo "- \`$f\` repaired via **$mode**" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
               return 0
             fi
             echo "  $mode: failed"
             return 1
           }
 
+          echo "### FTP repair fired" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           while IFS= read -r f; do
             echo "repairing $f ($(wc -c < "_deploy/$f") bytes)"
             attempt "encrypted data channel (current setting)" "" "$f" && continue
@@ -320,7 +337,11 @@ jobs:
             attempt "active mode"             "set ftp:passive-mode false;"     "$f" && continue
             attempt "passive, no EPSV"        "set ftp:prefer-epsv false;"      "$f" && continue
             echo "  every transport failed for $f"
+            echo "- \`$f\` — **every transport failed**" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           done < /tmp/missing.txt
+          echo "" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "If a rung other than the first won, put that setting in the" \
+               "mirror step so new files stop needing repair." >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
           remote_list > /tmp/remote2.txt
           still=$(comm -23 /tmp/expected.txt /tmp/remote2.txt || true)
