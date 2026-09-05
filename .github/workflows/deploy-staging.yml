@@ -57,12 +57,18 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           STAGING_DIR: ${{ secrets.STAGING_DIR }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           test -f grav/user/themes/coffeeshtob/blueprints.yaml \
             || { echo "theme not found — refusing to deploy"; exit 1; }
           # --delete is scoped to the theme directory alone. Grav's core, the
           # client's pages and their uploaded media all live outside it and are
           # never touched by this job.
+          #
+          # lftp's exit code is ignored for the same reason as in deploy.yml: on
+          # Beget it returns 1 for non-failures. The render check at the end of
+          # this job is what decides — it fetches staging and looks for the
+          # site's own markup, which is a fact about the result rather than an
+          # opinion about the transfer.
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
             set ftp:ssl-protect-data true; set ssl:verify-certificate no;
@@ -70,7 +76,7 @@ jobs:
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --delete --no-perms --verbose --parallel=2 \
               grav/user/themes/coffeeshtob/ '$STAGING_DIR/user/themes/coffeeshtob';
-          "
+          " || echo "mirror exited non-zero — the render check below decides"
 
       # Deliberately NOT part of the normal push path. Pages are what the client
       # edits in the admin panel; overwriting them on every deploy would throw

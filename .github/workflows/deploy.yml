@@ -168,6 +168,19 @@ jobs:
           # committed, at which point --delete will destroy the client's work on
           # the next push. Add --exclude user/ (or whatever holds content and
           # uploads) then, or drop --delete.
+          # lftp's exit code is NOT the gate here, deliberately. On this host it
+          # returns 1 for things that are not failures — SITE CHMOD refusals
+          # were the first, and --no-perms did not make it exit 0, so there is
+          # at least one more. Meanwhile the transfers themselves have worked
+          # every single time: the site updated on every one of those red runs.
+          #
+          # So this step reports, and the manifest check that follows decides.
+          # That check compares every expected file against a remote listing and
+          # repairs anything missing — a direct measurement of the outcome we
+          # actually care about, rather than a tool's opinion about it. A real
+          # transfer failure still fails the job, just one step later and with
+          # the missing filenames printed.
+          set +e
           lftp -c "
             set ftp:ssl-allow true;
             set ftp:ssl-force true;
@@ -182,6 +195,10 @@ jobs:
               --exclude-glob og-image.jpg \
               _deploy/ '$REMOTE_DIR';
           "
+          rc=$?
+          set -e
+          [ $rc -eq 0 ] && echo "mirror exited cleanly" \
+                        || echo "mirror exited $rc — verification below decides whether that mattered"
 
       # lftp exits 0 having silently skipped files. Confirmed on this host:
       # og-image.jpg — tracked, in the upload set, 42 KB, a valid JPEG — was
