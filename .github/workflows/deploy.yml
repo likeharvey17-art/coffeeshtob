@@ -112,6 +112,31 @@ jobs:
           #                days, and the failure would look like nothing to do
           #                with deploys.
           #
+          #   og-image.jpg IS A KNOWN UNSOLVED BUG, not a design decision.
+          #
+          #     lftp will not upload this one file to this one host. It is a
+          #     valid 42 KB JPEG, it is in the upload set (verified by
+          #     assembling it locally), and uploading it by hand through Beget's
+          #     File Manager works first time and serves 200. But `mirror` skips
+          #     it while exiting 0, AND an explicit `put` of it also fails —
+          #     two different lftp code paths, same file. Every other
+          #     root-level binary (favicon.ico, favicon.svg, apple-touch-icon,
+          #     icon-192, icon-512) uploads fine, as does images/uploads/*.jpg,
+          #     so it is not .jpg files and not root-level files as a class.
+          #
+          #     Three theories were tried and all were wrong: a parallel-transfer
+          #     race, Beget rejecting the file, and a malformed repair command.
+          #
+          #     Excluding it stops --delete removing the hand-uploaded copy, so
+          #     the file survives deploys. IT MUST BE UPLOADED MANUALLY once, and
+          #     again if it ever changes. It is the Open Graph card, so its
+          #     absence shows up as a broken Telegram or VK link preview.
+          #
+          #     Grav will replace this deploy layout entirely, which is the real
+          #     reason this is parked rather than solved — the bug may not
+          #     survive the migration. If it does, read the repair script the
+          #     verify step prints rather than guessing a fourth time.
+          #
           # WHEN GRAV LANDS: content will be edited on the server rather than
           # committed, at which point --delete will destroy the client's work on
           # the next push. Add --exclude user/ (or whatever holds content and
@@ -127,6 +152,7 @@ jobs:
             mirror --reverse --delete --verbose --parallel=2 \
               --exclude-glob cgi-bin/ \
               --exclude-glob .well-known/ \
+              --exclude-glob og-image.jpg \
               _deploy/ '$REMOTE_DIR';
           "
 
@@ -162,7 +188,11 @@ jobs:
             " 2>/dev/null | sed 's|^\./||' | sed 's|/$||' | grep -v '^$' | sort
           }
 
-          ( cd _deploy && find . -type f | sed 's|^\./||' ) | sort > /tmp/expected.txt
+          # og-image.jpg is deliberately not expected here — see the mirror step.
+          # It is excluded from the mirror so --delete stops removing it, and
+          # therefore cannot be checked for or repaired by this step either.
+          ( cd _deploy && find . -type f | sed 's|^\./||' ) \
+            | grep -v '^og-image\.jpg$' | sort > /tmp/expected.txt
           remote_list > /tmp/remote.txt
           comm -23 /tmp/expected.txt /tmp/remote.txt > /tmp/missing.txt || true
 
