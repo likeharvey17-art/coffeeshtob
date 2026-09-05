@@ -632,6 +632,13 @@ authoritative list rather than this paragraph:
 or the CMS login breaks the moment the new host goes live. See "GitLab OAuth
 application" above.
 
+**The canonical host is the bare domain, never `www`.** Beget creates `www`
+automatically and its certificate covers both names, so `https://www.coffeeshtob.ru/`
+served a byte-identical page with a 200 — two URLs for one page. All 14 absolute
+URLs use the bare form, so `.htaccess` 301s `www` to bare (in a single hop,
+combined with the HTTPS upgrade). If a future site wants `www` as canonical
+instead, that rule and all 14 URLs flip together.
+
 The move from `workers.dev` to `coffeeshtob.ru` was made in one commit for
 exactly this reason: canonical, `og:url` and `sitemap.xml` disagreeing about
 which host is real is the failure mode, and a split second where half the files
