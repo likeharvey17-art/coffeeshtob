@@ -6,36 +6,72 @@ region, Russia. Content is entirely in Russian.
 
 ## Current state
 
-Live and in the owner's hands. The whole page is CMS-editable, the menu carries
-prices, and most placeholder images have been replaced with real photos. Read
-"Things deliberately not built" before proposing a feature — several obvious
-additions were considered and rejected for reasons that still apply.
+**Live on Beget at `https://coffeeshtob.ru`, and the client currently cannot
+edit it.** Much of what follows in this file was written when the site was on
+Cloudflare with a working Decap CMS. Both of those are gone. Where a section
+below describes Cloudflare or GitLab, read it as history unless it says
+otherwise.
+
+What changed, in one pass:
+
+- **Cloudflare is gone.** The site was unreachable from Russian IPs — RKN
+  throttles Cloudflare. Now on Beget shared hosting (Apache behind nginx, PHP,
+  no database). See "Moving to Russian hosting".
+- **GitLab is gone.** The owner's account (`likeharvey17-art`) was blocked
+  without explanation. The repo now lives at
+  `https://github.com/likeharvey17-art/coffeeshtob` (private). The old GitLab
+  URL is kept as a `gitlab` remote for reference; it no longer authenticates.
+- **The CMS is dead as a result.** Decap authenticates through gitlab.com, so
+  `/admin/` cannot log in. Moving the repo to GitHub does not fix it — Decap's
+  GitHub backend needs an OAuth broker holding a client secret, which is the
+  whole reason GitLab PKCE was chosen originally.
+- **Deploys are manual for now** — a zip built from `git ls-files` minus the
+  private files, extracted in Beget's File Manager. The `.gitlab-ci.yml` FTPS
+  job is dead with GitLab; the replacement is a GitHub Actions workflow that
+  nobody has written yet.
 
 Known open items, in rough priority order:
 
-1. **The site loads badly from inside Russia, and hosting is moving because of
-   it.** The client reported it taking "forever" on both Wi-Fi and mobile, then
-   settling into a stripped-down version with the wrong fonts and unloaded
-   images. Two separate causes were identified; **one is fixed, one is not**:
-   - *Fixed:* Google Fonts was a render-blocking `<link>` in `<head>`, so a slow
-     Google meant a blank page until timeout, then system fonts. Fonts are now
-     self-hosted and the page makes no third-party requests at all.
-   - *Open:* the site is still served from Cloudflare, which RKN throttles. That
-     the page eventually arrives at all says Cloudflare is throttled rather than
-     blocked — but "eventually" is not good enough, and large assets (the
-     photos) are the ones that never finish. **The fix is to move to Russian
-     hosting**; see "Moving to Russian hosting" below.
-2. **GitLab pipeline failures** — every CMS save may still mail a failed-pipeline
-   notice. Not confirmed fixed; see Deployment. Note this stops being a nuisance
-   and becomes *required* if the site moves to a host that needs CI to deploy.
-3. **`404.html` is not served** by Cloudflare; the fix is risky. See Icons and SEO.
-   Ordinary Apache hosting would serve it correctly via `.htaccess`, so a move
-   closes this one for free.
-4. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
-5. **CMS body copy is applied by JS**, which Yandex renders less reliably than
-   Google. The SEO-critical signals (title, meta description, JSON-LD, `llms.txt`)
-   are static HTML and unaffected, but a Yandex indexing complaint would start
-   here. A PHP host could render the JSON server-side and close this too.
+1. **The client has no way to edit their own site.** This is the live problem
+   and the reason for the Grav decision below.
+2. **No automated deploy.** Write the GitHub Actions equivalent of the old FTPS
+   job (`lftp` mirror, same four secrets). Worth having it stamp the asset
+   `?v=` version from the commit SHA so nobody has to remember.
+3. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
+4. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
+   when Grav lands; deleting it earlier is harmless if the client is told.
+
+Resolved by the move, and no longer open: the Russia loading failure, the
+Cloudflare-only `404.html`, and the GitLab pipeline emails.
+
+## Decision: the CMS is being replaced with Grav
+
+Chosen deliberately, with the alternatives ruled out on record:
+
+- **Every git-based CMS is disqualified.** Decap *and* Sveltia both require the
+  editor to hold a GitHub or GitLab account. The requirement is that the client
+  logs in with a password the developer hands them, which no git-backed CMS can
+  do.
+- **Every hosted CMS is disqualified** (Sitepins, Tina Cloud, Contentful,
+  Storyblok). They satisfy the password requirement but reintroduce a foreign
+  service that can throttle, block or ban — which is precisely how both
+  Cloudflare and GitLab were lost inside one week. For a Russian client base,
+  treat that as fatal rather than as a trade-off.
+- **Kirby is out on cost** ($105/site) despite the best panel.
+- **A bespoke PHP admin was seriously considered and rejected.** It needs no
+  rewrite and reuses `content/home.json` as-is, but it means hand-written
+  authentication maintained across a dozen client sites forever, with no
+  upstream security patches and a bus factor of one.
+
+**Grav** wins on: free, flat-file (no database), PHP 7.3.6+, installs and
+updates over FTP with no SSH, its own user accounts, community Russian
+localisation, and — decisively — someone else patching the auth. It renders
+server-side, which deletes `render.js` and closes the old Yandex/JS-indexing
+concern as a side effect. Twig templates are *your* HTML, so Grav imposes no
+design: `style.css` and `script.js` carry over intact.
+
+**Sequencing matters.** Build Grav on a staging subdomain, port the design,
+verify, and only then swap. Do not rebuild in place on the live site.
 
 ## Stack
 
