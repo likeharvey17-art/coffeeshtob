@@ -236,11 +236,18 @@ from a different timezone, so ordering by the log is unreliable) or whether the
 config is still wrong. **The actual pipeline error text was never seen** — ask
 for it before theorising, it is on the pipeline page in GitLab.
 
-**Recommended resolution, and the one to push for: turn CI/CD off in the project
-settings** — Settings → General → Visibility → CI/CD off. That removes the whole
-class of problem instead of negotiating with it, and `.gitlab-ci.yml` can then be
-deleted. Two rounds of trying to write a config that does nothing have each cost
-more than the setting would have.
+**That advice is now REVERSED, and the project setting must stay ON.** Turning
+CI/CD off was the right call while nothing needed to run — but on Beget, CI *is*
+the deploy mechanism, and a disabled CI/CD makes `Settings → CI/CD` vanish from
+the menu entirely, so there is nowhere to add the FTP variables and no
+`Build → Pipelines` to run. That is exactly how it was found: the Settings menu
+had no CI/CD entry at all.
+
+Re-enable at **Settings → General → Visibility, project features, permissions →
+CI/CD**. Enabling it does not resurrect the old failed-pipeline emails: the
+`workflow` rule in `.gitlab-ci.yml` creates no pipeline while `$FTP_HOST` is
+unset, which is also why CI/CD can be switched on before the variables exist
+without anything firing in between.
 
 An earlier version of that file deployed to Beget over FTPS. It was replaced
 when hosting moved to Cloudflare; the FTP version is in git history if Beget
