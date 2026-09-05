@@ -178,14 +178,30 @@ jobs:
             echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
             echo "set ssl:verify-certificate no;"
             echo "set net:max-retries 3; set net:timeout 20;"
+            # Keep going if a command fails. mkdir on a directory that already
+            # exists is an error in lftp, and by default that aborts the rest of
+            # the script — taking the puts with it. The re-check below is what
+            # decides success, so tolerating individual failures here is safe.
+            echo "set cmd:fail-exit false;"
             echo "open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';"
             while IFS= read -r f; do
               d=$(dirname "$f")
-              echo "mkdir -p '$REMOTE_DIR/$d';"
-              echo "put -O '$REMOTE_DIR/$d' '_deploy/$f';"
+              if [ "$d" = "." ]; then
+                # A root-level file. dirname gives "." and naively appending it
+                # produced `put -O '$REMOTE_DIR/.'`, which lftp would not accept
+                # — so the one file that has ever gone missing here, og-image.jpg,
+                # was also the one the repair could not fix.
+                echo "put -O '$REMOTE_DIR' '_deploy/$f';"
+              else
+                echo "mkdir -p '$REMOTE_DIR/$d';"
+                echo "put -O '$REMOTE_DIR/$d' '_deploy/$f';"
+              fi
             done < /tmp/missing.txt
           } > /tmp/repair.lftp
-          lftp -f /tmp/repair.lftp
+          echo "--- repair script ---"
+          grep -v "^open " /tmp/repair.lftp | sed 's/^/  /'
+          echo "---------------------"
+          lftp -f /tmp/repair.lftp || echo "(repair reported errors; the re-check below decides)"
 
           remote_list > /tmp/remote2.txt
           still=$(comm -23 /tmp/expected.txt /tmp/remote2.txt || true)
