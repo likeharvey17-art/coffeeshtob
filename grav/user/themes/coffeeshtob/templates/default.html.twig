@@ -1,0 +1,24 @@
+{# Safety net, not a real template.
+
+   Grav picks a template from the page's filename: default.md asks for
+   default.html.twig, home.md asks for home.html.twig. A theme that provides
+   only home.html.twig therefore hard-errors on any page named default.md —
+   which is exactly what Grav's stock install ships, and exactly how this theme
+   failed on first activation:
+
+     ERROR: default.html.twig template not found for page: /
+
+   Rather than leave that landmine for whoever adds a second page, anything
+   asking for `default` renders through the same layout. It will show an empty
+   body, since home.html.twig owns the actual sections — but an empty styled
+   page is a far better failure than a stack trace, and it makes the cause
+   obvious instead of fatal. #}
+{% extends 'partials/base.html.twig' %}
+
+{% block body %}
+  <main class="section">
+    <div class="container">
+      {{ page.content|raw }}
+    </div>
+  </main>
+{% endblock %}

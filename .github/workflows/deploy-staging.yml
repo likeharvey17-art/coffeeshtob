@@ -84,13 +84,24 @@ jobs:
           STAGING_DIR: ${{ secrets.STAGING_DIR }}
         run: |
           echo "Seeding grav/user/pages/ — this OVERWRITES pages on staging."
+          # Grav's stock install ships user/pages/01.home/default.md. Because
+          # this mirror deliberately has no --delete (client pages must survive
+          # deploys), seeding leaves that file in place beside our home.md — and
+          # Grav then renders it, asking for a default.html.twig this theme has
+          # no reason to provide. First activation failed exactly that way.
+          #
+          # Removing it by name is precise: it targets Grav's demo page and
+          # nothing the client could have created.
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
             set ssl:verify-certificate no;
+            set cmd:fail-exit false;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --verbose --parallel=2 \
               grav/user/pages/ '$STAGING_DIR/user/pages';
-          "
+            rm -f '$STAGING_DIR/user/pages/01.home/default.md';
+            rm -rf '$STAGING_DIR/user/pages/02.typography';
+          " || echo "(seed reported errors; the render check below decides)"
 
       # Beget serves a JavaScript interstitial to clients that do not carry a
       # `beget=begetok` cookie — a 273-byte page that sets the cookie and
