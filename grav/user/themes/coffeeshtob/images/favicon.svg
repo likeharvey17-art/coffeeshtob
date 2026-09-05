@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Кофештаб">
+  <!-- Solid shapes, not line art. The header's brand mark is a stroked cup at
+       stroke-width 2, which turns to mush in a 16px browser tab, so the same
+       cup is redrawn here in silhouette with nothing thinner than 5/64 of the
+       canvas. The saucer earns its place: without it the cup reads as an
+       anonymous white blob at tab size. The gap above it is deliberate — close
+       it and the two shapes merge when downscaled.
+       Geometry is mirrored exactly in the PNG/ICO generator. -->
+  <rect width="64" height="64" rx="14" fill="#4a3b30"/>
+  <path d="M43.5 21a6 6 0 0 1 0 12" fill="none" stroke="#fdfbf8"
+        stroke-width="5" stroke-linecap="round"/>
+  <path d="M17 18h23v9.5a9.5 9.5 0 0 1-9.5 9.5h-4A9.5 9.5 0 0 1 17 27.5z" fill="#fdfbf8"/>
+  <rect x="12" y="43" width="40" height="5.5" rx="2.75" fill="#fdfbf8"/>
+</svg>

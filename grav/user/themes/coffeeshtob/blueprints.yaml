@@ -1,0 +1,20 @@
+name: Кофештаб
+slug: coffeeshtob
+type: theme
+version: 0.1.0
+description: Тема сайта кофештаба «Романов на Волге». Перенесена из статической вёрстки без изменений в дизайне.
+icon: mug-hot
+author:
+  name: webtyr
+homepage: https://coffeeshtob.ru
+license: MIT
+compatibility:
+  grav: ['2.0']
+dependencies:
+  - { name: grav, version: '>=2.0.0' }
+
+# No theme options form. Everything an editor touches lives on the page itself
+# (see blueprints/home.yaml), so the Themes screen deliberately offers nothing
+# to configure — one place to edit content, not two.
+form:
+  fields: {}

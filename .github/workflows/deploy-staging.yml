@@ -1,0 +1,112 @@
+name: Deploy theme to Grav staging
+
+# Staging is the Grav install at test.tryphopx.beget.tech, where the theme is
+# being built before it replaces the static production site.
+#
+# This deploys ONLY what is ours — the theme and the seed content under grav/ —
+# never Grav's core. system/ and vendor/ are Grav's, are 60+ MB, and are updated
+# through Grav's own admin panel. Committing them would make every version bump
+# a thousand-file diff and would mean hand-rolling updates Grav does in two
+# clicks. That split is the whole reason the repo mirrors Grav's layout under a
+# grav/ prefix rather than at the root.
+#
+# SETUP — one extra repository secret beside the four the production job uses:
+#   STAGING_DIR   /test.tryphopx.beget.tech/public_html
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'grav/**'
+      - '.github/workflows/deploy-staging.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the secrets exist
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          STAGING_DIR: ${{ secrets.STAGING_DIR }}
+        run: |
+          missing=
+          for v in FTP_HOST FTP_USER FTP_PASSWORD STAGING_DIR; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing repository secret(s):$missing"
+            exit 1
+          fi
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Deploy the theme
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          STAGING_DIR: ${{ secrets.STAGING_DIR }}
+        run: |
+          set -euo pipefail
+          test -f grav/user/themes/coffeeshtob/blueprints.yaml \
+            || { echo "theme not found — refusing to deploy"; exit 1; }
+          # --delete is scoped to the theme directory alone. Grav's core, the
+          # client's pages and their uploaded media all live outside it and are
+          # never touched by this job.
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set net:max-retries 3; set net:timeout 20;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --delete --verbose --parallel=2 \
+              grav/user/themes/coffeeshtob/ '$STAGING_DIR/user/themes/coffeeshtob';
+          "
+
+      # Deliberately NOT part of the normal push path. Pages are what the client
+      # edits in the admin panel; overwriting them on every deploy would throw
+      # their work away. This seeds the initial content once, by hand.
+      - name: Seed page content (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          STAGING_DIR: ${{ secrets.STAGING_DIR }}
+        run: |
+          echo "Seeding grav/user/pages/ — this OVERWRITES pages on staging."
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --verbose --parallel=2 \
+              grav/user/pages/ '$STAGING_DIR/user/pages';
+          "
+
+      # Beget serves a JavaScript interstitial to clients that do not carry a
+      # `beget=begetok` cookie — a 273-byte page that sets the cookie and
+      # reloads. Without it every check here reads the challenge instead of the
+      # site and reports nonsense. Browsers pass it invisibly; curl does not.
+      - name: Confirm staging still renders
+        run: |
+          for i in $(seq 1 10); do
+            body=$(curl -sS -L --max-redirs 5 -H 'Cookie: beget=begetok' \
+                   --max-time 30 "http://test.tryphopx.beget.tech/?ci=$GITHUB_RUN_ID-$i" || true)
+            if echo "$body" | grep -qi 'coffeeshtob\|Кофештаб'; then
+              echo "staging renders the site"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "staging did not render expected content. Last response:"
+          echo "$body" | head -c 600
+          exit 1

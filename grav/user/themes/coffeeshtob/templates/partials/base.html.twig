@@ -1,0 +1,73 @@
+{# Base layout. Mirrors the <head> of the old static index.html, with three
+   deliberate differences:
+
+   1. Absolute URLs come from `base_url_absolute` instead of being hardcoded.
+      The static site had the production host written into 14 places across five
+      files, all of which had to change together whenever hosting moved — and it
+      moved twice in a week. Here staging advertises staging and production
+      advertises production, with nothing to keep in sync.
+
+   2. CSS and JS go through Grav's asset manager, which appends its own version
+      to each URL. That replaces the hand-maintained `?v=YYYYMMDD` stamps: nginx
+      on Beget caches static files for a week regardless of what .htaccess says,
+      and no filename here carries a content hash, so without versioning a
+      deploy would strand returning visitors on a stale stylesheet.
+
+   3. Title and description come from the page, so they are editable rather than
+      buried in markup. #}
+<!DOCTYPE html>
+<html lang="{{ grav.language.getActive ?: 'ru' }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>{% block title %}{{ page.header.seo_title ?: page.title }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ page.header.seo_description }}{% endblock %}">
+<meta name="theme-color" content="#fdfbf8">
+<link rel="canonical" href="{{ page.url(true) }}">
+
+{# favicon.svg covers modern browsers at any size; favicon.ico carries the
+   16/32/48/64/128/256 set for older ones and for crawlers that still fetch
+   /favicon.ico by convention. #}
+<link rel="icon" href="{{ url('theme://images/favicon.ico') }}" sizes="any">
+<link rel="icon" href="{{ url('theme://images/favicon.svg') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ url('theme://images/apple-touch-icon.png') }}">
+<link rel="manifest" href="{{ url('theme://images/site.webmanifest') }}">
+
+{% set og_image = base_url_absolute ~ url('theme://images/og-image.jpg') %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Кофештаб «Романов на Волге»">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="{{ page.header.seo_title ?: page.title }}">
+<meta property="og:description" content="{{ page.header.seo_description }}">
+<meta property="og:url" content="{{ page.url(true) }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Кофештаб — кофейня в купеческом доме на Волжской набережной">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ page.header.seo_title ?: page.title }}">
+<meta name="twitter:description" content="{{ page.header.seo_description }}">
+<meta name="twitter:image" content="{{ og_image }}">
+
+{% block stylesheets %}
+  {% do assets.addCss('theme://css/style.css', 100) %}
+{% endblock %}
+{% block javascripts %}
+  {% do assets.addJs('theme://js/script.js', {group: 'bottom', priority: 100}) %}
+{% endblock %}
+{{ assets.css()|raw }}
+
+{% block head_extra %}{% endblock %}
+</head>
+<body>
+
+{% block header %}{% include 'partials/header.html.twig' %}{% endblock %}
+
+{% block body %}{% endblock %}
+
+{% block footer %}{% include 'partials/footer.html.twig' %}{% endblock %}
+
+{{ assets.js('bottom')|raw }}
+</body>
+</html>
