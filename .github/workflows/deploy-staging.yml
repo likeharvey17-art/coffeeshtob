@@ -68,7 +68,7 @@ jobs:
             set ftp:ssl-protect-data true; set ssl:verify-certificate no;
             set net:max-retries 3; set net:timeout 20;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --verbose --parallel=2 \
+            mirror --reverse --delete --no-perms --verbose --parallel=2 \
               grav/user/themes/coffeeshtob/ '$STAGING_DIR/user/themes/coffeeshtob';
           "
 
@@ -97,7 +97,7 @@ jobs:
             set ssl:verify-certificate no;
             set cmd:fail-exit false;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --verbose --parallel=2 \
+            mirror --reverse --no-perms --verbose --parallel=2 \
               grav/user/pages/ '$STAGING_DIR/user/pages';
             rm -f '$STAGING_DIR/user/pages/01.home/default.md';
             rm -rf '$STAGING_DIR/user/pages/02.typography';

@@ -109,6 +109,25 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
+          # --no-perms is why this job stopped going red on every single run.
+          #
+          # lftp's mirror sets permissions on each file after transferring it,
+          # and Beget's FTP server refuses outright:
+          #
+          #   chmod: Access failed: 550 SITE CHMOD command failed. (./inter-latin.woff2)
+          #   Error: Process completed with exit code 1
+          #
+          # Every file transferred correctly — the deploy always worked, the
+          # site always updated — and lftp still exited 1 because the chmod
+          # calls were rejected. Every red run up to this point was that, and it
+          # sent three separate investigations chasing a broken file that was
+          # never broken. --no-perms stops lftp attempting chmod at all.
+          #
+          # This is also the most credible explanation yet for og-image.jpg (see
+          # below): a chmod failure mid-mirror plausibly aborted the remaining
+          # queue. That has NOT been confirmed, and the exclude stays until a
+          # green run proves the flag works on its own.
+          #
           # --delete makes the server match the repo exactly, so a file deleted
           # here disappears there and stale assets cannot accumulate. That is
           # also what makes the two excludes below load-bearing:
@@ -157,7 +176,7 @@ jobs:
             set net:max-retries 3;
             set net:timeout 20;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --verbose --parallel=2 \
+            mirror --reverse --delete --no-perms --verbose --parallel=2 \
               --exclude-glob cgi-bin/ \
               --exclude-glob .well-known/ \
               --exclude-glob og-image.jpg \
