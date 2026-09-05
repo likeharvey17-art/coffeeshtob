@@ -152,10 +152,18 @@ jobs:
           #     complaint, so it was never size, type or location. lftp simply
           #     exhausts its retries on some transfers against this server.
           #
-          #     Hence --parallel=1 and the raised retry/timeout settings above:
-          #     the most likely trigger is a per-account concurrent-connection
-          #     limit on Beget's FTP, with the mirror and the verification pass
-          #     both opening sockets.
+          #     --parallel=1 and the raised retry/timeout settings above were
+          #     an attempt at a per-account connection limit on Beget's FTP.
+          #     THAT THEORY IS DISPROVEN — run #15 serialised every transfer and
+          #     inter-latin.woff2 went missing exactly as before. The settings
+          #     stay because serial transfers cost nothing here and remove a
+          #     variable, not because they fixed anything.
+          #
+          #     Four theories have now failed, all of them guesses at a message
+          #     that never named a cause. The verification step below now runs
+          #     `debug 3` on whatever is still missing, so the next red run
+          #     prints what the server actually says instead of inviting a
+          #     fifth guess.
           #
           #     The exclude stays only until a run proves inter-latin.woff2
           #     transfers reliably. If it does, remove this exclude — the
@@ -282,6 +290,41 @@ jobs:
           if [ -n "$still" ]; then
             echo "STILL MISSING after repair — failing the deploy:"
             echo "$still" | sed 's/^/  /'
+
+            # Four theories about this have each been wrong: a parallel-transfer
+            # race, something about the file, a malformed repair command, and a
+            # per-account connection limit. Every one of them was a guess, and
+            # they were all guesses because "Fatal error: max-retries exceeded"
+            # reports only that lftp gave up — never what the server said.
+            #
+            # debug 3 prints the FTP dialogue, so the server gives its own
+            # reason instead: 552 is quota, 550 is permission or a refused
+            # write, 421 is a connection limit. `du` alongside it shows what the
+            # account is actually using, which settles the quota case outright.
+            #
+            # max-retries is dropped to 1 here so the log is one clean exchange
+            # rather than eight. Credentials are redacted below, and Actions
+            # masks the secrets again on top of that.
+            one=$(echo "$still" | head -1)
+            dir=$(dirname "$one")
+            [ "$dir" = "." ] && dest="$REMOTE_DIR" || dest="$REMOTE_DIR/$dir"
+            echo "--- diagnosing $one ($(wc -c < "_deploy/$one") bytes) ---"
+            {
+              echo "debug -o /tmp/ftp.log 3;"
+              echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
+              echo "set ftp:ssl-protect-data true;"
+              echo "set ssl:verify-certificate no;"
+              echo "set net:max-retries 1; set net:timeout 20;"
+              echo "set cmd:fail-exit false;"
+              echo "open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';"
+              echo "du -hs '$REMOTE_DIR';"
+              echo "put -O '$dest' '_deploy/$one';"
+            } > /tmp/diag.lftp
+            lftp -f /tmp/diag.lftp || true
+            echo "--- FTP dialogue ---"
+            sed -E 's/^(.*(PASS|USER|ACCT)).*/\1 ***REDACTED***/' /tmp/ftp.log \
+              | tail -80 | sed 's/^/  /'
+            echo "--------------------"
             exit 1
           fi
           echo "repair succeeded; all files present"
