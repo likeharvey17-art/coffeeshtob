@@ -124,40 +124,66 @@ jobs:
             set net:max-retries 3;
             set net:timeout 20;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --verbose --parallel=4 \
+            mirror --reverse --delete --verbose --parallel=2 \
               --exclude-glob cgi-bin/ \
               --exclude-glob .well-known/ \
               _deploy/ '$REMOTE_DIR';
           "
 
-      # The mirror can report success while .htaccess never arrived — some FTP
-      # servers quietly refuse dotfiles. Its absence breaks /privacy, the 404
-      # page and the HTTPS redirect all at once, so check rather than assume.
-      - name: Verify the deploy landed
+      # lftp can exit 0 having silently skipped files. The first automated run
+      # did exactly that: og-image.jpg — tracked, in the upload set, and present
+      # from the previous manual upload — was simply not there afterwards, and
+      # the original version of this step missed it because it only checked
+      # .htaccess and index.html.
+      #
+      # So compare the WHOLE manifest, not a spot check. Anything the mirror
+      # dropped shows up here by name instead of as a 404 someone notices weeks
+      # later on a Telegram link preview.
+      - name: Verify every file arrived
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
+          set -uo pipefail
+          ( cd _deploy && find . -type f | sed 's|^\./||' ) | sort > /tmp/expected.txt
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
             set ssl:verify-certificate no;
+            set net:max-retries 3; set net:timeout 20;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             cd '$REMOTE_DIR';
-            ls .htaccess;
-            ls index.html;
-          " || { echo 'FAILED: .htaccess or index.html missing on the server'; exit 1; }
+            find;
+          " 2>/dev/null | sed 's|^\./||' | sed 's|/$||' | grep -v '^$' | sort > /tmp/remote.txt
 
+          missing=$(comm -23 /tmp/expected.txt /tmp/remote.txt || true)
+          echo "expected $(wc -l < /tmp/expected.txt) files; remote listing has $(wc -l < /tmp/remote.txt) entries"
+          if [ -n "$missing" ]; then
+            echo "MISSING FROM SERVER:"
+            echo "$missing" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "all files present"
+
+      # Retry rather than check once. The first run failed here despite having
+      # deployed correctly: it looked 5 seconds after the upload, got the old
+      # HTML, and went red on a site that was in fact fine. A single check makes
+      # this step a coin toss, and a deploy job that cries wolf gets ignored,
+      # which is worse than not having the check at all.
       - name: Confirm the live site is serving this commit
         run: |
           V="${GITHUB_SHA::7}"
-          sleep 5
-          got=$(curl -sS --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID" \
-                | grep -o "style.css?v=[A-Za-z0-9_.-]*" | head -1 || true)
-          echo "live: ${got:-<nothing>}   expected: style.css?v=$V"
-          [ "$got" = "style.css?v=$V" ] || {
-            echo "The live site is not serving this commit yet."
-            echo "If everything else passed, this is usually caching — check manually."
-            exit 1
-          }
+          for i in $(seq 1 12); do
+            got=$(curl -sS --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID-$i" 2>/dev/null \
+                  | grep -o "style.css?v=[A-Za-z0-9_.-]*" | head -1 || true)
+            if [ "$got" = "style.css?v=$V" ]; then
+              echo "live site is serving $V (after $i attempt(s))"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "After ~2 minutes the live site still reports: ${got:-<nothing>}"
+          echo "Expected style.css?v=$V. The upload and manifest checks passed,"
+          echo "so this is either caching or the domain pointing somewhere else."
+          exit 1
