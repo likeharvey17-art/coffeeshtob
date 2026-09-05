@@ -26,7 +26,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check the secrets exist
         env:
@@ -139,7 +139,19 @@ jobs:
       # So compare the WHOLE manifest, not a spot check. Anything the mirror
       # dropped shows up here by name instead of as a 404 someone notices weeks
       # later on a Telegram link preview.
-      - name: Verify every file arrived
+      # lftp exits 0 having silently skipped files. Confirmed on this host:
+      # og-image.jpg — tracked, in the upload set, 42 KB, a valid JPEG — was
+      # skipped by `mirror` on two consecutive runs, while uploading the same
+      # file by hand through Beget's File Manager worked first time and served
+      # correctly. So the server is fine and lftp is the problem, and the cause
+      # is not reproducible without this specific FTP endpoint.
+      #
+      # Rather than keep guessing at why, repair it: the comparison already
+      # knows exactly which files are missing, so put them individually and
+      # check again. A single skipped file here is invisible — og-image.jpg is
+      # the social card, and its absence shows up only as a broken Telegram or
+      # VK link preview weeks later.
+      - name: Verify every file arrived, and repair what did not
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -147,24 +159,51 @@ jobs:
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -uo pipefail
-          ( cd _deploy && find . -type f | sed 's|^\./||' ) | sort > /tmp/expected.txt
-          lftp -c "
-            set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set net:max-retries 3; set net:timeout 20;
-            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            cd '$REMOTE_DIR';
-            find;
-          " 2>/dev/null | sed 's|^\./||' | sed 's|/$||' | grep -v '^$' | sort > /tmp/remote.txt
 
-          missing=$(comm -23 /tmp/expected.txt /tmp/remote.txt || true)
-          echo "expected $(wc -l < /tmp/expected.txt) files; remote listing has $(wc -l < /tmp/remote.txt) entries"
-          if [ -n "$missing" ]; then
-            echo "MISSING FROM SERVER:"
-            echo "$missing" | sed 's/^/  /'
+          remote_list() {
+            lftp -c "
+              set ftp:ssl-allow true; set ftp:ssl-force true;
+              set ssl:verify-certificate no;
+              set net:max-retries 3; set net:timeout 20;
+              open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+              cd '$REMOTE_DIR';
+              find;
+            " 2>/dev/null | sed 's|^\./||' | sed 's|/$||' | grep -v '^$' | sort
+          }
+
+          ( cd _deploy && find . -type f | sed 's|^\./||' ) | sort > /tmp/expected.txt
+          remote_list > /tmp/remote.txt
+          comm -23 /tmp/expected.txt /tmp/remote.txt > /tmp/missing.txt || true
+
+          echo "expected $(wc -l < /tmp/expected.txt) files"
+          if [ ! -s /tmp/missing.txt ]; then
+            echo "all files present"
+            exit 0
+          fi
+
+          echo "missing after mirror — repairing:"
+          sed 's/^/  /' /tmp/missing.txt
+          {
+            echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
+            echo "set ssl:verify-certificate no;"
+            echo "set net:max-retries 3; set net:timeout 20;"
+            echo "open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';"
+            while IFS= read -r f; do
+              d=$(dirname "$f")
+              echo "mkdir -p '$REMOTE_DIR/$d';"
+              echo "put -O '$REMOTE_DIR/$d' '_deploy/$f';"
+            done < /tmp/missing.txt
+          } > /tmp/repair.lftp
+          lftp -f /tmp/repair.lftp
+
+          remote_list > /tmp/remote2.txt
+          still=$(comm -23 /tmp/expected.txt /tmp/remote2.txt || true)
+          if [ -n "$still" ]; then
+            echo "STILL MISSING after repair — failing the deploy:"
+            echo "$still" | sed 's/^/  /'
             exit 1
           fi
-          echo "all files present"
+          echo "repair succeeded; all files present"
 
       # Retry rather than check once. The first run failed here despite having
       # deployed correctly: it looked 5 seconds after the upload, got the old
