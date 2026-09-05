@@ -48,12 +48,20 @@ jobs:
       # Built from `git ls-files` rather than mirroring the checkout, so the
       # upload set is exactly what is tracked — no .git, no runner droppings,
       # and nothing that happens to be lying around.
+      #
+      # `grav/` is excluded because it belongs to the OTHER site. It holds the
+      # Grav theme for the staging install and has no meaning on the static
+      # production site. Adding it to the repo without adding it here shipped
+      # the whole theme — CSS, fonts, images, templates, page content — to
+      # coffeeshtob.ru, where /grav/user/themes/coffeeshtob/css/style.css was
+      # publicly serving 200. Whenever a directory is added to this repo for a
+      # different deploy target, it has to be excluded here in the same commit.
       - name: Assemble the upload set
         run: |
           set -euo pipefail
           rm -rf _deploy && mkdir _deploy
           git ls-files \
-            | grep -vE '^(CLAUDE\.md|\.gitignore|\.github/|\.claude/)' \
+            | grep -vE '^(CLAUDE\.md|\.gitignore|\.github/|\.claude/|grav/)' \
             | while IFS= read -r f; do
                 mkdir -p "_deploy/$(dirname "$f")"
                 cp "$f" "_deploy/$f"
