@@ -25,21 +25,23 @@ What changed, in one pass:
   `/admin/` cannot log in. Moving the repo to GitHub does not fix it — Decap's
   GitHub backend needs an OAuth broker holding a client secret, which is the
   whole reason GitLab PKCE was chosen originally.
-- **Deploys are manual for now** — a zip built from `git ls-files` minus the
-  private files, extracted in Beget's File Manager. The `.gitlab-ci.yml` FTPS
-  job is dead with GitLab; the replacement is a GitHub Actions workflow that
-  nobody has written yet.
+- **Deploys are automated again**, now by GitHub Actions rather than GitLab CI —
+  `.github/workflows/deploy.yml` for production, `deploy-staging.yml` for the
+  Grav install. The manual zip-and-extract through Beget's File Manager is
+  history. See "Deploy" below, which is worth reading before touching either
+  workflow: this host breaks FTP in two specific ways.
 
 Known open items, in rough priority order:
 
 1. **The client has no way to edit their own site.** This is the live problem
    and the reason for the Grav decision below.
-2. **No automated deploy.** Write the GitHub Actions equivalent of the old FTPS
-   job (`lftp` mirror, same four secrets). Worth having it stamp the asset
-   `?v=` version from the commit SHA so nobody has to remember.
-3. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
-4. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
+2. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
+3. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
    when Grav lands; deleting it earlier is harmless if the client is told.
+4. **`og-image.jpg` is on the server by hand, not by deploy.** It is excluded
+   from the mirror (which is what stops `--delete` removing it) and from the
+   manifest check. Fold it back in once the mirror carries the working FTP
+   transport — see "Deploy".
 
 Resolved by the move, and no longer open: the Russia loading failure, the
 Cloudflare-only `404.html`, and the GitLab pipeline emails.
@@ -272,7 +274,12 @@ from a different timezone, so ordering by the log is unreliable) or whether the
 config is still wrong. **The actual pipeline error text was never seen** — ask
 for it before theorising, it is on the pipeline page in GitLab.
 
-**That advice is now REVERSED, and the project setting must stay ON.** Turning
+**Moot as of the move to GitHub — the whole of the rest of this section is
+GitLab archaeology, kept only in case that account is ever recovered. Deploys
+run on GitHub Actions now; see "Deploy" under "Moving to Russian hosting".**
+
+**That advice was REVERSED while GitLab was still in use, and the project
+setting had to stay ON.** Turning
 CI/CD off was the right call while nothing needed to run — but on Beget, CI *is*
 the deploy mechanism, and a disabled CI/CD makes `Settings → CI/CD` vanish from
 the menu entirely, so there is nowhere to add the FTP variables and no
@@ -370,20 +377,99 @@ then bounced back, costing two redirects and a plaintext hop per link. **Any new
 
 ### Deploy
 
-`.gitlab-ci.yml` is now the FTPS mirror job again, but **dormant**: its
-`workflow` rule creates no pipeline at all while `$FTP_HOST` is unset. So it is
-safe to carry before the hosting account exists — nothing runs, nothing fails, no
-failed-pipeline email — and it activates itself the moment the four CI variables
-are added. That also subsumes the old Auto-DevOps suppression.
+**GitHub Actions, two workflows**, both `lftp` FTPS mirrors:
 
-`mirror --delete` makes the server match the repo exactly. **When the PHP CMS
-lands and content is edited on the server rather than committed, `--delete` will
-destroy those edits on the next push** — add `--exclude content/` and
-`--exclude images/uploads/` at that point, or drop `--delete`.
+- `.github/workflows/deploy.yml` — production, on every push to `main`. Four
+  repository secrets: `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `REMOTE_DIR`.
+- `.github/workflows/deploy-staging.yml` — the Grav install, on pushes touching
+  `grav/**`. One extra secret, `STAGING_DIR`. It deploys **only the theme**;
+  Grav's own `system/` and `vendor/` are 60+ MB and are updated through Grav's
+  admin panel, which is why the repo mirrors Grav's layout under a `grav/`
+  prefix rather than at the root.
 
-Unlike Cloudflare, the deploy excludes `CLAUDE.md`, `.gitlab-ci.yml` and
-`.gitignore`, and `.htaccess` denies them anyway. The repo root stops being the
-web root, so this file stops being world-readable.
+Production assembles its upload set from `git ls-files` minus
+`CLAUDE.md`, `.gitignore`, `.github/`, `.claude/` and **`grav/`**. That last
+exclusion is load-bearing and was learned by breaking it: adding `grav/` to the
+repo without excluding it here shipped the whole Grav theme to coffeeshtob.ru,
+where `/grav/user/themes/coffeeshtob/css/style.css` served a public 200. **Any
+directory added for a different deploy target must be excluded here in the same
+commit.**
+
+It also stamps the `?v=` asset version from the commit SHA, so nobody has to
+remember to bump it, and asserts the count afterwards — an empty `GITHUB_SHA`
+would otherwise write `?v=` seven times and still pass a naive check.
+
+#### Beget breaks FTP in two ways, and both cost days
+
+**1. `lftp`'s exit code is meaningless on this host.** It returns 1 for things
+that are not failures. The first was `SITE CHMOD`, which Beget refuses outright:
+
+```
+chmod: Access failed: 550 SITE CHMOD command failed. (./inter-latin.woff2)
+```
+
+Every file transferred, the site updated, and the job went red anyway — through
+*three separate investigations* into a file that was never broken. `--no-perms`
+stops lftp attempting chmod at all, and even then the exit code stayed
+unreliable. **So neither workflow gates on it.** Production gates on a manifest
+check that lists the server and compares it to the upload set; staging gates on
+fetching the page and finding the site's own markup. Both are measurements of
+the outcome rather than opinions about the transfer.
+
+**2. Some data connections are dropped mid-transfer.** One file
+(`fonts/inter-latin.woff2`, and earlier `og-image.jpg`) failed on every run
+while its neighbours went through — deterministic, not flaky, and independent of
+size, type and directory. lftp reported only `Fatal error: max-retries
+exceeded`, which produced **four wrong theories in a row**: a parallel-transfer
+race, something about the file itself, a malformed repair command, and a
+per-account connection limit. Each was a guess at a message that named no cause.
+
+Adding `debug 3` to print the FTP dialogue ended it in one run:
+
+```
+<--- 250 Directory successfully changed.
+<--- 426 Failure reading network stream.
+```
+
+`426` is the data connection dying, not a permission or a refusal — and `du -hs`
+in the same run reported 11M, retiring the quota theory too. The repair step now
+walks a **transport ladder** — encrypted data channel, plaintext (`PROT C`),
+active mode, passive without EPSV — and reports which rung succeeds.
+
+**The lesson, twice over: get the server to say why.** Both of these burned days
+on theories while one flag would have printed the answer.
+
+Two cautions for whoever edits that step:
+
+- Each rung **deletes the remote file before writing it**. Deliberate — a
+  half-written remote file defeats every retry — but it must never point at a
+  file whose only copy lives on the server. `og-image.jpg` is exactly that
+  today.
+- `dirname` of a root-level file is `.`, and `put -O '$REMOTE_DIR/.'` is
+  rejected by lftp. That is why the one file that ever went missing at the root
+  was also the one the repair could not fix.
+
+#### `--delete`
+
+`mirror --delete` makes the server match the repo exactly, which is what stops
+stale assets accumulating. Three things are excluded from it, all for real
+reasons:
+
+- `cgi-bin/` — Beget creates it in every docroot; it is not in the repo.
+- `.well-known/` — where Let's Encrypt writes its ACME challenge. Wiping it
+  mid-renewal breaks certificate renewal every 90 days, and the failure would
+  look like nothing to do with deploys.
+- `og-image.jpg` — see above.
+
+**When Grav goes live and content is edited on the server rather than committed,
+`--delete` will destroy the client's work on the next push.** Add `--exclude
+user/` (or whatever holds pages and uploads) at that point, or drop `--delete`.
+The staging workflow already handles this: its `--delete` is scoped to the theme
+directory alone, and page content is seeded only on a manual
+`workflow_dispatch`, never on a push.
+
+Unlike Cloudflare, the repo root is no longer the web root, and `.htaccess`
+denies the private files anyway.
 
 ## Sections (in DOM order)
 
