@@ -1,0 +1,20 @@
+# Uploads are the one place on this site where a file arrives from outside the
+# repo: the CMS writes here, and on the new host that means a writable directory
+# under the web root. If anything executable ever lands here — through a CMS
+# bug, a stolen editor login, or a mis-set permission — this is what stops the
+# server from running it and turns it into an inert download instead.
+#
+# Nothing here should ever execute. These are photographs.
+
+<FilesMatch "\.(php|phtml|php[0-9]|phps|pht|shtml|cgi|pl|py|sh|htaccess)$">
+  Require all denied
+</FilesMatch>
+
+# Belt-and-braces: even if a handler is registered elsewhere, refuse to run it.
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .cgi .pl .py
+AddType text/plain .php .phtml .cgi .pl .py
+
+Options -ExecCGI -Indexes

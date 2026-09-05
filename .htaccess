@@ -1,0 +1,137 @@
+# Apache configuration for Russian shared hosting (Beget).
+#
+# INERT ON CLOUDFLARE. Cloudflare ignores .htaccess entirely, so this file does
+# nothing until DNS points at the new host. It is committed early so the cutover
+# is a DNS change rather than a DNS change plus a scramble.
+#
+# NOT YET VERIFIED ON A REAL SERVER — there is no Apache on the dev machine to
+# test against. Check each numbered block below on the host before trusting it,
+# especially (2): if the rewrites are wrong, /privacy 404s and takes the
+# canonical URL, the sitemap and the footer link down with it.
+
+# ---------------------------------------------------------------------------
+# 1. HTTPS
+# ---------------------------------------------------------------------------
+RewriteEngine On
+
+# Two conditions, not one: on shared hosting SSL is often terminated by a proxy
+# in front of Apache, in which case %{HTTPS} is never "on" and a redirect keyed
+# only on it loops forever. X-Forwarded-Proto is what the proxy actually sets.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# ---------------------------------------------------------------------------
+# 2. Extensionless URLs
+# ---------------------------------------------------------------------------
+# Cloudflare did this for free: it trimmed .html and 307'd /privacy.html to
+# /privacy. Every canonical, og:url, sitemap <loc> and internal link in this
+# repo is therefore written WITHOUT the extension. Apache does not do it by
+# default, so without this block /privacy is a hard 404 on the new host.
+#
+# MultiViews would also solve it, but by content negotiation, which guesses.
+# Explicit rewrites are predictable and fail loudly instead of oddly. Some hosts
+# forbid Options in .htaccess — if that 500s the site, delete this one line.
+<IfModule mod_negotiation.c>
+  Options -MultiViews
+</IfModule>
+
+# 2a. Redirect any explicit .html request to the clean URL, so one page has one
+#     address. index.html is handled first and separately, or /index.html would
+#     redirect to /index rather than to /.
+RewriteCond %{THE_REQUEST} \s/+(([^\s?]*/)?)index\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+RewriteCond %{THE_REQUEST} \s/+([^\s?]+)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# 2b. Serve foo.html for /foo. The !-f and !-d guards matter: without them this
+#     would hijack real files and directories, including /admin/.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^(.+?)/?$ $1.html [L]
+
+# ---------------------------------------------------------------------------
+# 3. Error page
+# ---------------------------------------------------------------------------
+# 404.html has existed and been styled for months but Cloudflare never served
+# it — an unknown path returned an empty body. Apache serves it properly, so
+# moving host closes that open item for free.
+ErrorDocument 404 /404.html
+
+# ---------------------------------------------------------------------------
+# 4. Compression
+# ---------------------------------------------------------------------------
+# Text only. woff2, jpeg and png are already compressed; running deflate over
+# them burns CPU to make them very slightly larger.
+# The guard is mod_filter, NOT mod_deflate. AddOutputFilterByType is provided by
+# mod_filter; mod_deflate only supplies the DEFLATE filter it references. Guarding
+# on mod_deflate passes on a server that has it without mod_filter, and then the
+# unknown directive throws "Invalid command 'AddOutputFilterByType'" — which in
+# .htaccess is a 500 on EVERY page, not a skipped feature. That was the actual
+# behaviour when this file was first tested against Apache 2.4.66.
+<IfModule mod_filter.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+  # BOTH javascript types. Apache 2.4 serves .js as text/javascript, so a list
+  # naming only application/javascript silently compresses nothing — measured:
+  # script.js and render.js came back uncompressed and uncached until this was
+  # added. Keep both; which one a host uses is not worth guessing.
+  AddOutputFilterByType DEFLATE text/javascript application/javascript
+  AddOutputFilterByType DEFLATE application/json application/manifest+json
+  AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
+
+# .webmanifest is not in Apache's default mime.types, so it was served with no
+# Content-Type at all. Declare the types this site needs rather than assuming
+# the host knows them.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType font/woff2 .woff2
+  AddType image/svg+xml .svg
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# 5. Caching
+# ---------------------------------------------------------------------------
+# The split here is deliberate and the short end is the important half: this
+# site has NO cache-busting hashes in its filenames. style.css is always
+# style.css, so a long max-age on it means visitors keep a stale stylesheet
+# after a deploy with no way to tell them otherwise.
+#
+# content/home.json is the sharpest case — it is what the CMS rewrites, so
+# caching it at all means an editor saves, the file changes, and the site keeps
+# showing the old copy. That is the exact failure this project has been bitten
+# by before from a different cause. Keep it at zero.
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Immutable in practice: content-addressed by filename, replaced not edited.
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png  "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType image/x-icon "access plus 30 days"
+
+  # Unversioned, so they must revalidate reasonably often. Both javascript
+  # types for the reason given in the compression block — naming only
+  # application/javascript left the two .js files with no expiry at all.
+  ExpiresByType text/css "access plus 1 hour"
+  ExpiresByType text/javascript "access plus 1 hour"
+  ExpiresByType application/javascript "access plus 1 hour"
+
+  # Must always be fresh.
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# 6. Keep private files private
+# ---------------------------------------------------------------------------
+# The CI job already excludes these from upload, so this is belt-and-braces for
+# a manual FTP drag-and-drop that forgets. On Cloudflare the repo root IS the
+# web root and CLAUDE.md was publicly readable at /CLAUDE.md; that stops here.
+<FilesMatch "(^\.|^(CLAUDE\.md|README\.md)$|\.(yml|yaml|log|bak|orig)$)">
+  Require all denied
+</FilesMatch>

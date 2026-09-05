@@ -246,6 +246,82 @@ An earlier version of that file deployed to Beget over FTPS. It was replaced
 when hosting moved to Cloudflare; the FTP version is in git history if Beget
 ever comes back.
 
+## Moving to Russian hosting
+
+**The site is unreachable from Russian IPs on Cloudflare.** Self-hosting the
+fonts (which was a genuine, separate cause) did not fix it — the client retested
+and reported it still does not load at all. RKN throttling of Cloudflare is the
+remaining cause, and the answer is to leave Cloudflare.
+
+**Chosen host: Beget.** Free tier to start, cheap multi-site paid plans as more
+client sites are added, Apache + PHP + `.htaccess` + free Let's Encrypt. It is
+also where this project deployed *before* Cloudflare, so the FTPS job already
+existed in history.
+
+**The domain does not move.** `coffeeshtob.ru` is on reg.ru nameservers with A
+records pointing at Cloudflare, so the cutover is an A-record change at reg.ru.
+Nothing else follows from it: none of the 14 absolute URLs change, and the GitLab
+Redirect URI stays valid. Keep the `workers.dev` redirect URI registered anyway.
+
+### `.htaccess` — and why it is not optional
+
+Cloudflare did two things for free that Apache does not, and both are load-bearing:
+
+1. **It trimmed `.html`.** Every canonical, `og:url`, sitemap `<loc>` and
+   internal link in this repo is extensionless. Without the rewrite block,
+   `/privacy` is a hard 404 and takes the canonical URL and the sitemap with it.
+2. It is why `404.html` never worked. Apache serves it via `ErrorDocument`, so
+   the move closes that open item.
+
+**The file was tested against a real Apache 2.4.66**, not written from memory —
+a throwaway `httpd` on port 8899 with a config in the scratchpad, serving a copy
+of the site (macOS blocks Apache's user from reading `~/Desktop`, so it cannot
+serve the working tree directly). Three real bugs surfaced that review would not
+have caught:
+
+- **`AddOutputFilterByType` is `mod_filter`, not `mod_deflate`.** Guarding the
+  compression block on `<IfModule mod_deflate.c>` passes on a server with
+  deflate but no filter, and the unknown directive then throws
+  `Invalid command` — which in `.htaccess` is **a 500 on every page**, not a
+  skipped feature. This is the one that would have taken the site down at
+  cutover.
+- **Apache serves `.js` as `text/javascript`**, not `application/javascript`.
+  Listing only the latter left `script.js` and `render.js` with no expiry *and*
+  no compression. Both types are now named.
+- **`.webmanifest` is not in Apache's default mime.types** and was served with
+  no `Content-Type` at all. The needed types are declared explicitly.
+
+Verified end to end: `/` and `/privacy` 200; `/privacy.html` 301s to `/privacy`
+and `/index.html` to `/` (not to `/index`); `/admin/` and `/style.css` are not
+hijacked by the rewrite; an unknown path returns the styled `404.html` with its
+`noindex`; `CLAUDE.md` and `.gitlab-ci.yml` return 403; a `.php` dropped in
+`images/uploads/` returns 403.
+
+**Cache policy — the short end is the important half.** No filename here carries
+a content hash, so `style.css` is always `style.css`. A long `max-age` means
+visitors keep a stale stylesheet after a deploy with no way to tell them. HTML,
+JSON, CSS and JS are therefore short or zero; fonts and images are long.
+`content/home.json` at `max-age=0` is the sharpest case — it is what the CMS
+rewrites, and caching it means an editor saves and the site keeps showing the old
+copy.
+
+### Deploy
+
+`.gitlab-ci.yml` is now the FTPS mirror job again, but **dormant**: its
+`workflow` rule creates no pipeline at all while `$FTP_HOST` is unset. So it is
+safe to carry before the hosting account exists — nothing runs, nothing fails, no
+failed-pipeline email — and it activates itself the moment the four CI variables
+are added. That also subsumes the old Auto-DevOps suppression.
+
+`mirror --delete` makes the server match the repo exactly. **When the PHP CMS
+lands and content is edited on the server rather than committed, `--delete` will
+destroy those edits on the next push** — add `--exclude content/` and
+`--exclude images/uploads/` at that point, or drop `--delete`.
+
+Unlike Cloudflare, the deploy excludes `CLAUDE.md`, `.gitlab-ci.yml` and
+`.gitignore`, and `.htaccess` denies them anyway. The repo root stops being the
+web root, so this file stops being world-readable.
+
 ## Sections (in DOM order)
 
 `#top` header → hero → `#about` (О штабе) → `#menu` (`menu_items` + `drinks_items`)

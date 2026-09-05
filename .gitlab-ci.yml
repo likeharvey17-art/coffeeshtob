@@ -1,34 +1,104 @@
-# This project deliberately has no CI.
+# Deploys the site to Beget over FTPS on every push to main.
 #
-# The site is static HTML/CSS/JS with no build, test or bundle step, and it is
-# deployed by Cloudflare pulling directly from this repo — GitLab has no part in
-# getting it live. See the Deployment section of CLAUDE.md.
+# Why this exists again: Decap CMS commits content edits to this repo, but a
+# shared host is plain file storage — it has no idea the repo changed. Cloudflare
+# watched the repo and deployed on its own; Beget does not. Without this job an
+# edit made in /admin/ lands in GitLab and never reaches visitors, silently.
 #
-# This file exists to stop pipelines, not to run one. With no .gitlab-ci.yml at
-# all, GitLab falls back to Auto DevOps: it tries to detect and build an
-# application, finds static files with no package.json or Dockerfile, fails, and
-# mails a failed-pipeline notice on every push — including every CMS edit, since
-# those are pushes too.
+# ---------------------------------------------------------------------------
+# THIS FILE IS DORMANT UNTIL THE FTP VARIABLES EXIST
+# ---------------------------------------------------------------------------
+# The workflow rule below creates NO PIPELINE AT ALL while $FTP_HOST is unset.
+# That matters for two reasons:
 #
-# `workflow: rules: when: never` prevents a pipeline from being created, so
-# nothing runs and no CI minutes are spent.
+#   1. It is safe to commit now, before the hosting account exists. Nothing runs,
+#      nothing fails, and nobody gets a failed-pipeline email.
+#   2. It activates itself. The moment the four variables are added in GitLab,
+#      the next push deploys. No code change, no second commit.
 #
-# The job below must stay *visible* — do not give it `rules: when: never`.
-# GitLab validates that a config declares at least one job that isn't excluded
-# by its own rules; an unreachable job makes the whole config invalid, and an
-# invalid config is itself a failed pipeline. That mistake was made here once
-# and produced exactly the failure emails this file is meant to prevent.
-# The workflow rule above is what stops it ever running.
+# It also replaces the previous version of this file, which existed purely to
+# suppress Auto DevOps. That suppression is still here — an unset $FTP_HOST
+# produces no pipeline, which is the same outcome — but now the file has a real
+# job to do as well. The job below must stay reachable by its own rules:
+# GitLab requires at least one such job, and a config where every job is
+# excluded is invalid, and an invalid config is itself a failed pipeline. That
+# mistake was made on this project once already.
 #
-# Cleaner permanent alternative, if you would rather not carry this file:
-# Settings → General → Visibility → turn CI/CD off, or
-# Settings → CI/CD → Auto DevOps → untick "Default to Auto DevOps pipeline".
-# Either makes this file redundant and it can be deleted.
+# ---------------------------------------------------------------------------
+# SETUP — Settings > CI/CD > Variables in GitLab. Do not put any of these here.
+# ---------------------------------------------------------------------------
+#   FTP_HOST      Beget FTP host (e.g. yourlogin.beget.tech)
+#   FTP_USER      FTP login
+#   FTP_PASSWORD  FTP password        <- tick "Mask variable"
+#   REMOTE_DIR    web root for the domain, e.g. /coffeeshtob.ru/public_html
+#
+# Tick "Protect variable" only if main is a protected branch, or the job will
+# not see them.
 
 workflow:
   rules:
+    # No credentials configured yet -> no pipeline, no email, no noise.
+    - if: '$FTP_HOST == null || $FTP_HOST == ""'
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - when: never
 
-no-op:
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    # Only main. Feature branches and merge requests must not touch production.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script:
+    - apk add --no-cache lftp
+    - |
+      for v in FTP_HOST FTP_USER FTP_PASSWORD REMOTE_DIR; do
+        eval "val=\$$v"
+        if [ -z "$val" ]; then
+          echo "CI variable $v is not set — add it under Settings > CI/CD > Variables."
+          exit 1
+        fi
+      done
   script:
-    - echo "This project has no CI. See the comments in .gitlab-ci.yml."
+    # --delete makes the server mirror the repo exactly, so files removed here
+    # disappear there and stale assets cannot pile up. The cost is that
+    # REMOTE_DIR must contain ONLY this site — anything else in it gets wiped.
+    #
+    # NOTE FOR THE PHP-CMS MIGRATION: once content is edited on the server rather
+    # than committed to git, --delete will destroy those edits on the next push.
+    # At that point add --exclude content/ and --exclude images/uploads/, or drop
+    # --delete. Getting this wrong silently reverts the client's work.
+    - |
+      lftp -c "
+        set ftp:ssl-allow true;
+        set ftp:ssl-force true;
+        set ftp:ssl-protect-data true;
+        set ssl:verify-certificate no;
+        set net:max-retries 3;
+        set net:timeout 20;
+        open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+        mirror --reverse --delete --verbose --parallel=4 \
+          --exclude-glob .git/ \
+          --exclude-glob .claude/ \
+          --exclude .gitlab-ci.yml \
+          --exclude .gitignore \
+          --exclude CLAUDE.md \
+          ./ '$REMOTE_DIR';
+      "
+    # .htaccess must arrive. lftp mirrors dotfiles by default, but this is the
+    # one file whose absence breaks /privacy, the 404 page and the HTTPS
+    # redirect all at once, so fail loudly rather than discover it in a browser.
+    - |
+      lftp -c "
+        set ftp:ssl-allow true; set ftp:ssl-force true;
+        set ssl:verify-certificate no;
+        open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+        cd '$REMOTE_DIR';
+        ls .htaccess;
+      " || { echo 'FAILED: .htaccess is not on the server after mirror.'; exit 1; }
+  environment:
+    name: production
+    url: https://coffeeshtob.ru
