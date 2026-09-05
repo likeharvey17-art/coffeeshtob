@@ -14,6 +14,18 @@
 # ---------------------------------------------------------------------------
 RewriteEngine On
 
+# ACME first, and it must stay first. Let's Encrypt validates a certificate by
+# fetching http://<domain>/.well-known/acme-challenge/<token> over PLAIN HTTP.
+# The redirect below would bounce that to HTTPS — which, at exactly the moment
+# you have no certificate yet, is a URL that cannot be fetched. The cert then
+# fails to issue, and because the redirect is unconditional there is no way out
+# except editing this file on the server.
+#
+# This matters every 90 days, not just once: renewals validate the same way. A
+# site that renews automatically for a year and then silently fails to is a much
+# worse outage than one that never issued in the first place.
+RewriteRule ^\.well-known/acme-challenge/ - [L]
+
 # Two conditions, not one: on shared hosting SSL is often terminated by a proxy
 # in front of Apache, in which case %{HTTPS} is never "on" and a redirect keyed
 # only on it loops forever. X-Forwarded-Proto is what the proxy actually sets.
