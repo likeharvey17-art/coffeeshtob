@@ -130,15 +130,6 @@ jobs:
               _deploy/ '$REMOTE_DIR';
           "
 
-      # lftp can exit 0 having silently skipped files. The first automated run
-      # did exactly that: og-image.jpg — tracked, in the upload set, and present
-      # from the previous manual upload — was simply not there afterwards, and
-      # the original version of this step missed it because it only checked
-      # .htaccess and index.html.
-      #
-      # So compare the WHOLE manifest, not a spot check. Anything the mirror
-      # dropped shows up here by name instead of as a 404 someone notices weeks
-      # later on a Telegram link preview.
       # lftp exits 0 having silently skipped files. Confirmed on this host:
       # og-image.jpg — tracked, in the upload set, 42 KB, a valid JPEG — was
       # skipped by `mirror` on two consecutive runs, while uploading the same
