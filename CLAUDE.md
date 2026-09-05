@@ -304,13 +304,33 @@ hijacked by the rewrite; an unknown path returns the styled `404.html` with its
 `noindex`; `CLAUDE.md` and `.gitlab-ci.yml` return 403; a `.php` dropped in
 `images/uploads/` returns 403.
 
-**Cache policy — the short end is the important half.** No filename here carries
-a content hash, so `style.css` is always `style.css`. A long `max-age` means
-visitors keep a stale stylesheet after a deploy with no way to tell them. HTML,
-JSON, CSS and JS are therefore short or zero; fonts and images are long.
-`content/home.json` at `max-age=0` is the sharpest case — it is what the CMS
-rewrites, and caching it means an editor saves and the site keeps showing the old
-copy.
+**Beget runs nginx in front of Apache, and that makes half this file inert.**
+`Server: nginx-reuseport/1.21.1` on every response. nginx serves static files
+itself and never consults `.htaccess`, so the `mod_expires` and `AddType` blocks
+below **do nothing on Beget** — measured: `style.css` came back `max-age=604800`
+where the file asks for 1 hour, and `.js` is served as
+`application/x-javascript`, a type neither the compression nor the expiry list
+names. The rewrites, `ErrorDocument` and `FilesMatch` denials *do* work, because
+those run in Apache. Keep the cache block anyway: it is correct, it costs
+nothing, and it applies on any host that doesn't front Apache with nginx.
+
+**The consequence is that asset caching is out of our hands, so the URLs carry a
+version instead.** `style.css`, `script.js` and `render.js` are referenced as
+`?v=YYYYMMDD` in all three HTML files (7 references). With nginx caching CSS for
+7 days and no content hash in any filename, a deploy would otherwise leave
+returning visitors on a stale stylesheet for a week. **Bump the stamp whenever
+those files change** — it is the only thing that guarantees a code change
+reaches anyone who has already visited. Content edits are unaffected:
+`content/home.json` is served `max-age=0`.
+
+**Apache does not know it is behind TLS.** nginx terminates HTTPS, so
+`%{HTTPS}` is never `on` inside `.htaccess`. Two consequences, both already
+handled: the force-HTTPS rule tests `X-Forwarded-Proto` as well, and the
+`.html`-to-clean-URL redirects name `https://` explicitly. Written as `/%1`,
+Apache expanded them to `Location: http://…` — an HTTPS request for
+`/privacy.html` really did come back pointing at plaintext, which the force rule
+then bounced back, costing two redirects and a plaintext hop per link. **Any new
+`R=301` rule added here must name the scheme for the same reason.**
 
 ### Deploy
 

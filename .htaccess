@@ -51,11 +51,21 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 # 2a. Redirect any explicit .html request to the clean URL, so one page has one
 #     address. index.html is handled first and separately, or /index.html would
 #     redirect to /index rather than to /.
+#
+#     The target is written as an absolute https:// URL on purpose. Beget puts
+#     nginx in front of Apache and terminates TLS there, so Apache believes the
+#     request arrived over plain HTTP. Left as `/%1`, Apache expands that to a
+#     full URL using its own idea of the scheme and emits a `Location: http://…`
+#     — measured, not theorised: an HTTPS request for /privacy.html came back
+#     with `Location: http://coffeeshtob.ru/privacy`. The force-HTTPS rule above
+#     then bounces it back, so the page still loads, but every such link costs
+#     two redirects and dips through plaintext in between. Naming the scheme
+#     removes both.
 RewriteCond %{THE_REQUEST} \s/+(([^\s?]*/)?)index\.html[\s?] [NC]
-RewriteRule ^ /%1 [R=301,L]
+RewriteRule ^ https://%{HTTP_HOST}/%1 [R=301,L]
 
 RewriteCond %{THE_REQUEST} \s/+([^\s?]+)\.html[\s?] [NC]
-RewriteRule ^ /%1 [R=301,L]
+RewriteRule ^ https://%{HTTP_HOST}/%1 [R=301,L]
 
 # 2b. Serve foo.html for /foo. The !-f and !-d guards matter: without them this
 #     would hijack real files and directories, including /admin/.
