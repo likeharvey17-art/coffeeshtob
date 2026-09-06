@@ -537,6 +537,7 @@ jobs:
           fail=0
           for u in / /privacy /sitemap.xml /robots.txt /llms.txt \
                    /favicon.ico /apple-touch-icon.png \
+                   /icon-192.png /icon-512.png /og-image.jpg \
                    /yandex_11df7f8b41641d66.html; do
             code=""
             for i in 1 2 3 4 5 6; do

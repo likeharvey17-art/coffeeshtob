@@ -218,6 +218,7 @@ jobs:
           fail=0
           for u in /privacy /sitemap.xml /robots.txt /llms.txt \
                    /favicon.ico /apple-touch-icon.png \
+                   /icon-192.png /icon-512.png /og-image.jpg \
                    /yandex_11df7f8b41641d66.html; do
             code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 \
                    -H 'Cookie: beget=begetok' \
