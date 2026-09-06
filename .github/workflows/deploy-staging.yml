@@ -47,6 +47,14 @@ jobs:
             exit 1
           fi
 
+      # Cheap, offline, and it runs before anything is uploaded. The three
+      # files it compares drift silently — Twig renders a missing key as an
+      # empty string, so a rename shows up as a blank section on the live site
+      # rather than as an error. That is the exact failure the old Decap setup
+      # had between index.html, home.json and config.yml.
+      - name: Check the content fields agree
+        run: python3 .github/scripts/check-content-fields.py
+
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
@@ -109,21 +117,63 @@ jobs:
             rm -rf '$STAGING_DIR/user/pages/02.typography';
           " || echo "(seed reported errors; the render check below decides)"
 
+          # Images are PAGE MEDIA in Grav: home.md stores a bare filename and
+          # Grav resolves it against the page folder. So the photos have to live
+          # beside home.md, not in the theme — and until they do, every image on
+          # the page falls back to the placeholder and the client's media picker
+          # is empty.
+          #
+          # They are mirrored from images/uploads/ rather than committed a
+          # second time under grav/: 5.2 MB of the same JPEGs already in this
+          # repo is not worth duplicating. Client uploads land in this same
+          # folder, and no --delete here means they survive every later deploy.
+          #
+          # .htaccess is skipped deliberately: it belongs to the static site's
+          # docroot (it blocks PHP execution in an uploads folder that is served
+          # directly) and has no business inside Grav's pages tree.
+          echo "Seeding page media from images/uploads/"
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set net:max-retries 8; set net:timeout 40;
+            set cmd:fail-exit false;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --no-perms --verbose --parallel=1 \
+              --exclude-glob .htaccess \
+              images/uploads/ '$STAGING_DIR/user/pages/01.home';
+          " || echo "(media seed reported errors; images may fall back to the placeholder)"
+
       # Beget serves a JavaScript interstitial to clients that do not carry a
       # `beget=begetok` cookie — a 273-byte page that sets the cookie and
       # reloads. Without it every check here reads the challenge instead of the
       # site and reports nonsense. Browsers pass it invisibly; curl does not.
       - name: Confirm staging still renders
         run: |
+          # Prove the CONTENT rendered, not just that the theme did. Matching
+          # the word "Кофештаб" was not enough: it comes from the header
+          # partial, so it would keep matching happily while every editable
+          # field on the page rendered blank.
+          #
+          # The evidence is structural rather than a literal string. Keying this
+          # to a phrase out of home.md would have meant the check started
+          # failing the first time the client edited that phrase in the admin —
+          # a gate that breaks on correct use is worse than none.
+          #
+          #   a non-empty <h1>      hero_title reached the page
+          #   a .menu-item article  the loops ran over page.header.*
+          #   no Twig error text    Grav rendered rather than trapped
           for i in $(seq 1 10); do
             body=$(curl -sS -L --max-redirs 5 -H 'Cookie: beget=begetok' \
                    --max-time 30 "http://test.tryphopx.beget.tech/?ci=$GITHUB_RUN_ID-$i" || true)
-            if echo "$body" | grep -qi 'coffeeshtob\|Кофештаб'; then
-              echo "staging renders the site"
+            h1=$(echo "$body" | grep -oE '<h1[^>]*>[^<]{3,}</h1>' | head -1)
+            items=$(echo "$body" | grep -c 'class="menu-item"' || true)
+            if [ -n "$h1" ] && [ "$items" -ge 1 ]; then
+              echo "staging renders page content: $h1 ($items menu items)"
               exit 0
             fi
             sleep 10
           done
+          echo "h1=[$h1] menu-items=[${items:-0}]"
           echo "staging did not render expected content. Last response:"
           echo "$body" | head -c 600
           exit 1

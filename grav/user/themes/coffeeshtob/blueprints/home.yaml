@@ -1,0 +1,240 @@
+title: Главная страница
+
+# The editing form the client actually uses. Everything is in Russian on
+# purpose — the person maintaining this site is not a developer and should
+# never have to guess what `hero_lead` means.
+#
+# WHY A BLUEPRINT AT ALL: without one, Grav shows the page's front matter as a
+# raw YAML box. That works, and it is also exactly how a client deletes a colon
+# and takes the site down. A blueprint turns the same data into labelled text
+# boxes with no syntax to get wrong.
+#
+# FIELD NAMES ARE THE STABLE IDENTIFIER, labels are not. `drinks_title` reads
+# «Также в штабе» today; the owner changes headings freely. Refer to sections
+# by field name (menu_items, drinks_items), never by what the heading says.
+#
+# Names match home.html.twig one for one. A rename here that is not made there
+# silently blanks that part of the page — Twig prints nothing for a missing
+# key. The check in .github/workflows/deploy-staging.yml compares the two
+# lists on every deploy so that cannot pass unnoticed.
+
+extends@: default
+
+form:
+  fields:
+    tabs:
+      type: tabs
+      active: 1
+      fields:
+
+        hero:
+          type: tab
+          title: Первый экран
+          fields:
+            header.hero_title:
+              type: text
+              label: Заголовок
+              help: Крупная надпись поверх фотографии.
+            header.hero_lead:
+              type: textarea
+              label: Короткий текст под заголовком
+              rows: 3
+            header.hero_badge:
+              type: text
+              label: Адрес в плашке сверху
+              help: Короткая строка рядом со значком метки.
+            header.hero_image:
+              type: pagemediaselect
+              label: Фон первого экрана
+              help: 'Сначала загрузите фотографию во вкладке «Медиа» этой страницы, затем выберите её здесь. Фото размывается и затемняется, поэтому подойдёт почти любое — важно, чтобы белый заголовок оставался читаемым.'
+
+        about:
+          type: tab
+          title: О штабе
+          fields:
+            header.about_title:
+              type: text
+              label: Заголовок раздела
+            header.about_image:
+              type: pagemediaselect
+              label: Фотография раздела
+            header.about_text:
+              type: textarea
+              label: Текст о штабе
+              rows: 8
+              help: 'Пустая строка между абзацами начинает новый абзац.'
+            header.features:
+              type: list
+              label: Карточки «чем мы хороши»
+              help: 'У первых четырёх карточек есть свои значки. Пятая и далее выводятся без значка — это сделано намеренно, чтобы значок не повторялся случайно.'
+              fields:
+                .title:
+                  type: text
+                  label: Заголовок
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+
+        menu:
+          type: tab
+          title: Меню
+          fields:
+            header.menu_title:
+              type: text
+              label: Заголовок раздела
+            header.menu_sub:
+              type: text
+              label: Подзаголовок
+            header.menu_items:
+              type: list
+              label: Позиции меню
+              help: 'Количество колонок подстраивается само — позиций может быть сколько угодно, ничего в вёрстке менять не нужно.'
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .price:
+                  type: text
+                  label: Цена
+                  help: 'Можно оставить пустым — тогда цена просто не показывается.'
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+            header.drinks_title:
+              type: text
+              label: Заголовок подраздела «другие напитки»
+            header.drinks_sub:
+              type: text
+              label: Подзаголовок подраздела
+            header.drinks_items:
+              type: list
+              label: Другие напитки
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .price:
+                  type: text
+                  label: Цена
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+
+        life:
+          type: tab
+          title: Жизнь штаба
+          fields:
+            header.life_title:
+              type: text
+              label: Заголовок раздела
+            header.life_sub:
+              type: text
+              label: Подзаголовок
+            header.life_items:
+              type: list
+              label: Блоки
+              fields:
+                .title:
+                  type: text
+                  label: Заголовок
+                .text:
+                  type: textarea
+                  label: Первый абзац
+                  rows: 4
+                .text2:
+                  type: textarea
+                  label: Второй абзац (необязательно)
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+
+        schedule:
+          type: tab
+          title: График и гостям
+          fields:
+            header.schedule_title:
+              type: text
+              label: Заголовок раздела
+            header.schedule_sub:
+              type: text
+              label: Подзаголовок
+            header.hours_title:
+              type: text
+              label: Заголовок таблицы с часами
+            header.hours:
+              type: list
+              label: Часы работы
+              help: 'Единственный блок на странице в рамке — так и задумано, его ищут глазами.'
+              fields:
+                .label:
+                  type: text
+                  label: Дни
+                  help: 'Например: БУДНИ (ПН–ПТ)'
+                .time:
+                  type: text
+                  label: Часы
+                  help: 'Например: 15:15–19:00'
+            header.hours_note:
+              type: text
+              label: Примечание под таблицей
+            header.guests_title:
+              type: text
+              label: Заголовок «Гостям города»
+            header.guests_text:
+              type: textarea
+              label: Текст «Гостям города»
+              rows: 6
+            header.ferry_title:
+              type: text
+              label: Заголовок «Как перебраться»
+            header.ferry_text:
+              type: textarea
+              label: Текст «Как перебраться»
+              rows: 4
+
+        footer:
+          type: tab
+          title: Подвал
+          fields:
+            header.footer_about:
+              type: textarea
+              label: Описание в подвале
+              rows: 4
+            header.address:
+              type: textarea
+              label: Адрес
+              rows: 2
+            header.address_note:
+              type: text
+              label: Ориентир
+            header.phone:
+              type: text
+              label: Телефон
+              help: 'Показывается как есть и одновременно превращается в ссылку для звонка — пробелы и скобки убираются автоматически.'
+
+        seo:
+          type: tab
+          title: SEO
+          fields:
+            header.seo_title:
+              type: text
+              label: Заголовок вкладки браузера
+              help: 'Он же в результатах поиска и в превью ссылки. До ~60 знаков.'
+            header.seo_description:
+              type: textarea
+              label: Описание для поиска
+              rows: 3
+              help: 'Показывается под ссылкой в поиске. До ~160 знаков.'
