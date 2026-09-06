@@ -33,20 +33,18 @@ What changed, in one pass:
 
 Known open items, in rough priority order:
 
-1. **The client has no way to edit their own site.** This is the live problem
-   and the reason for the Grav decision below. The Grav theme and its Russian
-   editing form are written; **rendering them through Grav is not yet
-   confirmed** — no PHP on the dev machine, so Twig cannot be executed locally
-   and staging is the first real test. After that comes the cutover: pointing
-   coffeeshtob.ru at the Grav install and retiring `render.js`,
-   `content/home.json` and `admin/`.
+1. **The client has no way to edit their own site — until the cutover.**
+   Everything else is done and verified on staging: the theme renders, all 23
+   page fields and 5 lists come from the Russian editing form, images resize,
+   and every URL the static site serves exists there too. What remains is
+   entirely on Beget — see "The cutover" below.
 2. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
 3. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
    when Grav lands; deleting it earlier is harmless if the client is told.
-4. **`og-image.jpg` is on the server by hand, not by deploy.** It is excluded
-   from the mirror (which is what stops `--delete` removing it) and from the
-   manifest check. Fold it back in once the mirror carries the working FTP
-   transport — see "Deploy".
+4. **`og-image.jpg` is hand-uploaded on the STATIC site only.** It is excluded
+   from that mirror (which is what stops `--delete` removing it) and from its
+   manifest check. On Grav it deploys normally from `grav/root/` and the repair
+   pass lands it — verified. The exclusion dies with static mode at cutover.
 
 Resolved by the move, and no longer open: the Russia loading failure, the
 Cloudflare-only `404.html`, and the GitLab pipeline emails.
@@ -79,6 +77,34 @@ design: `style.css` and `script.js` carry over intact.
 
 **Sequencing matters.** Build Grav on a staging subdomain, port the design,
 verify, and only then swap. Do not rebuild in place on the live site.
+
+### The cutover
+
+**Copy, don't convert.** Leave the static site's folder untouched so rollback is
+one setting rather than a restore:
+
+1. Beget: new site folder, e.g. `coffeeshtob-grav`.
+2. Copy the whole staging Grav install into it — it already has the theme, the
+   content, the photos and the admin account.
+3. Point `coffeeshtob.ru`'s document root at that folder.
+4. Update the `REMOTE_DIR` repository secret to the new path.
+5. Commit `.deploy-mode` containing `grav`, and push. That push installs the
+   production `.htaccess` and then checks all twelve URLs return 200 and an
+   unknown path still 404s.
+
+Rollback at any point: point the document root back, set `.deploy-mode` to
+`static`.
+
+**Also required before handing it over:** PHP 8.4 on that site (Grav 2 dies with
+a blank 500 on 5.6, which already cost an evening), Configuration → System →
+Pages → Expires set to `0`, and a Grav account for the client that is not yours.
+
+**The interlock that makes this safe.** In static mode the deploy mirrors plain
+HTML with `--delete`; run once against a Grav install it would erase Grav, the
+client's pages and every uploaded photo. So before any static mirror the job
+asks the server whether `system/defines.php` exists and refuses if it does. It
+checks the server rather than re-reading `.deploy-mode`, because the dangerous
+case is exactly when intent and reality disagree.
 
 **Grav caches pages in the browser for a week by default.** Measured on staging:
 the HTML comes back with `Cache-Control: max-age=604800` and a matching
@@ -140,13 +166,15 @@ index, which is the fragile mechanism this replaces.
 Two things the old CMS could not reach are fields now: the hero address badge,
 and the second paragraph of each Жизнь штаба card.
 
-**Not yet carried across: the JSON-LD.** `index.html` has a `CafeOrCoffeeShop`
-block whose `openingHoursSpecification` mirrors `#schedule`. It cannot be
-derived from the `hours` list, whose labels are free text («БУДНИ (ПН–ПТ)»), and
-guessing a day-of-week mapping from Russian prose is exactly the kind of
-invention this project avoids. Either add explicit day fields to the blueprint
-or carry the block over verbatim and accept that editing hours desyncs it —
-decide before cutover, not after.
+**The JSON-LD is carried across and is now driven by the page's own fields.**
+The static version hardcoded `openingHoursSpecification`, which was safe only
+while a developer was the one changing the hours; once the client edits them in
+the admin it would go stale on the first change, and a wrong «открыто до 19:00»
+in search results is invisible from the site itself. Each `hours` row therefore
+carries optional `days` / `opens` / `closes` fields feeding the schema, seeded
+from the values already in the static markup. A row missing any of them is
+skipped, and with no qualifying row the property is omitted entirely — an absent
+rich result is a small loss where a wrong one sends people to a closed café.
 
 ## Stack
 
