@@ -35,8 +35,10 @@ Known open items, in rough priority order:
 
 1. **The client has no way to edit their own site.** This is the live problem
    and the reason for the Grav decision below. The Grav theme and its Russian
-   editing form are built and verified on staging; what remains is the cutover
-   — pointing coffeeshtob.ru at the Grav install and retiring `render.js`,
+   editing form are written; **rendering them through Grav is not yet
+   confirmed** — no PHP on the dev machine, so Twig cannot be executed locally
+   and staging is the first real test. After that comes the cutover: pointing
+   coffeeshtob.ru at the Grav install and retiring `render.js`,
    `content/home.json` and `admin/`.
 2. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
 3. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
