@@ -34,7 +34,10 @@ What changed, in one pass:
 Known open items, in rough priority order:
 
 1. **The client has no way to edit their own site.** This is the live problem
-   and the reason for the Grav decision below.
+   and the reason for the Grav decision below. The Grav theme and its Russian
+   editing form are built and verified on staging; what remains is the cutover
+   — pointing coffeeshtob.ru at the Grav install and retiring `render.js`,
+   `content/home.json` and `admin/`.
 2. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
 3. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
    when Grav lands; deleting it earlier is harmless if the client is told.
@@ -74,6 +77,63 @@ design: `style.css` and `script.js` carry over intact.
 
 **Sequencing matters.** Build Grav on a staging subdomain, port the design,
 verify, and only then swap. Do not rebuild in place on the live site.
+
+### The Grav theme — where the port has got to
+
+Staging is `http://test.tryphopx.beget.tech`, deployed by
+`.github/workflows/deploy-staging.yml`. **Production is still the static site**;
+nothing below is live yet.
+
+Layout under `grav/`, mirroring Grav's own tree so only *our* files are in the
+repo — `system/` and `vendor/` are Grav's 60+ MB and are updated from its admin
+panel:
+
+- `user/themes/coffeeshtob/templates/home.html.twig` — the page. Every value
+  comes from `page.header.*`; nothing is hardcoded.
+- `user/themes/coffeeshtob/templates/partials/{base,header,footer}.html.twig` —
+  head, sticky header, footer. `base` sets `<title>`, the OG tags and the
+  canonical from `base_url_absolute`, which is why the 14 hardcoded absolute
+  URLs of the static site do not exist here.
+- `user/themes/coffeeshtob/blueprints/home.yaml` — the client's editing form,
+  in Russian, tabbed by section. Without it Grav shows raw YAML front matter,
+  which is how a client deletes a colon and takes the site down.
+- `user/pages/01.home/home.md` — the content. Generated from
+  `content/home.json`, not retyped.
+- `default.html.twig` — a safety net, not a real template. Grav picks a template
+  from the page filename, so a page named `default.md` (which Grav's stock
+  install ships) hard-errors on a theme that only provides `home.html.twig`.
+  That is exactly how first activation failed.
+
+**Three files must name the same fields, and nothing complains when they
+don't.** Twig renders a missing key as an empty string, so a rename shows up as
+a silently blank section on the live site — the identical trap the Decap setup
+had across `index.html`, `home.json` and `admin/config.yml`. It is checked
+rather than documented: `.github/scripts/check-content-fields.py` compares
+template, form and content, and runs before the staging deploy touches the
+server. Run it directly after editing any of the three.
+
+**Images are page media**, not theme assets: `home.md` stores a bare filename
+which Grav resolves against `user/pages/01.home/`, so the client uploads a photo
+in the same place they edit the text. The seed mirrors `images/uploads/` into
+that folder rather than committing the same 5.2 MB twice. An empty filename
+falls back to `theme://images/placeholder.svg` — which is what the three menu
+items still awaiting photos rely on, so don't "fix" the empty values.
+
+**The feature-card icons stay hardcoded and positional.** They are four
+different drawings tied to card order, not content. A fifth card renders with no
+icon on purpose: the old CMS preserved them only by cloning template nodes by
+index, which is the fragile mechanism this replaces.
+
+Two things the old CMS could not reach are fields now: the hero address badge,
+and the second paragraph of each Жизнь штаба card.
+
+**Not yet carried across: the JSON-LD.** `index.html` has a `CafeOrCoffeeShop`
+block whose `openingHoursSpecification` mirrors `#schedule`. It cannot be
+derived from the `hours` list, whose labels are free text («БУДНИ (ПН–ПТ)»), and
+guessing a day-of-week mapping from Russian prose is exactly the kind of
+invention this project avoids. Either add explicit day fields to the blueprint
+or carry the block over verbatim and accept that editing hours desyncs it —
+decide before cutover, not after.
 
 ## Stack
 
