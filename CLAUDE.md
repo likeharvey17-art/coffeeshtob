@@ -80,6 +80,17 @@ design: `style.css` and `script.js` carry over intact.
 **Sequencing matters.** Build Grav on a staging subdomain, port the design,
 verify, and only then swap. Do not rebuild in place on the live site.
 
+**Grav caches pages in the browser for a week by default.** Measured on staging:
+the HTML comes back with `Cache-Control: max-age=604800` and a matching
+`Expires`, alongside `ETag` and `Vary: Accept-Encoding` — which is Grav's
+`system.pages` header block, not nginx. The effect is that an edit saved in the
+admin is live on the server immediately but invisible in a browser that has
+already loaded the page, for up to seven days. That looks exactly like "saving
+is broken" and is not. **Set Configuration → System → Pages → Expires to 0
+before handing the site to the client**, or the first thing they report is that
+their edits do nothing. Verify by re-fetching and checking the header changed;
+if it does not, the value is coming from nginx and needs Beget's side instead.
+
 ### The Grav theme — where the port has got to
 
 Staging is `http://test.tryphopx.beget.tech`, deployed by
@@ -795,6 +806,16 @@ site never changes. If the 404 page matters more than that risk, add the config
 *and* confirm the very next commit reaches the live site before trusting it.
 
 Until then the page is reachable at `/404` and does no harm.
+
+**Yandex Webmaster verification lives in `yandex_11df7f8b41641d66.html`** at the
+repo root, and `.htaccess` exempts it from the `.html`-stripping redirect — the
+same treatment the ACME challenge gets, and for the same reason: a third party
+fetches a fixed absolute URL and expects a 200, not a 301. Yandex matters more
+than Google here; the client's customers search on Yandex.
+
+**It must survive the cutover.** When Grav takes over the docroot this file has
+to still be reachable at `/yandex_11df7f8b41641d66.html`, or the site quietly
+loses verification. Grav's own root is where it goes.
 
 `llms.txt` is a plain-language summary for assistants and crawlers — hours,
 address, phone, what the place does. Keep it in step with the page; it is the
