@@ -62,6 +62,24 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
   Options -MultiViews
 </IfModule>
 
+# 2a-0. Yandex Webmaster's verification file, exempted from everything below.
+#
+#     Yandex fetches this exact URL and wants a 200 with the token in the body.
+#     The .html-stripping redirect in 2a would answer with a 301 to
+#     /yandex_11df7f8b41641d66 instead — which does eventually serve the same
+#     bytes via 2b, but verification that depends on a redirect being followed
+#     is verification that can fail for no visible reason.
+#
+#     The pattern is deliberately narrow — yandex_ plus 16 hex digits — so it
+#     exempts Yandex's token file and nothing else. Same shape as the ACME
+#     exemption at the top of this file, and for the same reason: a well-known
+#     absolute path that a third party fetches must not be rewritten.
+#
+#     Google's equivalent (google*.html) is not listed: the client's customers
+#     use Yandex, and a rule for a file that does not exist is a rule nobody
+#     will remember to remove.
+RewriteRule ^yandex_[0-9a-f]{16}\.html$ - [L]
+
 # 2a. Redirect any explicit .html request to the clean URL, so one page has one
 #     address. index.html is handled first and separately, or /index.html would
 #     redirect to /index rather than to /.
@@ -101,13 +119,24 @@ ErrorDocument 404 /404.html
 # ---------------------------------------------------------------------------
 # Text only. woff2, jpeg and png are already compressed; running deflate over
 # them burns CPU to make them very slightly larger.
-# The guard is mod_filter, NOT mod_deflate. AddOutputFilterByType is provided by
-# mod_filter; mod_deflate only supplies the DEFLATE filter it references. Guarding
-# on mod_deflate passes on a server that has it without mod_filter, and then the
-# unknown directive throws "Invalid command 'AddOutputFilterByType'" — which in
-# .htaccess is a 500 on EVERY page, not a skipped feature. That was the actual
-# behaviour when this file was first tested against Apache 2.4.66.
+# BOTH modules have to be guarded on, and each for its own reason. This took two
+# rounds of testing against a real Apache 2.4.66 to get right, and each round
+# found a 500 on EVERY page rather than a quietly skipped feature — which is what
+# an unusable directive in .htaccess costs.
+#
+#   mod_filter  provides AddOutputFilterByType itself. Without it the directive
+#               is unknown: "Invalid command 'AddOutputFilterByType'".
+#   mod_deflate provides the DEFLATE provider the directive names. With
+#               mod_filter present but mod_deflate absent, the directive parses
+#               and then fails at request time with "Unknown filter provider
+#               DEFLATE" — which is how every URL on the test server returned
+#               500 while the config itself passed `httpd -t`.
+#
+# Guarding on either one alone leaves a live server configuration that takes the
+# whole site down. Beget happens to have both, so this has never bitten in
+# production — but it is one host migration away from doing so.
 <IfModule mod_filter.c>
+<IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
   # BOTH javascript types. Apache 2.4 serves .js as text/javascript, so a list
   # naming only application/javascript silently compresses nothing — measured:
@@ -116,6 +145,7 @@ ErrorDocument 404 /404.html
   AddOutputFilterByType DEFLATE text/javascript application/javascript
   AddOutputFilterByType DEFLATE application/json application/manifest+json
   AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
 </IfModule>
 
 # .webmanifest is not in Apache's default mime.types, so it was served with no
