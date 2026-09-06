@@ -58,26 +58,36 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # THE DATA CHANNEL IS DELIBERATELY UNENCRYPTED, and this is the answer to
-      # the question that cost more time than anything else on this project.
+      # ABOUT THE DATA CHANNEL, AND WHAT IS ACTUALLY ESTABLISHED.
       #
-      # Beget drops some FTPS data connections mid-transfer — deterministic per
-      # file, independent of size, type and directory. lftp reported only
-      # "max-retries exceeded", which produced four wrong theories. Asked with
-      # debug 3, the server finally said what it was doing:
+      # Beget loses some files during a mirror — deterministically the same
+      # ones, independent of size, type and directory. og-image.jpg has failed
+      # this way since the first deploy. lftp reported only "max-retries
+      # exceeded", which produced four wrong theories; asked with debug 3, the
+      # server said what it was doing:
       #
       #   <--- 426 Failure reading network stream.
       #
-      # The repair ladder then established WHICH transport survives, using
-      # og-image.jpg — the file that has failed since the very first deploy — as
-      # the test case:
+      # The repair ladder was built to find which transport survives, and the
+      # first result looked conclusive — with the mirror on an encrypted data
+      # channel, the encrypted rung failed and the plaintext rung succeeded, so
+      # the mirrors were switched to plaintext.
       #
-      #   og-image.jpg repaired via plaintext data channel
+      # THE NEXT RUN UNDERCUT THAT. With the mirror on plaintext, the mirror
+      # still lost og-image.jpg, and the repair's FIRST rung — the identical
+      # setting — put it there without complaint. So encryption is not the
+      # discriminator. What differs is that the repair issues one `put` on a
+      # fresh connection, while the mirror is a long-lived session that has
+      # already moved dozens of files by the time it reaches this one.
       #
-      # Hence ftp:ssl-protect-data false. The CONTROL connection is still TLS
-      # (ftp:ssl-force stays on), so the password is never sent in the clear.
-      # Only the file bytes travel unprotected, and every one of them is about
-      # to be served to the public anyway.
+      # That is an observation, not a theory to act on: two runs is not enough
+      # to name a cause, and this project has already spent days on confident
+      # explanations of this exact symptom. What IS established is that the
+      # repair pass lands the file every time and the URL checks prove the
+      # outcome. Plaintext is kept because it costs nothing — the control
+      # connection stays TLS, so the password is never in the clear, and the
+      # file bytes are about to be public anyway — not because it was shown to
+      # be the fix.
       - name: Deploy the theme
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}

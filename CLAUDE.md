@@ -505,9 +505,32 @@ Adding `debug 3` to print the FTP dialogue ended it in one run:
 ```
 
 `426` is the data connection dying, not a permission or a refusal — and `du -hs`
-in the same run reported 11M, retiring the quota theory too. The repair step now
-walks a **transport ladder** — encrypted data channel, plaintext (`PROT C`),
-active mode, passive without EPSV — and reports which rung succeeds.
+in the same run reported 11M, retiring the quota theory too.
+
+**The fix is the repair pass, and the cause is still not established.** Every
+mirror is followed by `.github/scripts/ftp-repair.sh`, which lists what is
+actually on the server, retries anything missing over a ladder of transports —
+plaintext data channel, encrypted, active mode, passive without EPSV — and
+judges each attempt by whether the file is there afterwards. It reports the
+winning rung to the run summary.
+
+Two runs, and they disagree about why:
+
+- with the mirror on an **encrypted** data channel, the encrypted rung failed
+  and the **plaintext** rung succeeded — which looked conclusive, and the
+  mirrors were switched to plaintext;
+- with the mirror on **plaintext**, the mirror still lost the file and the
+  repair's *first* rung — the identical setting — landed it.
+
+So encryption is not the discriminator. The remaining difference is that the
+repair issues a single `put` on a fresh connection while the mirror is a
+long-lived session that has already moved dozens of files. **That is an
+observation, not a conclusion** — this project has already spent days on
+confident explanations of this exact symptom, and two runs do not name a cause.
+Plaintext is kept because it costs nothing (the control connection stays TLS, so
+the password is never in the clear, and the bytes are about to be public), not
+because it was shown to be the fix. What is established: the repair lands the
+file every time, and the URL checks prove the outcome rather than trusting it.
 
 **The lesson, twice over: get the server to say why.** Both of these burned days
 on theories while one flag would have printed the answer.

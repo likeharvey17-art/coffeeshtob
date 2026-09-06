@@ -89,9 +89,10 @@ echo "### FTP repair fired" >> "$SUMMARY"
 failed=0
 for rel in "${missing[@]}"; do
   echo "  repairing $rel ($(wc -c < "$LOCAL_DIR/$rel" | tr -d ' ') bytes)"
-  # Rung one must match what the mirror itself uses, or a "working" rung here
-  # says nothing about why the mirror failed. The mirrors now use a plaintext
-  # data channel, because that is the rung that repaired og-image.jpg.
+  # Rung one deliberately matches what the mirror itself uses. That is what
+  # made the useful observation possible: when rung one succeeds, the setting
+  # was never the problem — a single put on a fresh connection lands a file the
+  # long-lived mirror session lost. Keep it first for that reason.
   attempt "plaintext data channel (the mirror's setting)" "set ftp:ssl-protect-data false;" "$rel" && continue
   attempt "encrypted data channel" "set ftp:ssl-protect-data true;" "$rel" && continue
   attempt "active mode"             "set ftp:passive-mode false;"     "$rel" && continue
