@@ -86,6 +86,37 @@ jobs:
               grav/user/themes/coffeeshtob/ '$STAGING_DIR/user/themes/coffeeshtob';
           " || echo "mirror exited non-zero — the render check below decides"
 
+      # The root files, so /privacy, /sitemap.xml and the rest can be verified
+      # here before they are trusted on production.
+      #
+      # .htaccess is EXCLUDED, and that exclusion is load-bearing: the
+      # production file forces HTTPS and redirects www to the bare domain.
+      # Staging is plain http on a beget.tech subdomain, so deploying it here
+      # would redirect every request to an https:// URL this host has no
+      # certificate for — staging would break in a way that looks like the
+      # theme's fault. The file is tested against a local Apache instead, with a
+      # Grav-shaped docroot and the X-Forwarded-Proto header simulated.
+      #
+      # No --delete: the neighbours here are Grav's own core files.
+      - name: Deploy the web-root files (never .htaccess)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          STAGING_DIR: ${{ secrets.STAGING_DIR }}
+        run: |
+          set -uo pipefail
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set net:max-retries 8; set net:timeout 40;
+            set cmd:fail-exit false;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --no-perms --verbose --parallel=1 \
+              --exclude-glob .htaccess \
+              grav/root/ '$STAGING_DIR';
+          " || echo "(root mirror reported errors; the checks below decide)"
+
       # Deliberately NOT part of the normal push path. Pages are what the client
       # edits in the admin panel; overwriting them on every deploy would throw
       # their work away. This seeds the initial content once, by hand.
@@ -177,6 +208,29 @@ jobs:
           echo "staging did not render expected content. Last response:"
           echo "$body" | head -c 600
           exit 1
+
+      # Every URL the static site serves has to exist here too, or the cutover
+      # silently 404s them. /privacy is the one that matters most: it is linked
+      # from the footer of every page and it is the privacy notice.
+      - name: Confirm the other URLs exist
+        run: |
+          set -uo pipefail
+          fail=0
+          for u in /privacy /sitemap.xml /robots.txt /llms.txt \
+                   /favicon.ico /apple-touch-icon.png \
+                   /yandex_11df7f8b41641d66.html; do
+            code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 \
+                   -H 'Cookie: beget=begetok' \
+                   "http://test.tryphopx.beget.tech$u?ci=$GITHUB_RUN_ID" || true)
+            printf '  %-34s %s\n' "$u" "$code"
+            [ "$code" = "200" ] || fail=1
+          done
+          nf=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+               -H 'Cookie: beget=begetok' \
+               "http://test.tryphopx.beget.tech/no-such-page-$GITHUB_RUN_ID" || true)
+          printf '  %-34s %s (want 404)\n' "/no-such-page" "$nf"
+          [ "$nf" = "404" ] || fail=1
+          [ "$fail" -eq 0 ] || { echo "FAIL — see above"; exit 1; }
 
       # The photos come straight off a phone: 3.6 MB across the page, with a
       # 821 KB JPEG behind a thumbnail that displays at 76 pixels. Grav resizes
