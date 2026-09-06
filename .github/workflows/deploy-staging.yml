@@ -115,7 +115,18 @@ jobs:
             mirror --reverse --no-perms --verbose --parallel=1 \
               --exclude-glob .htaccess \
               grav/root/ '$STAGING_DIR';
-          " || echo "(root mirror reported errors; the checks below decide)"
+          " || echo "(root mirror reported errors; the repair below decides)"
+
+          # og-image.jpg is the file whose data connection this host drops, and
+          # it 404'd here on the first run that deployed these files — the mirror
+          # swallowed the failure and the URL check caught it one step later.
+          # A mirror finishing is not evidence the files arrived.
+          #
+          # .htaccess is not in the local set (excluded above), so it is neither
+          # checked for nor uploaded here.
+          rm -rf _root && mkdir _root
+          cp -R grav/root/. _root/ && rm -f _root/.htaccess
+          .github/scripts/ftp-repair.sh _root "$STAGING_DIR"
 
       # Deliberately NOT part of the normal push path. Pages are what the client
       # edits in the admin panel; overwriting them on every deploy would throw

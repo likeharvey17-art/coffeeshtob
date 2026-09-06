@@ -495,7 +495,9 @@ jobs:
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --delete --no-perms --verbose --parallel=1 \
               grav/user/themes/coffeeshtob/ '$REMOTE_DIR/user/themes/coffeeshtob';
-          " || echo "mirror exited non-zero — the checks below decide"
+          " || echo "mirror exited non-zero — the repair below decides"
+          .github/scripts/ftp-repair.sh grav/user/themes/coffeeshtob \
+            "$REMOTE_DIR/user/themes/coffeeshtob"
 
       # Files that have to sit at the web root rather than inside the theme,
       # because something outside this site asks for them by absolute path:
@@ -523,7 +525,12 @@ jobs:
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --no-perms --verbose --parallel=1 \
               grav/root/ '$REMOTE_DIR';
-          " || echo "root mirror exited non-zero — the checks below decide"
+          " || echo "root mirror exited non-zero — the repair below decides"
+
+          # Same reason as staging: the mirror silently loses og-image.jpg on
+          # this host. Presence on the server is measured, and anything missing
+          # is retried over a different transport.
+          .github/scripts/ftp-repair.sh grav/root "$REMOTE_DIR"
 
       # As in staging: lftp's exit code is not trusted on this host, so what the
       # site actually serves is the gate. These are the URLs that existed on the
