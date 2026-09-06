@@ -240,4 +240,55 @@
   </section>
 
 </main>
+
+{# Structured data for search. Carried over from the static index.html, with the
+   one change that matters: it is built from the same fields the page renders,
+   so it cannot quietly contradict them.
+
+   That was the open question. The static version hardcoded
+   openingHoursSpecification, and CLAUDE.md warned to "change both together or
+   the rich result will contradict the page" — a warning that only works while
+   the person changing the hours is a developer reading this repo. Once the
+   client edits hours in the admin, it would go stale on the first change and
+   nobody would ever know: a wrong "открыто до 19:00" in search results is
+   invisible from the site itself.
+
+   The days/opens/closes fields feed it, and are optional. A row missing any of
+   them is skipped, and if no row qualifies the property is omitted entirely —
+   an absent rich result is a small loss, a wrong one sends people to a closed
+   café.
+
+   json_encode does the escaping. Building this by hand with string
+   concatenation is how an apostrophe in a business name silently invalidates
+   the whole block. #}
+{% set opening = [] %}
+{% for row in page.header.hours %}
+  {% if row.days and row.opens and row.closes %}
+    {% set opening = opening|merge([{
+      '@type': 'OpeningHoursSpecification',
+      'dayOfWeek': row.days,
+      'opens': row.opens,
+      'closes': row.closes
+    }]) %}
+  {% endif %}
+{% endfor %}
+{% set schema = {
+  '@context': 'https://schema.org',
+  '@type': 'CafeOrCoffeeShop',
+  'name': 'Кофештаб «Романов на Волге»',
+  'description': page.header.seo_description,
+  'url': base_url_absolute ~ '/',
+  'image': base_url_absolute ~ url('theme://images/og-image.jpg'),
+  'telephone': theme_config.phone|replace({' ': '', '(': '', ')': '', '-': ''}),
+  'address': {
+    '@type': 'PostalAddress',
+    'streetAddress': 'Волжская набережная, 19',
+    'addressLocality': 'Тутаев',
+    'addressRegion': 'Ярославская область',
+    'addressCountry': 'RU'
+  },
+  'sameAs': ['https://t.me/coffeeshtob', 'https://vk.com/coffeeshtob']
+} %}
+{% if opening %}{% set schema = schema|merge({'openingHoursSpecification': opening}) %}{% endif %}
+<script type="application/ld+json">{{ schema|json_encode|raw }}</script>
 {% endblock %}

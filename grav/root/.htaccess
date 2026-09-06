@@ -1,0 +1,170 @@
+# .htaccess for the Grav install at coffeeshtob.ru
+#
+# THIS IS GRAV 2.0's STOCK FILE, fetched from the Grav repository rather than
+# written from memory, with three deliberate changes. Everything not marked
+# below is upstream's and should be replaced wholesale when Grav is updated.
+#
+# CHANGE 1 — X-Forwarded-Proto is uncommented.
+#   Beget runs nginx in front of Apache and terminates TLS there, so Apache and
+#   therefore Grav see plain HTTP. Grav ships this block commented out for
+#   exactly this situation. Left commented, Grav builds absolute URLs from its
+#   own idea of the scheme and emits http:// in the canonical tag, og:url and
+#   sitemap of an https:// site — search engines then see two hosts, which is
+#   the problem all fourteen hardcoded URLs on the old static site existed to
+#   avoid.
+#
+# CHANGE 2 — www canonicalisation and forced HTTPS, added below.
+#   Grav's stock file does neither. Beget serves www automatically and its
+#   certificate covers both names, so https://www.coffeeshtob.ru/ would return
+#   a byte-identical page: two URLs, one page. The static site's .htaccess did
+#   this and the behaviour has to survive the cutover.
+#
+# CHANGE 3 — the compression block, carried over from the static site.
+#   Guarded on BOTH mod_filter and mod_deflate. mod_filter provides the
+#   directive, mod_deflate the provider it names; with either one missing the
+#   result is a 500 on every page rather than a skipped feature. Both halves
+#   were confirmed against a real Apache 2.4.66.
+#
+# WHAT NEEDED NO CHANGE, and is worth knowing before anyone adds a rule:
+#   - The Yandex verification file, robots.txt, sitemap.xml and the icons need
+#     no exemption here. Grav routes to index.php only when the request is NOT
+#     a real file (!-f), so anything actually sitting in this directory is
+#     served directly. The static site needed an exemption solely because its
+#     own rules stripped .html from every URL; Grav has no such rule.
+#   - .well-known is already exempt from the dotfile ban on the upstream line
+#     "RewriteRule (^|/)\.(?!well-known) - [F]", so Let's Encrypt renewals
+#     keep working.
+
+# ---------------------------------------------------------------------------
+# Added for this site — see CHANGE 2 at the top.
+#
+# ORDER MATTERS AND IS THE POINT. This block sits BEFORE Grav's rules, not
+# after. Placed after them, REQUEST_URI has already been rewritten to
+# /index.php by Grav's front-controller rule, so a request for
+# https://www.coffeeshtob.ru/privacy redirected to https://coffeeshtob.ru/index.php
+# — every www visitor landed on the home page regardless of what they asked
+# for. Caught against a real Apache; it is invisible by reading.
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# www -> bare, and http -> https, in a single hop each. The scheme is named
+# explicitly rather than written as /%1: behind nginx, Apache expands a
+# scheme-relative target using its own idea of the protocol and emits a
+# "Location: http://..." header, which the next rule then bounces back — two
+# redirects
+# and a plaintext hop for every link. Measured on the static site, not guessed.
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+# The ACME challenge must stay reachable over plain HTTP, or certificate
+# renewal breaks every 90 days in a way that looks nothing like a deploy.
+RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+<IfModule mod_rewrite.c>
+
+RewriteEngine On
+
+## Begin RewriteBase
+# If you are getting 500 or 404 errors on subpages, you may have to uncomment the RewriteBase entry
+# You should change the '/' to your appropriate subfolder. For example if you have
+# your Grav install at the root of your site '/' should work, else it might be something
+# along the lines of: RewriteBase /<your_sub_folder>
+##
+
+# RewriteBase /
+
+## End - RewriteBase
+
+## Begin - X-Forwarded-Proto
+# In some hosted or load balanced environments, SSL negotiation happens upstream.
+# In order for Grav to recognize the connection as secure, you need to uncomment
+# the following lines.
+#
+# UNCOMMENTED DELIBERATELY — see the note at the top of this file.
+RewriteCond %{HTTP:X-Forwarded-Proto} https
+RewriteRule .* - [E=HTTPS:on]
+#
+## End - X-Forwarded-Proto
+
+## Begin - Exploits
+# If you experience problems on your site block out the operations listed below
+# This attempts to block the most common type of exploit `attempts` to Grav
+#
+# Block out any script trying to use twig tags in URL.
+RewriteCond %{REQUEST_URI} ({{|}}|{%|%}) [OR]
+RewriteCond %{QUERY_STRING} ({{|}}|{%25|%25}) [OR]
+# Block out any script trying to base64_encode data within the URL.
+RewriteCond %{QUERY_STRING} base64_encode[^(]*\([^)]*\) [OR]
+# Block out any script that includes a <script> tag in URL.
+RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+# Block out any script trying to set a PHP GLOBALS variable via URL.
+RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+# Block out any script trying to modify a _REQUEST variable via URL.
+RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
+# Return 403 Forbidden header and show the content of the root homepage
+RewriteRule .* index.php [F]
+#
+## End - Exploits
+
+## Begin - Index
+# If the requested path and file is not /index.php and the request
+# has not already been internally rewritten to the index.php script
+RewriteCond %{REQUEST_URI} !^/index\.php
+# and the requested path and file doesn't directly match a physical file
+RewriteCond %{REQUEST_FILENAME} !-f
+# and the requested path and file doesn't directly match a physical folder
+RewriteCond %{REQUEST_FILENAME} !-d
+# internally rewrite the request to the index.php script
+RewriteRule .* index.php [L]
+## End - Index
+
+## Begin - Security
+# Block all direct access for these folders
+RewriteRule ^(\.git|cache|bin|logs|backup|webserver-configs|tests)/(.*) error [F]
+# Block all direct access to these sensitive user folders, whatever the file type
+RewriteRule ^(user)/(accounts|config|data|env)/(.*) error [F]
+# Block access to specific file types for these system folders
+RewriteRule ^(system|vendor)/(.*)\.(txt|xml|md|html|htm|shtml|shtm|json|yaml|yml|php|php2|php3|php4|php5|phar|phtml|pl|py|cgi|twig|sh|bat)$ error [F]
+# Block access to specific file types for these user folders
+RewriteRule ^(user)/(.*)\.(txt|md|json|yaml|yml|php|php2|php3|php4|php5|phar|phtml|pl|py|cgi|twig|sh|bat)$ error [F]
+# Block all direct access to .md files:
+RewriteRule \.md$ error [F]
+# Block all direct access to files and folders beginning with a dot
+RewriteRule (^|/)\.(?!well-known) - [F]
+# Block access to specific files in the root folder
+RewriteRule ^(LICENSE\.txt|composer\.lock|composer\.json|\.htaccess)$ error [F]
+## End - Security
+
+</IfModule>
+
+# Begin - Prevent Browsing and Set Default Resources
+Options -Indexes
+DirectoryIndex index.php index.html index.htm
+# End - Prevent Browsing and Set Default Resources
+
+# ---------------------------------------------------------------------------
+# Compression — see CHANGE 3 at the top.
+# ---------------------------------------------------------------------------
+<IfModule mod_filter.c>
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+  # BOTH javascript types: Apache 2.4 serves .js as text/javascript, so a list
+  # naming only application/javascript silently compresses nothing.
+  AddOutputFilterByType DEFLATE text/javascript application/javascript
+  AddOutputFilterByType DEFLATE application/json application/manifest+json
+  AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
+</IfModule>
+
+# .webmanifest is not in Apache's default mime.types and was served with no
+# Content-Type at all on the static site.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType font/woff2 .woff2
+  AddType image/svg+xml .svg
+</IfModule>

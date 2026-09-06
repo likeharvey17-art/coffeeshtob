@@ -57,7 +57,13 @@ def twig_fields():
         # nest for-loops, so the next endfor is the right one.
         body = src[m.end():]
         body = body[:body.index('{% endfor %}')]
-        loops[field] = set(re.findall(rf'\b{var}\.([a-z0-9_]+)', body))
+        # A field can be looped over more than once — `hours` is rendered as a
+        # table and read again to build the JSON-LD — so keys are accumulated
+        # across loops rather than overwritten. Assigning here instead made the
+        # second loop hide the first one's fields, and the check then reported
+        # the page's own visible columns as missing.
+        loops.setdefault(field, set()).update(
+            re.findall(rf'\b{var}\.([a-z0-9_]+)', body))
     return top, loops
 
 
