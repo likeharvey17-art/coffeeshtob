@@ -162,6 +162,26 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      # THE DATA CHANNEL IS DELIBERATELY UNENCRYPTED, and this is the answer to
+      # the question that cost more time than anything else on this project.
+      #
+      # Beget drops some FTPS data connections mid-transfer — deterministic per
+      # file, independent of size, type and directory. lftp reported only
+      # "max-retries exceeded", which produced four wrong theories. Asked with
+      # debug 3, the server finally said what it was doing:
+      #
+      #   <--- 426 Failure reading network stream.
+      #
+      # The repair ladder then established WHICH transport survives, using
+      # og-image.jpg — the file that has failed since the very first deploy — as
+      # the test case:
+      #
+      #   og-image.jpg repaired via plaintext data channel
+      #
+      # Hence ftp:ssl-protect-data false. The CONTROL connection is still TLS
+      # (ftp:ssl-force stays on), so the password is never sent in the clear.
+      # Only the file bytes travel unprotected, and every one of them is about
+      # to be served to the public anyway.
       - name: Mirror to Beget over FTPS
         if: env.MODE == 'static'
         env:
@@ -252,7 +272,7 @@ jobs:
           lftp -c "
             set ftp:ssl-allow true;
             set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
+            set ftp:ssl-protect-data false;
             set ssl:verify-certificate no;
             set net:max-retries 8;
             set net:timeout 40;
@@ -490,7 +510,7 @@ jobs:
           # touched. Widening this path is how a deploy eats a client's work.
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set ftp:ssl-protect-data false; set ssl:verify-certificate no;
             set net:max-retries 8; set net:timeout 40; set net:reconnect-interval-base 5;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --delete --no-perms --verbose --parallel=1 \
@@ -519,7 +539,7 @@ jobs:
           test -d grav/root || { echo "grav/root missing"; exit 1; }
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set ftp:ssl-protect-data false; set ssl:verify-certificate no;
             set net:max-retries 8; set net:timeout 40;
             set cmd:fail-exit false;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';

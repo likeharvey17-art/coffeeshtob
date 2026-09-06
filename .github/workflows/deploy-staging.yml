@@ -58,6 +58,26 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      # THE DATA CHANNEL IS DELIBERATELY UNENCRYPTED, and this is the answer to
+      # the question that cost more time than anything else on this project.
+      #
+      # Beget drops some FTPS data connections mid-transfer — deterministic per
+      # file, independent of size, type and directory. lftp reported only
+      # "max-retries exceeded", which produced four wrong theories. Asked with
+      # debug 3, the server finally said what it was doing:
+      #
+      #   <--- 426 Failure reading network stream.
+      #
+      # The repair ladder then established WHICH transport survives, using
+      # og-image.jpg — the file that has failed since the very first deploy — as
+      # the test case:
+      #
+      #   og-image.jpg repaired via plaintext data channel
+      #
+      # Hence ftp:ssl-protect-data false. The CONTROL connection is still TLS
+      # (ftp:ssl-force stays on), so the password is never sent in the clear.
+      # Only the file bytes travel unprotected, and every one of them is about
+      # to be served to the public anyway.
       - name: Deploy the theme
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -79,7 +99,7 @@ jobs:
           # opinion about the transfer.
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set ftp:ssl-protect-data false; set ssl:verify-certificate no;
             set net:max-retries 8; set net:timeout 40; set net:reconnect-interval-base 5;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --delete --no-perms --verbose --parallel=1 \
@@ -266,12 +286,25 @@ jobs:
             printf '  %7s KB  %s\n' "$((sz / 1024))" "$u"
           done <<< "$urls"
           echo "total image weight: $((total / 1024)) KB"
-          # 900 KB is deliberately loose: it is well under the 3.6 MB that
-          # prompted this, and well over what the resized set should come to, so
-          # it catches "resizing stopped working" without failing on a genuinely
-          # larger photo being uploaded.
-          if [ "$total" -gt 921600 ]; then
-            echo "FAIL: over 900 KB of images — resizing is not being applied"
+          # THE BUDGET IS 1.5 MB, AND THE NUMBER IS NOT ARBITRARY. Measured:
+          # unresized this page carried 3.6 MB, with a 821 KB JPEG behind a
+          # thumbnail displayed at 76 pixels. Resized it came to 944 KB.
+          #
+          # This gate exists to catch resizing SILENTLY STOPPING — if image
+          # processing is unavailable on the host, Grav serves the originals and
+          # nothing looks broken, it is just slow again. So the threshold sits
+          # between those two figures, near enough to 944 KB to notice a real
+          # regression and far enough below 3.6 MB to be unambiguous, with room
+          # for the client to add photos without tripping it.
+          #
+          # It was 900 KB first, which failed a run where resizing was working
+          # perfectly — and said "resizing is not being applied", which was
+          # simply false. A gate that misreports the cause is worse than no gate:
+          # it sends whoever reads it looking in the wrong place.
+          if [ "$total" -gt 1572864 ]; then
+            echo "FAIL: $((total / 1024)) KB of images, over the 1536 KB budget."
+            echo "Either resizing has stopped being applied (compare against the"
+            echo "3.6 MB unresized figure), or the photos have genuinely grown."
             exit 1
           fi
-          echo "OK — within budget"
+          echo "OK — $((total / 1024)) KB, within the 1536 KB budget"

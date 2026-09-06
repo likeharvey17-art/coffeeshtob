@@ -69,7 +69,7 @@
       <div class="about-grid">
         <div class="img-frame img-frame--about">
           {% set about_img = page.media[page.header.about_image|default('')] %}
-          <img src="{{ about_img ? about_img.cropZoom(1040, 780).quality(80).url : url('theme://images/placeholder.svg') }}"
+          <img src="{{ about_img ? about_img.cropZoom(1040, 780).quality(75).url : url('theme://images/placeholder.svg') }}"
                alt="Фото: купеческий дом на Волжской набережной" loading="lazy" decoding="async">
         </div>
         <div class="about-text">
@@ -84,7 +84,7 @@
           <article class="feature-card">
             <div class="img-frame img-frame--square">
               {% set im = page.media[item.image|default('')] %}
-              <img src="{{ im ? im.cropZoom(800, 800).quality(80).url : url('theme://images/placeholder.svg') }}"
+              <img src="{{ im ? im.cropZoom(800, 800).quality(75).url : url('theme://images/placeholder.svg') }}"
                    alt="{{ item.title }}" loading="lazy" decoding="async">
             </div>
             {# Icons are positional, not content — see note 2 at the top. #}
@@ -127,7 +127,7 @@
           <article class="menu-item">
             <div class="menu-thumb">
               {% set im = page.media[item.image|default('')] %}
-              <img src="{{ im ? im.cropZoom(160, 160).quality(80).url : url('theme://images/placeholder.svg') }}"
+              <img src="{{ im ? im.cropZoom(160, 160).quality(75).url : url('theme://images/placeholder.svg') }}"
                    alt="{{ item.title }}" loading="lazy" decoding="async">
             </div>
             <div class="menu-body">
@@ -154,7 +154,7 @@
             <article class="menu-item">
               <div class="menu-thumb">
                 {% set im = page.media[item.image|default('')] %}
-                <img src="{{ im ? im.cropZoom(160, 160).quality(80).url : url('theme://images/placeholder.svg') }}"
+                <img src="{{ im ? im.cropZoom(160, 160).quality(75).url : url('theme://images/placeholder.svg') }}"
                      alt="{{ item.title }}" loading="lazy" decoding="async">
               </div>
               <div class="menu-body">
@@ -185,7 +185,7 @@
           <article class="life-card">
             <div class="img-frame img-frame--wide">
               {% set im = page.media[item.image|default('')] %}
-              <img src="{{ im ? im.cropZoom(1100, 688).quality(80).url : url('theme://images/placeholder.svg') }}"
+              <img src="{{ im ? im.cropZoom(1100, 688).quality(75).url : url('theme://images/placeholder.svg') }}"
                    alt="{{ item.title }}" loading="lazy" decoding="async">
             </div>
             <h3>{{ item.title }}</h3>
