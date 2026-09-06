@@ -177,3 +177,35 @@ jobs:
           echo "staging did not render expected content. Last response:"
           echo "$body" | head -c 600
           exit 1
+
+      # The photos come straight off a phone: 3.6 MB across the page, with a
+      # 821 KB JPEG behind a thumbnail that displays at 76 pixels. Grav resizes
+      # them in the template, but that only helps while the resize is actually
+      # happening — if image processing is unavailable on the host, Grav serves
+      # the original and nothing looks broken, it is just slow again. This is
+      # the audience that reported the site taking "forever" to load, so the
+      # weight is worth gating rather than trusting.
+      - name: Measure what the page actually weighs
+        run: |
+          set -uo pipefail
+          base=http://test.tryphopx.beget.tech
+          body=$(curl -sS -L -H 'Cookie: beget=begetok' --max-time 30 "$base/?w=$GITHUB_RUN_ID")
+          urls=$(echo "$body" | grep -oE '<img[^>]+src="[^"]+"' | sed -E 's/.*src="([^"]+)".*/\1/' | sort -u)
+          total=0
+          while IFS= read -r u; do
+            [ -n "$u" ] || continue
+            case "$u" in http*) full="$u";; *) full="$base$u";; esac
+            sz=$(curl -sS -o /dev/null -H 'Cookie: beget=begetok' --max-time 30 -w '%{size_download}' "$full" || echo 0)
+            total=$((total + sz))
+            printf '  %7s KB  %s\n' "$((sz / 1024))" "$u"
+          done <<< "$urls"
+          echo "total image weight: $((total / 1024)) KB"
+          # 900 KB is deliberately loose: it is well under the 3.6 MB that
+          # prompted this, and well over what the resized set should come to, so
+          # it catches "resizing stopped working" without failing on a genuinely
+          # larger photo being uploaded.
+          if [ "$total" -gt 921600 ]; then
+            echo "FAIL: over 900 KB of images — resizing is not being applied"
+            exit 1
+          fi
+          echo "OK — within budget"
