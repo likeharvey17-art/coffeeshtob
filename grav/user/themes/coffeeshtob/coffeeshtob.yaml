@@ -1,1 +1,9 @@
 enabled: true
+
+# Defaults only. The client's edits are stored by Admin in
+# user/config/themes/coffeeshtob.yaml and take precedence, so changing a
+# value here does not overwrite theirs.
+footer_about: 'Кофейня в купеческом доме на левом берегу Волги. Хороший кофе, сыр из Борисоглеба, романовский квас, квартирники, своя 3D-мастерская и многое другое.'
+address: 'Ярославская область, г. Тутаев (левый берег Романов), Волжская набережная, д. 19'
+address_note: 'Ориентир: набережная Волги, между лестницей к переправе и Казанским храмом'
+phone: '+7 929 078 65 00'

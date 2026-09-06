@@ -24,8 +24,13 @@ THEME = 'grav/user/themes/coffeeshtob'
 TWIG = f'{THEME}/templates/home.html.twig'
 FOOTER = f'{THEME}/templates/partials/footer.html.twig'
 BASE = f'{THEME}/templates/partials/base.html.twig'
+PRIVACY_TPL = f'{THEME}/templates/privacy.html.twig'
+ERROR_TPL = f'{THEME}/templates/error.html.twig'
 BLUEPRINT = f'{THEME}/blueprints/home.yaml'
 PAGE = 'grav/user/pages/01.home/home.md'
+PRIVACY_PAGE = 'grav/user/pages/02.privacy/privacy.md'
+THEME_BLUEPRINT = f'{THEME}/blueprints.yaml'
+THEME_CONFIG = f'{THEME}/coffeeshtob.yaml'
 
 # Grav's own page keys, not content fields.
 GRAV_OWNED = {'title'}
@@ -120,6 +125,31 @@ def main():
         if name in p_lists:
             cmp(f'{name} item', t_lists[name], 'the template', p_lists[name], 'the seeded page')
 
+    # Contact details live in theme config, not on a page, because the footer
+    # renders on every page and the phone number appears in three places. Same
+    # coupling, different files: every theme_config.X a template renders must
+    # exist both in the theme's form and in its defaults, or the footer goes
+    # blank and nothing says why.
+    all_templates = (read(TWIG) + read(FOOTER) + read(BASE)
+                     + read(PRIVACY_TPL) + read(ERROR_TPL))
+    used = set(re.findall(r'theme_config\.([a-z0-9_]+)', all_templates))
+    form = set(re.findall(r'^\s{8}([a-z0-9_]+):\s*$', read(THEME_BLUEPRINT), re.M))
+    values = set(re.findall(r'^([a-z0-9_]+):', read(THEME_CONFIG), re.M)) - {'enabled'}
+    for f in sorted(used - form):
+        problems.append(f'theme_config: `{f}` is rendered but is not in the theme form')
+    for f in sorted(used - values):
+        problems.append(f'theme_config: `{f}` is rendered but has no default value')
+    for f in sorted(form - used):
+        problems.append(f'theme_config: `{f}` is in the theme form but nothing renders it')
+
+    # The privacy page has no editing form on purpose (its copy is legal text,
+    # see the note in privacy.html.twig), so only the template and the page file
+    # are compared.
+    priv_used = set(re.findall(r'page\.header\.([a-z0-9_]+)', read(PRIVACY_TPL)))
+    priv_have = set(re.findall(r'^([a-z0-9_]+):', read(PRIVACY_PAGE), re.M))
+    for f in sorted(priv_used - priv_have):
+        problems.append(f'privacy: `{f}` is rendered but is not set in privacy.md')
+
     # A count worth asserting on its own: the whole point of the port is that
     # nothing is hardcoded any more.
     leftovers = re.findall(r'data-cms-(?:field|list|item)', read(TWIG) + read(FOOTER))
@@ -133,8 +163,10 @@ def main():
         print(f'\n{len(problems)} problem(s).')
         return 1
 
-    print(f'OK — {len(t_top)} fields and {len(t_lists)} lists agree across '
-          f'template, editing form and seeded page.')
+    print(f'OK — {len(t_top)} page fields and {len(t_lists)} lists agree across '
+          f'template, editing form and seeded page;')
+    print(f'     {len(used)} theme-config fields agree across template, theme form '
+          f'and defaults.')
     for name in sorted(t_lists):
         print(f'  {name}: {", ".join(sorted(t_lists[name]))}')
     return 0

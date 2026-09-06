@@ -1,0 +1,8 @@
+# The CMS is a private editing surface, not a page — keep it out of the index.
+# Everything else is open, deliberately: assistants and search crawlers are
+# welcome, and there is a plain-language summary for them at /llms.txt.
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://coffeeshtob.ru/sitemap.xml

@@ -1,0 +1,100 @@
+{# The privacy notice.
+
+   THE COPY LIVES HERE, NOT IN A FORM, AND THAT IS DELIBERATE. This page makes
+   factual legal assertions about how the site behaves — that it collects
+   nothing, has no forms, no registration, no visit counters and sets no
+   cookies. Those statements are true of the site as built, and they stop being
+   true the moment anyone adds a contact form, Yandex Metrica, a chat widget or
+   a consent banner. Handing it to a content form invites it to be edited
+   casually, or padded back out with the boilerplate headings it was twice
+   rewritten to remove.
+
+   So: adding ANY of those things to the site means rewriting this page in the
+   same commit. That is a code change, and it belongs with the code.
+
+   The two things that are not legal text — the phone number and the address —
+   come from theme config, so they cannot drift from the footer or the home
+   page. That was the whole reason contact details moved there.
+
+   Word count is load-bearing too: ~126 words across three <h2> sections. Short
+   is the point. Don't grow it. #}
+{% extends 'partials/base.html.twig' %}
+
+{# The legal pages carry a two-item header — brand, then «На главную» — with no
+   .main-nav between them. style.css keys the right-alignment off that absence
+   (`.brand + .nav-social-btn { margin-left: auto }`) rather than off a modifier
+   class, so this markup needs no class of its own to sit correctly. #}
+{% block header %}
+<header class="site-header" id="top">
+  <div class="header-inner">
+    <a class="brand" href="{{ base_url }}/" aria-label="Кофештаб — на главную">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+          <line x1="6" y1="1" x2="6" y2="4"></line>
+          <line x1="10" y1="1" x2="10" y2="4"></line>
+          <line x1="14" y1="1" x2="14" y2="4"></line>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>Кофештаб</strong>
+        <small>РОМАНОВ НА ВОЛГЕ</small>
+      </span>
+    </a>
+
+    <a class="btn btn-accent nav-social-btn" href="{{ base_url }}/">На главную</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="legal">
+  <div class="legal-inner">
+    <span class="eyebrow">ПРАВОВАЯ ИНФОРМАЦИЯ</span>
+    <h1>Политика конфиденциальности</h1>
+    <p class="legal-updated">Обновлено {{ page.header.updated }}</p>
+
+    <div class="legal-callout">
+      <p>Мы не собираем данные посетителей. На сайте нет форм, регистрации
+      и счётчиков посещений. Cookie-файлы сайт не ставит, поэтому и баннера
+      про согласие здесь нет.</p>
+    </div>
+
+    <h2>Записи сервера</h2>
+    <p>Сервер записывает обращения к сайту: адрес страницы, время, IP
+    и браузер. Без этих записей нельзя починить поломку или отсеять ботов.
+    Мы их не разбираем.</p>
+
+    <h2>Ссылки на другие сайты</h2>
+    <p>С сайта можно перейти в наш Telegram, во ВКонтакте, на гид «Романов
+    на Волге» и в Яндекс.Карты. Там действуют их правила, а не наши.</p>
+
+    <h2>Если есть вопросы</h2>
+    <p>Данных о вас у нас нет, удалять нечего. Если что-то непонятно,
+    позвоните или заходите.</p>
+    <p>
+      {% set tel = theme_config.phone|replace({' ': '', '(': '', ')': '', '-': ''}) %}
+      Телефон: <a class="legal-link" href="tel:{{ tel }}">{{ theme_config.phone }}</a><br>
+      Адрес: {{ theme_config.address }}
+    </p>
+
+    <p class="legal-back">
+      <a class="link-arrow" href="{{ base_url }}/">← Вернуться на главную</a>
+    </p>
+  </div>
+</main>
+{% endblock %}
+
+{# The legal pages use a stripped footer — one line, no columns, no contact
+   block. The full footer would be taller than the page it sits under. #}
+{% block footer %}
+<footer class="site-footer legal-footer">
+  <div class="container">
+    <div class="footer-bottom-inner">
+      <span>© {{ 'now'|date('Y') }} «Кофештаб»</span>
+      <span>{{ theme_config.address }}</span>
+    </div>
+  </div>
+</footer>
+{% endblock %}

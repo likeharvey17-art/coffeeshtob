@@ -13,8 +13,38 @@ compatibility:
 dependencies:
   - { name: grav, version: '>=2.0.0' }
 
-# No theme options form. Everything an editor touches lives on the page itself
-# (see blueprints/home.yaml), so the Themes screen deliberately offers nothing
-# to configure — one place to edit content, not two.
+# THIS FORM USED TO BE EMPTY, on the reasoning that one place to edit content
+# beats two. That was right while the site had one page. It stopped being right
+# the moment the privacy page was ported: the footer renders on every page, and
+# the phone number appears in three places — the footer text, the footer's
+# tel: link, and the privacy notice.
+#
+# Held as page fields, those go out of step the first time the client changes
+# their number, and the failure is silent and awful: the site shows one number
+# and dials another. Contact details are facts about the business, not content
+# belonging to a page, so they live here and every template reads the same value.
+#
+# Admin writes changes to user/config/themes/coffeeshtob.yaml, NOT to the file
+# in this repo, so a deploy cannot overwrite what the client has edited.
 form:
-  fields: {}
+  fields:
+    contacts:
+      type: section
+      title: Контакты
+      underline: true
+      fields:
+        footer_about:
+          type: textarea
+          label: Описание в подвале
+          rows: 4
+        address:
+          type: textarea
+          label: Адрес
+          rows: 2
+        address_note:
+          type: text
+          label: Ориентир
+        phone:
+          type: text
+          label: Телефон
+          help: 'Показывается как есть и одновременно превращается в ссылку для звонка — пробелы и скобки убираются автоматически. Используется и в политике конфиденциальности.'

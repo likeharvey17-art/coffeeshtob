@@ -28,6 +28,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # WHAT THIS SITE IS depends on where the cutover has got to, and getting it
+      # wrong is the worst thing this repo can do. The mode lives in a tracked
+      # file rather than a repo variable so the state is visible in the diff, and
+      # so flipping it is a reviewable commit made at the same moment as the
+      # Beget docroot change.
+      - name: Read the deploy mode
+        run: |
+          set -euo pipefail
+          MODE=$(tr -d '[:space:]' < .deploy-mode)
+          case "$MODE" in
+            static|grav) ;;
+            *) echo ".deploy-mode must be 'static' or 'grav', found '$MODE'"; exit 1 ;;
+          esac
+          echo "MODE=$MODE" >> "$GITHUB_ENV"
+          echo "deploying in '$MODE' mode"
+
       - name: Check the secrets exist
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -45,6 +61,48 @@ jobs:
             exit 1
           fi
 
+      # THE INTERLOCK. In static mode the very next steps mirror plain HTML into
+      # the docroot with --delete, which against a Grav install would delete
+      # Grav's core, the client's pages and every photo they ever uploaded — a
+      # loss no deploy can undo, caused by nothing more than a stray push after
+      # the cutover.
+      #
+      # So it is checked against the server rather than assumed: `system/defines.php`
+      # exists in every Grav install and in no static site. If it is there, this
+      # job refuses to run in static mode and says what to do about it.
+      #
+      # This is deliberately a server-side fact, not a re-reading of .deploy-mode.
+      # The file says what we intend; this says what is actually there, and the
+      # dangerous case is precisely the one where the two disagree.
+      - name: Refuse to overwrite a Grav install with static files
+        if: env.MODE == 'static'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          set -uo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          found=$(lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no; set cmd:fail-exit false;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            cls -1 '$REMOTE_DIR/system/defines.php';
+          " </dev/null 2>/dev/null | grep -c . || true)
+          if [ "$found" -gt 0 ]; then
+            echo "REFUSING TO DEPLOY."
+            echo
+            echo "$REMOTE_DIR contains system/defines.php, so it is a Grav install,"
+            echo "but .deploy-mode still says 'static'. Mirroring static files over it"
+            echo "with --delete would destroy Grav and every edit the client has made."
+            echo
+            echo "If the cutover has happened, commit .deploy-mode containing 'grav'."
+            echo "If it has not, check REMOTE_DIR points at the static site's docroot."
+            exit 1
+          fi
+          echo "target is not a Grav install — safe to continue in static mode"
+
       # Built from `git ls-files` rather than mirroring the checkout, so the
       # upload set is exactly what is tracked — no .git, no runner droppings,
       # and nothing that happens to be lying around.
@@ -57,6 +115,7 @@ jobs:
       # publicly serving 200. Whenever a directory is added to this repo for a
       # different deploy target, it has to be excluded here in the same commit.
       - name: Assemble the upload set
+        if: env.MODE == 'static'
         run: |
           set -euo pipefail
           rm -rf _deploy && mkdir _deploy
@@ -84,6 +143,7 @@ jobs:
       # instead. Stamping it from the commit means a deploy always reaches
       # people who have already visited, without anyone remembering to bump it.
       - name: Stamp asset version from the commit
+        if: env.MODE == 'static'
         run: |
           set -euo pipefail
           V="${GITHUB_SHA::7}"
@@ -103,6 +163,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
       - name: Mirror to Beget over FTPS
+        if: env.MODE == 'static'
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -221,6 +282,7 @@ jobs:
       # the social card, and its absence shows up only as a broken Telegram or
       # VK link preview weeks later.
       - name: Verify every file arrived, and repair what did not
+        if: env.MODE == 'static'
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -381,6 +443,7 @@ jobs:
       # this step a coin toss, and a deploy job that cries wolf gets ignored,
       # which is worse than not having the check at all.
       - name: Confirm the live site is serving this commit
+        if: env.MODE == 'static'
         run: |
           V="${GITHUB_SHA::7}"
           for i in $(seq 1 12); do
@@ -396,3 +459,106 @@ jobs:
           echo "Expected style.css?v=$V. The upload and manifest checks passed,"
           echo "so this is either caching or the domain pointing somewhere else."
           exit 1
+
+      # ======================================================================
+      # GRAV MODE — everything below runs only after the cutover.
+      # ======================================================================
+      # The shape is deliberately different from static mode, and the difference
+      # is the whole point: on a Grav site the server holds content that exists
+      # nowhere else. The client's edits, their uploaded photos and their admin
+      # account are all under user/, and none of it is in this repo. So nothing
+      # here mirrors the docroot, and --delete never points at anything but our
+      # own theme directory.
+
+      - name: Check the content fields agree
+        if: env.MODE == 'grav'
+        run: python3 .github/scripts/check-content-fields.py
+
+      - name: Deploy the theme
+        if: env.MODE == 'grav'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          set -uo pipefail
+          test -f grav/user/themes/coffeeshtob/blueprints.yaml \
+            || { echo "theme not found — refusing to deploy"; exit 1; }
+          # --delete is scoped to the theme directory ALONE. Grav's core, the
+          # client's pages and their media all live outside it and are never
+          # touched. Widening this path is how a deploy eats a client's work.
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set net:max-retries 8; set net:timeout 40; set net:reconnect-interval-base 5;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --delete --no-perms --verbose --parallel=1 \
+              grav/user/themes/coffeeshtob/ '$REMOTE_DIR/user/themes/coffeeshtob';
+          " || echo "mirror exited non-zero — the checks below decide"
+
+      # Files that have to sit at the web root rather than inside the theme,
+      # because something outside this site asks for them by absolute path:
+      # crawlers fetch /robots.txt, /sitemap.xml and /favicon.ico by convention,
+      # and Yandex fetches its verification token at a fixed URL.
+      #
+      # NO --delete here, ever. This directory's neighbours are Grav's own core
+      # files — index.php, system/, vendor/, user/ — and a mirror that deleted
+      # what it did not recognise would remove the entire installation.
+      - name: Deploy the files that must live at the web root
+        if: env.MODE == 'grav'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          set -uo pipefail
+          test -d grav/root || { echo "grav/root missing"; exit 1; }
+          lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ftp:ssl-protect-data true; set ssl:verify-certificate no;
+            set net:max-retries 8; set net:timeout 40;
+            set cmd:fail-exit false;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --no-perms --verbose --parallel=1 \
+              grav/root/ '$REMOTE_DIR';
+          " || echo "root mirror exited non-zero — the checks below decide"
+
+      # As in staging: lftp's exit code is not trusted on this host, so what the
+      # site actually serves is the gate. These are the URLs that existed on the
+      # static site and would otherwise disappear silently at cutover — a 404 on
+      # /privacy is a broken link in the footer of every page, and a 404 on the
+      # Yandex token quietly loses search verification.
+      - name: Confirm production serves every URL the static site did
+        if: env.MODE == 'grav'
+        run: |
+          set -uo pipefail
+          fail=0
+          for u in / /privacy /sitemap.xml /robots.txt /llms.txt \
+                   /favicon.ico /apple-touch-icon.png \
+                   /yandex_11df7f8b41641d66.html; do
+            code=""
+            for i in 1 2 3 4 5 6; do
+              code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 \
+                     "https://coffeeshtob.ru$u?ci=$GITHUB_RUN_ID-$i" || true)
+              [ "$code" = "200" ] && break
+              sleep 10
+            done
+            printf '  %-34s %s\n' "$u" "$code"
+            [ "$code" = "200" ] || fail=1
+          done
+          # An unknown path must still 404 rather than 200 — a catch-all that
+          # answers everything would make the checks above meaningless.
+          nf=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+               "https://coffeeshtob.ru/definitely-not-a-page-$GITHUB_RUN_ID" || true)
+          printf '  %-34s %s (want 404)\n' "/definitely-not-a-page" "$nf"
+          [ "$nf" = "404" ] || fail=1
+          body=$(curl -sS -L --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID" || true)
+          h1=$(echo "$body" | grep -oE '<h1[^>]*>[^<]{3,}</h1>' | head -1)
+          items=$(echo "$body" | grep -c 'class="menu-item"' || true)
+          echo "  h1: ${h1:-<empty>}   menu items: $items"
+          { [ -n "$h1" ] && [ "$items" -ge 1 ]; } || fail=1
+          [ "$fail" -eq 0 ] || { echo "FAIL — see above"; exit 1; }
+          echo "all good"
+

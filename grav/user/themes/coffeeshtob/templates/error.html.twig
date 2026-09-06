@@ -1,0 +1,63 @@
+{# Grav's error page. The static site had 404.html, which Cloudflare famously
+   never served — an unknown path returned an empty body for months. Apache
+   served it via ErrorDocument; Grav routes everything through index.php, so
+   ErrorDocument no longer applies and this template is what stands in.
+
+   noindex, follow is the correct pair: a 404 must not be indexed, but its links
+   should still be crawled so the crawler finds its way back to real pages. #}
+{% extends 'partials/base.html.twig' %}
+
+{% block title %}Страница не найдена — Кофештаб{% endblock %}
+{% block description %}Такой страницы на сайте Кофештаба нет.{% endblock %}
+
+{% block head_extra %}
+<meta name="robots" content="noindex, follow">
+{% endblock %}
+
+{% block header %}
+<header class="site-header" id="top">
+  <div class="header-inner">
+    <a class="brand" href="{{ base_url }}/" aria-label="Кофештаб — на главную">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+          <line x1="6" y1="1" x2="6" y2="4"></line>
+          <line x1="10" y1="1" x2="10" y2="4"></line>
+          <line x1="14" y1="1" x2="14" y2="4"></line>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>Кофештаб</strong>
+        <small>РОМАНОВ НА ВОЛГЕ</small>
+      </span>
+    </a>
+    <a class="btn btn-accent nav-social-btn" href="{{ base_url }}/">На главную</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="legal">
+  <div class="legal-inner">
+    <span class="eyebrow">ОШИБКА 404</span>
+    <h1>Такой страницы нет</h1>
+    <p>Возможно, она переехала или в адресе опечатка. А кофе на месте — заходите
+    на главную и посмотрите, что у нас есть.</p>
+    <p class="legal-back">
+      <a class="link-arrow" href="{{ base_url }}/">← Вернуться на главную</a>
+    </p>
+  </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+<footer class="site-footer legal-footer">
+  <div class="container">
+    <div class="footer-bottom-inner">
+      <span>© {{ 'now'|date('Y') }} «Кофештаб»</span>
+      <span>{{ theme_config.address }}</span>
+    </div>
+  </div>
+</footer>
+{% endblock %}
