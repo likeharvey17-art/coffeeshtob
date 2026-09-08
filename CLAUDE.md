@@ -666,6 +666,25 @@ block carries its own `calc(var(--header-h) + 22px)` for the same reason.
 gradient stop. It is measured in `script.js`; the `100px` fallback in `:root` is
 what all of that resolves against if JS never runs.
 
+**The hero responds to scroll, driven by `--hero-progress`** — 0 at rest, 1 once
+the hero's own height has passed, set by `script.js` on the `.hero` element and
+written on a `requestAnimationFrame` so it lands once per painted frame. The
+copy lifts 36px and fades; the photo drifts down 42px, more slowly than the
+page. Under `prefers-reduced-motion` the property is never set and the CSS
+fallback of `0` leaves everything still.
+
+Two things this must not become. **It only ever touches opacity and transform,
+never a height** — the `svh` rule below exists because a changing height
+rescaled the cover-fitted photo every frame, and that is the jank this project
+already shipped once. And **the fade does not start at zero**: a plain
+`1 - p * 1.6` left the headline at 52% opacity after 30% of the hero had
+scrolled, which reads as the text bailing out while still plainly in view. It
+holds full opacity for the first 18% and is gone by ~71%.
+
+`.hero-bg`'s scale went 1.06 → 1.12 *because* of that drift, not for its own
+sake: the scale exists to push blur's feathered edge out of frame, and 6%
+overhang no longer covers it once the image also travels 42px.
+
 `.hero-inner` grows to fill the hero (`flex: 1`), and three `auto` margins —
 above the `h1`, above and below `.hero-actions` — split the leftover space into
 equal thirds, which is exactly the condition for the buttons to sit midway
@@ -711,10 +730,23 @@ A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
   re-measuring every pairing**, not just the one this file happens to name.
   - `--accent-light` — light brown, the only one legible on `--dark`
     (footer icons and links, hero badge icon).
-- `--grain`: an inline-SVG noise texture applied as an extra *background
-  layer* on `body` and `.section-alt` (never as an overlay element, which
-  would risk painting over cards). Cards stay clean white. Alpha is baked into
-  the SVG (`opacity` on its `<rect>`), so adjust it there, not in CSS.
+- `--grain` and `--beans`: two inline-SVG textures applied as extra *background
+  layers* on `body` and `.section-alt` (never as overlay elements, which would
+  risk painting over cards). Cards stay clean white. Alpha is baked into each
+  SVG — `opacity` on the grain's `<rect>`, `stroke-opacity` on the beans — so
+  there is one place to adjust each, not two.
+
+  **The texture changes the contrast maths, and that is not obvious.** Measured
+  by compositing the layers onto the background in a canvas: `--cream-alt`
+  renders at rgb(233,225,211) rather than its token rgb(237,228,213), which
+  dropped `--muted` and `--accent-mid` from 4.62:1 to **4.48 and 4.49** — both
+  under AA, invisibly. Both were darkened again to clear 4.6 against the
+  *rendered* colour. **Measure against the composite, not the token**, whenever
+  the texture or a background changes.
+
+  The beans were also dialled back once: 13% opacity on a 200px tile read as
+  wallpaper with the repeat visible in rows. 10% on a 260px tile with seven
+  irregularly placed beans is the version that reads as texture.
 - Type: `Playfair Display` (serif, headings) + `Inter` (sans, body),
   **self-hosted from `fonts/`** — see "Fonts are self-hosted" below.
 - Shape language: pill buttons/nav (`--radius-full`), rounded cards
@@ -737,9 +769,29 @@ makes it read as emphasis. Its two siblings in `#schedule` («Гостям го�
 distinction.
 
 Because there is no card padding any more, the grid gaps are load-bearing:
-they are the only thing separating entries. `.feature-grid` 34/54px,
-`.life-grid` 40/54px, `.info-grid` 44px. Shrinking them back toward the old
-20px brings back the cramped look the boxes were hiding.
+they are the only thing separating entries. `.life-grid` 40/54px, `.info-grid`
+44px. Shrinking them back toward the old 20px brings back the cramped look the
+boxes were hiding.
+
+**The About feature entries are alternating full-width rows, not a grid.** The
+section reads as one zig-zag: `.about-grid` is photo-left / text-right, so the
+first feature card — the beans in cupped hands — is photo-**right**, and it
+alternates from there. Two details that are easy to get wrong:
+
+- The two-column row and the alternation live in a `@media (min-width: 961px)`
+  block, matched to the width at which `.about-grid` also goes two-column, so
+  the section is never half zig-zag and half stacked. Below that everything
+  stacks photo-above-text, which is what it always did.
+- **The column ratio flips with the side.** Written once as `0.95fr 1fr` the
+  narrow column stays on the left, so the photos came out 506px on even rows
+  and 532px on odd ones — they changed size as they changed sides. Each parity
+  sets its own ratio.
+
+No wrapper element was added around the icon/heading/paragraph: the card is a
+five-row grid, the photo spans all five, and the text sits in rows 2–4 between
+two `1fr` spacers, which is what centres it against the photo whatever its
+length. A wrapper would have meant editing the static markup and the Twig
+template for a purely visual change.
 
 ## The menu is a list, not a grid
 
@@ -935,7 +987,10 @@ Every remaining placeholder spot still has a real `<img>` tag pointing at
 `images/placeholder.svg`, wrapped in a `.img-frame` div that fixes the aspect
 ratio (so swapping images later causes no layout shift):
 
-- `.img-frame--square` — feature/menu/drink card thumbnails (1:1)
+- `.img-frame--feature` — About-section feature photos (4:3). Was `--square` at
+  1:1 when these sat two-across as thumbnails; as a half-width row beside a
+  short paragraph a square is far too tall and strands the text in white space.
+  The Grav template crops the source to match (1000×750).
 - `.img-frame--about` — About section photo (4:3)
 - `.img-frame--wide` — Жизнь штаба cards (16:10)
 - `.hero-bg` — full-bleed hero background image (object-fit: cover), blurred

@@ -216,6 +216,42 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
+  /* Hero scroll response: the copy lifts and fades as the hero leaves, and the
+     photo drifts a little more slowly than the page. Deliberately small — a
+     busy hero on a cafe's front page is the "AI landing page" tell this design
+     keeps avoiding.
+
+     ONLY opacity and transform are touched, never a height. The hero is sized
+     in `svh` precisely so nothing reflows mid-scroll; the jank this project
+     already shipped once came from the height changing as the mobile address
+     bar moved, which rescaled the cover-fitted photo every frame. Driving a
+     transform from scrollY does not reintroduce that.
+
+     Reduced motion opts out entirely: --hero-progress is never set, so the CSS
+     fallback of 0 applies and the hero sits still. */
+  const heroEl = document.querySelector('.hero');
+  if (heroEl && !prefersReducedMotion.matches) {
+    let heroTicking = false;
+    const paintHero = () => {
+      heroTicking = false;
+      /* Progress over the hero's own height, clamped. Past the hero there is
+         nothing left to animate, and a value above 1 would go on pushing the
+         photo down behind the section below. */
+      const span = heroEl.offsetHeight || 1;
+      const p = Math.min(1, Math.max(0, window.scrollY / span));
+      heroEl.style.setProperty('--hero-progress', p.toFixed(3));
+    };
+    /* Scroll events outrun frames, so the write is deferred to the next one —
+       otherwise the same style is set several times per painted frame. */
+    window.addEventListener('scroll', () => {
+      if (!heroTicking) {
+        heroTicking = true;
+        requestAnimationFrame(paintHero);
+      }
+    }, { passive: true });
+    paintHero();
+  }
+
   /* Opening either panel must bring the header back into view first. */
   [navToggle, socialBtn].forEach((el) => {
     el && el.addEventListener('click', () => setHeaderHidden(false));

@@ -94,14 +94,14 @@
   --paper: #ffffff;      /* cards — true white, lifts off the page */
   --ink: #241a13;        /* espresso */
   --ink-soft: #4a3b2d;
-  --muted: #716352;      /* darkened with the backgrounds — see the note below */
+  --muted: #6f6150;      /* darkened for the backgrounds AND the texture — see below */
   --border: #e2d5c2;
   --accent: #4a3b30;      /* roasted coffee — primary. Deliberately low
                              saturation (~21%): the previous browns read as
                              orange because they were saturated at this
                              lightness, not because of the hue. */
   --accent-dark: #372b23; /* hover */
-  --accent-mid: #77614e;  /* light brown — accents on light backgrounds
+  --accent-mid: #755f4c;  /* light brown — accents on light backgrounds
                              (4.9:1 on --cream-alt, the tightest pairing) */
   --accent-light: #c6b09a;/* pale brown — the browns above are too dark to
                              read on --dark, so use this on dark surfaces
@@ -111,7 +111,28 @@
 
   /* Grain, ~7.5% alpha baked into the SVG. Used as an extra background
      layer (never an overlay) so it can't paint over cards. */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.075'/%3E%3C/svg%3E");
+  /* Two background LAYERS, never overlay elements — an overlay would need a
+     stacking position and could paint over the cards. Both are applied to
+     `body` and `.section-alt` only, so the white cards stay clean.
+
+     Alpha is baked into each SVG (stroke-opacity / rect opacity), not set in
+     CSS, so there is one place to adjust each. Order matters where they are
+     used: beans sit above the grain.
+
+     baseFrequency went 0.65 -> 0.5 to coarsen the noise — lower frequency means
+     larger speckle, which is what reads as "rough" rather than "dithered".
+
+     Both were dialled back from a first attempt that was too strong: the beans
+     sat at 13% on a 200px tile and read as wallpaper, with the repeat visible
+     as rows. 10% on a 260px tile is sparser and quieter. The grain went the
+     other way, 0.1 -> 0.13, because at 0.1 it was doing nothing at all. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.13'/%3E%3C/svg%3E");
+  /* Seven coffee beans scattered across a 200px tile at irregular positions and
+     angles. Irregularity is the whole job: an evenly spaced motif reads as
+     wallpaper, and the repeat becomes obvious the moment you notice one. At
+     13% stroke opacity it is a texture you find rather than one that announces
+     itself. */
+  --beans: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cg fill='none' stroke='%2343362c' stroke-opacity='0.1' stroke-width='1.1'%3E%3Cg transform='translate(34 40) rotate(-24)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(150 22) rotate(38)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(232 96) rotate(-8)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(88 128) rotate(64)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(196 186) rotate(-46)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(28 214) rotate(16)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(126 246) rotate(-30)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -146,7 +167,7 @@ html, body { overflow-x: hidden; }
 body {
   margin: 0;
   background-color: var(--cream);
-  background-image: var(--grain);
+  background-image: var(--beans), var(--grain);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.6;
@@ -552,11 +573,22 @@ p { margin: 0; }
    condition is "the hero is taller than its content", which is now every width.
    Leaving the 641–860px band out made tablets the one place where the buttons
    sat tucked under the lead with 300px of empty photo beneath them. */
+/* The copy lifts and fades as the hero leaves. --hero-progress runs 0 -> 1 over
+   the hero's own height and is set by script.js; with JS off, or under reduced
+   motion, it stays 0 and nothing moves.
+
+   The fade DOES NOT START AT ZERO, and that matters more than the rate. A plain
+   `1 - p * 1.6` left the headline at 52% opacity after only 30% of the hero had
+   scrolled — measured — which reads as the text bailing out while it is still
+   plainly in view. Holding full opacity for the first 18% and finishing by ~71%
+   keeps it legible while it is on screen and gone by the time it leaves. */
 .hero-inner {
   flex: 1;
   display: flex;
   flex-direction: column;
   margin: 0 auto; /* height now fills, so no vertical auto-centring */
+  opacity: calc(1 - max(0, var(--hero-progress, 0) - 0.18) * 1.9);
+  transform: translateY(calc(var(--hero-progress, 0) * -36px));
 }
 .hero-inner h1 { margin-top: auto; }
 .hero-inner .hero-lead { margin-bottom: 0; }
@@ -572,7 +604,7 @@ p { margin: 0; }
 }
 .section-alt {
   background-color: var(--cream-alt);
-  background-image: var(--grain);
+  background-image: var(--beans), var(--grain);
 }
 
 .section-head {
@@ -627,7 +659,12 @@ p { margin: 0; }
   object-fit: cover;
   display: block;
 }
-.img-frame--square { aspect-ratio: 1 / 1; margin-bottom: 20px; }
+/* Was --square at 1:1, when these sat two-across as small thumbnails. As a
+   half-width row beside a short paragraph a square is far too tall and leaves
+   the text stranded in white space, so the frame is 4:3 and the name says what
+   it is for rather than what shape it happens to be. The Grav template crops
+   the source to match (1000x750). */
+.img-frame--feature { aspect-ratio: 4 / 3; margin-bottom: 20px; }
 .img-frame--about { aspect-ratio: 4 / 3; }
 .img-frame--wide { aspect-ratio: 16 / 10; margin-bottom: 22px; }
 
@@ -643,7 +680,15 @@ p { margin: 0; }
      full-bleed image shows as a pale halo along the hero's borders. Scaling up
      slightly pushes that feathered edge out of frame. */
   filter: blur(4px);
-  transform: scale(1.06);
+  /* Drifts down a little more slowly than the page as the hero scrolls away —
+     see --hero-progress on .hero-inner below.
+
+     The scale went 1.06 -> 1.12 BECAUSE of that drift, not for its own sake.
+     blur() feathers the element's own edges and the scale exists to push that
+     feathered edge out of frame; once the image also travels 42px, 6% overhang
+     is no longer enough to keep the top edge covered. The image is upscaled
+     either way and already blurred, so the extra costs nothing visible. */
+  transform: scale(1.12) translateY(calc(var(--hero-progress, 0) * 42px));
 }
 
 /* ===== Grids / entries =====
@@ -658,11 +703,20 @@ p { margin: 0; }
    Without card padding the grids need their own air, so the gaps below are
    deliberately large — that whitespace IS the separation now. Reducing it
    brings back the crowded look the boxes were compensating for. */
+/* Feature entries are full-width ROWS that alternate side to side, not a
+   two-across grid. The section reads as one continuous zig-zag: the About block
+   above is photo-left / text-right, so the first feature card — the beans in
+   cupped hands — is photo-RIGHT / text-left, and it alternates from there.
+
+   Single column here is the base, which is also the whole of the mobile
+   layout: photo above text, exactly as before. The two-column row and the
+   alternation live in the ≥961px block near the bottom of this file, matched to
+   the width at which .about-grid also goes two-column, so the section is never
+   half zig-zag and half stacked. */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 34px;
-  row-gap: 54px;
+  grid-template-columns: 1fr;
+  row-gap: 64px;
 }
 .feature-card h3, .life-card h3, .info-card h3 {
   font-size: 1.2rem;
@@ -1021,7 +1075,6 @@ p { margin: 0; }
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
   .about-grid { grid-template-columns: 1fr; gap: 28px; }
-  .feature-grid { grid-template-columns: 1fr 1fr; }
   /* .info-grid is already 1fr 1fr at every width — see its base rule. */
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -1105,7 +1158,9 @@ p { margin: 0; }
   .footer-grid {
     grid-template-columns: 1fr;
   }
-  .img-frame--square { max-width: 240px; margin-left: auto; margin-right: auto; }
+  /* The old 240px cap existed because a full-width 1:1 square was enormous on a
+     phone. At 4:3 it is a normal photo, the same shape as the Жизнь штаба cards
+     above it, so it runs full width like they do. */
   .subsection { margin-top: 56px; }
   .hero-actions { flex-direction: column; align-items: stretch; }
   .hero-actions .btn { width: 100%; }
@@ -1145,4 +1200,53 @@ p { margin: 0; }
   }
   .reveal { opacity: 1; transform: none; }
   .btn:hover, .to-top:hover { transform: none; }
+}
+
+/* ===== About: alternating photo / text rows (desktop) ===== */
+/* 961px is not arbitrary — it is where .about-grid becomes two columns. Below
+   it every entry stacks, photo above text, and the alternation simply does not
+   apply.
+
+   No wrapper element was added around the icon/heading/paragraph. The card is a
+   five-row grid instead: the photo spans all five, and the three text pieces sit
+   in rows 2-4 with flexible 1fr rows above and below, which is what centres the
+   text block against the photo whatever its length. A wrapper would have meant
+   editing both the static markup and the Twig template for a purely visual
+   change. */
+@media (min-width: 961px) {
+  .feature-grid { row-gap: 78px; }
+
+  .feature-card {
+    display: grid;
+    grid-template-rows: 1fr auto auto auto 1fr;
+    column-gap: 54px;
+  }
+
+  /* The photo column is slightly narrower than the text column: a photo that
+     matches the text width makes the row read as two equal blocks rather than
+     an image with something to say about it.
+
+     The ratio has to FLIP with the alternation, not sit on a fixed column.
+     Written once as `0.95fr 1fr` the narrow column stayed on the left, so the
+     photo came out 506px on even rows and 532px on odd ones — measured — and
+     the photos changed size down the page as they changed sides. */
+  .feature-card:nth-child(odd)  { grid-template-columns: 1fr 0.95fr; }
+  .feature-card:nth-child(even) { grid-template-columns: 0.95fr 1fr; }
+
+  .feature-card .img-frame {
+    grid-row: 1 / -1;
+    align-self: center;
+    margin-bottom: 0;
+  }
+  .feature-card .feature-icon { grid-row: 2; align-self: end; }
+  .feature-card h3 { grid-row: 3; }
+  .feature-card p  { grid-row: 4; align-self: start; }
+
+  /* Odd cards put the photo on the right, even cards on the left. Everything
+     that is not the photo takes the other column — written as :not() so adding
+     a fourth element to a card needs no new rule here. */
+  .feature-card:nth-child(odd) .img-frame { grid-column: 2; }
+  .feature-card:nth-child(odd) > :not(.img-frame) { grid-column: 1; }
+  .feature-card:nth-child(even) .img-frame { grid-column: 1; }
+  .feature-card:nth-child(even) > :not(.img-frame) { grid-column: 2; }
 }

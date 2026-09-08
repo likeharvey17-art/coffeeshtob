@@ -82,9 +82,9 @@
       <div class="feature-grid">
         {% for item in page.header.features %}
           <article class="feature-card">
-            <div class="img-frame img-frame--square">
+            <div class="img-frame img-frame--feature">
               {% set im = page.media[item.image|default('')] %}
-              <img src="{{ im ? im.cropZoom(800, 800).quality(75).url : url('theme://images/placeholder.svg') }}"
+              <img src="{{ im ? im.cropZoom(1000, 750).quality(75).url : url('theme://images/placeholder.svg') }}"
                    alt="{{ item.title }}" loading="lazy" decoding="async">
             </div>
             {# Icons are positional, not content — see note 2 at the top. #}
