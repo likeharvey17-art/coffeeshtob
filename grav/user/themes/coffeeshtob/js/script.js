@@ -14,10 +14,20 @@ document.addEventListener('DOMContentLoaded', () => {
      targets clear of it. Measured rather than hardcoded, since the header's
      height differs between the desktop and mobile layouts. */
   const syncHeaderHeight = () => {
-    document.documentElement.style.setProperty(
+    const root = document.documentElement;
+    root.style.setProperty(
       '--header-h',
       `${Math.round(header.getBoundingClientRect().height)}px`
     );
+    /* How far the header must travel to be fully gone. The transform lives in
+       CSS now, so the measurement is published as a custom property.
+
+       Measured off the element rather than written as -100%: a percentage
+       resolves against the element's own box, and in some in-app webviews —
+       Telegram's among them — the sticky box and the visual viewport disagree,
+       which left a sliver of the bar stranded on screen. The +16 clears the
+       pill's drop shadow too. */
+    root.style.setProperty('--header-hide', `${header.offsetHeight + 16}px`);
   };
   syncHeaderHeight();
   if ('ResizeObserver' in window) {
@@ -129,83 +139,35 @@ document.addEventListener('DOMContentLoaded', () => {
      The header slides away while reading downwards and comes straight back on
      any upward scroll. Near the top it is always shown, so the resting state
      above the hero is unchanged. */
-  /* Desktop and mobile hide the header by different mechanisms.
+  /* ONE MECHANISM AT EVERY WIDTH: toggle `.is-hidden` and let a short CSS
+     transition play.
 
-     Desktop toggles `.is-hidden` and lets a CSS transition play — the header
-     is a fixed chrome element there, and animating it reads fine.
+     Mobile used to be different — an inline transform driven straight from the
+     scroll delta and interpolated in a requestAnimationFrame loop, so the bar
+     travelled one-to-one with the finger rather than on a timer. That was
+     deliberate, and replacing it is deliberate too: a fast timed slide was
+     asked for instead. It is also about forty lines less machinery to go wrong,
+     and it puts desktop and mobile back on the same code path.
 
-     Mobile drives an inline transform straight from the scroll delta instead,
-     one-to-one with the finger. A timed transition can only be slow (the bar
-     lingers while the page moves under it) or fast (it snaps); neither is what
-     a header scrolling away with the content looks like. Tracking the scroll
-     has no duration to get wrong. */
+     If the scroll-linked version is ever wanted back, the reason it existed is
+     that a *slow* transition makes the bar linger while the page moves under
+     it. Keep the duration short (0.2s) and that does not arise. */
   const desktop = window.matchMedia('(min-width: 861px)');
   const hideAfter = () => (desktop.matches ? 220 : 12);
   const DELTA = 4;        // ignore sub-pixel jitter and momentum wobble
   let lastY = window.scrollY;
   let holdVisibleUntil = 0; // timestamp; see the anchor-click handler below
 
-  /* How far the header must travel to be fully gone, measured off the element
-     in pixels rather than written as -100%. A percentage resolves against the
-     element's own box, and in some in-app webviews — Telegram's included — the
-     sticky box and the visual viewport disagree. */
-  const hiddenDistance = () => header.offsetHeight + 16;
-
-  /* Mobile hiding is scroll-driven but frame-rendered, and it has to be both.
-
-     Scroll events fire less often than frames, so writing the transform
-     straight from the scroll delta moved the bar in visible jumps. Instead the
-     scroll handler only sets `wanted`, and a rAF loop walks `shown` towards it
-     one frame at a time. The result still follows the scroll — it is not a
-     timed animation with a duration to get wrong — but it renders on every
-     frame instead of every scroll event, which is what removes the stepping. */
-  let shown = 0;   // px currently rendered
-  let wanted = 0;  // px the scroll position asks for
-  let raf = null;
-
-  const paint = () => {
-    header.style.transform = shown ? `translateY(${-shown}px)` : '';
-    /* Once it is all the way up, stop painting it at all. Translating a sticky
-       element off-screen is not the same as it being gone: a webview whose
-       sticky box disagrees with the visual viewport can still show a sliver of
-       it, which is exactly the strip left hanging in Telegram's browser.
-       visibility removes it from the render without affecting layout. */
-    header.style.visibility = shown >= hiddenDistance() - 0.5 ? 'hidden' : '';
-  };
-
-  const step = () => {
-    const diff = wanted - shown;
-    if (Math.abs(diff) < 0.5) {
-      shown = wanted;
-      paint();
-      raf = null;
-      return;
-    }
-    shown += diff * 0.3;   // catches up in ~3 frames: smooth, still responsive
-    paint();
-    raf = requestAnimationFrame(step);
-  };
-
-  const settle = () => {
-    if (raf === null) raf = requestAnimationFrame(step);
-  };
-
   const setHeaderHidden = (hidden) => {
     header.classList.toggle('is-hidden', hidden);
   };
 
-  const clearOffset = () => {
-    wanted = 0;
-    settle();
-  };
-
-  /* Crossing the breakpoint must not strand the other layout's state. */
+  /* Crossing the breakpoint changes the header's height, so the hide distance
+     is remeasured; the ResizeObserver above catches the resize itself, but not
+     a media-query flip that leaves the height unchanged. */
   desktop.addEventListener('change', () => {
-    shown = 0;
-    wanted = 0;
-    header.style.transform = '';
-    header.style.visibility = '';
     setHeaderHidden(false);
+    syncHeaderHeight();
   });
 
   const onScroll = () => {
@@ -239,7 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (pinned) {
       setHeaderHidden(false);
-      clearOffset();
       lastY = y;
       return;
     }
@@ -248,19 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
        successive small movements accumulate instead of being discarded. */
     if (!moved) return;
 
-    if (desktop.matches) {
-      clearOffset(); // in case we arrived from the mobile layout
-      header.style.visibility = '';
-      setHeaderHidden(!scrollingUp);
-    } else {
-      /* Mobile: the class stays off and the transform does the work, moving
-         the header by exactly as much as the page moved, up to the point where
-         it is fully clear. */
-      setHeaderHidden(false);
-      wanted = Math.max(0, Math.min(hiddenDistance(), wanted + movement));
-      settle();
-    }
-
+    setHeaderHidden(!scrollingUp);
     lastY = y;
   };
 
@@ -278,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a[href^="#"]').forEach((link) => {
     link.addEventListener('click', () => {
       setHeaderHidden(false);
-      clearOffset();
       holdVisibleUntil = Date.now() + (prefersReducedMotion.matches ? 150 : 900);
     });
   });

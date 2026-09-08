@@ -689,8 +689,8 @@ A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
 
 ## Design tokens (see `:root` in `style.css`)
 
-- Palette: near-white background (`--cream` — the name is historical, the
-  value is now `#fdfbf8`), soft cream alternating sections (`--cream-alt`),
+- Palette: warm off-white background (`--cream` — the name is historical, the
+  value is now `#f7f3ec`), soft cream alternating sections (`--cream-alt`),
   true-white cards (`--paper`), espresso text (`--ink`), and a coffee-brown
   accent. Dark roast hero/footer (`--dark`).
 - The accent runs as a three-step brown ramp, picked by the background it sits
@@ -699,9 +699,16 @@ A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
   - `--accent` / `--accent-dark` — coffee brown, for buttons and links on
     light backgrounds.
   - `--accent-mid` — lighter brown, for small accents on light backgrounds
-    (section eyebrow labels, the feature icons). Its value is pinned at
-    4.69:1 against `--cream-alt`, the tightest pairing on the page; darken it
-    rather than lighten it if you change it.
+    (section eyebrow labels, the feature icons). Darken it rather than lighten
+    it if you change it.
+
+  **The tightest pairing on the page is `--muted` on `--cream-alt`, currently
+  4.62:1.** An older note here named `--accent-mid` at 4.69:1; measuring found
+  that wrong on both counts. The two now sit level, because when the backgrounds
+  were darkened both text colours had to move with them — `--muted` and
+  `--accent-mid` each dropped below 4.5 against the new `--cream-alt` and were
+  darkened until they cleared it. **Any further darkening of a background means
+  re-measuring every pairing**, not just the one this file happens to name.
   - `--accent-light` — light brown, the only one legible on `--dark`
     (footer icons and links, hero badge icon).
 - `--grain`: an inline-SVG noise texture applied as an extra *background
@@ -980,28 +987,31 @@ and matching it structurally covers both legal pages and any future one with no
 way to add a page and forget the class. On `index.html` the nav sits between the
 two, so it never matches there.
 
-The header hides on scroll-down and reappears on scroll-up, but by **two
-different mechanisms**, and they must not be merged:
+The header hides on scroll-down and reappears on scroll-up, by **one mechanism
+at every width**: `script.js` toggles `.is-hidden` and a 0.2s CSS transition
+plays.
 
-- **Desktop** toggles `.is-hidden` and lets a 0.28s CSS transition play.
-- **Mobile** ignores the class and moves the header with an inline
-  `translateY`, scroll-driven but **frame-rendered**. The scroll handler only
-  sets `wanted`; a `requestAnimationFrame` loop walks `shown` toward it at 30%
-  per frame. Both halves matter: a timed CSS transition is either laggy or
-  snappy (both were tried and rejected), but writing the transform straight from
-  the scroll delta moved the bar in visible steps, because scroll events fire
-  less often than frames. Interpolating between them is what makes it smooth
-  while still following the scroll rather than a clock.
+**Mobile used to be different, and the history is worth knowing before anyone
+"restores" it.** It drove an inline `translateY` straight from the scroll delta,
+interpolated in a `requestAnimationFrame` loop, so the bar travelled with the
+finger rather than on a timer. That was deliberate — a *slow* transition makes
+the bar linger while the page moves underneath. It was replaced just as
+deliberately, on request, by a short timed slide; keeping the duration at 0.2s
+is what stops the lingering the old version existed to avoid. The change also
+removed ~40 lines and put both widths back on one code path.
 
-  When fully up, the header also gets `visibility: hidden`. Translating a
-  sticky element off-screen is **not** the same as it being gone — a webview
-  whose sticky box disagrees with the visual viewport still paints a sliver,
-  which is the strip that stayed on screen in Telegram's in-app browser.
+When hidden, the header also gets `visibility: hidden`, delayed by the
+transition duration so it does not vanish mid-slide (on the way back there is no
+delay, so it reappears the instant the class comes off). Translating a sticky
+element off-screen is **not** the same as it being gone — a webview whose sticky
+box disagrees with the visual viewport still paints a sliver, which is the strip
+that stayed on screen in Telegram's in-app browser.
 
-`hiddenDistance()` is measured off the element (`offsetHeight + 16`) rather
-than written as `-100%`. A percentage resolves against the element's own box,
-and in some in-app webviews — Telegram's among them — the sticky box and the
-visual viewport disagree, which left a sliver of the bar stranded on screen.
+The travel distance is `--header-hide`, published by `script.js` from
+`offsetHeight + 16` alongside `--header-h`, rather than written as `-100%` in
+CSS. A percentage resolves against the element's own box, and in those same
+webviews that left a sliver stranded. The CSS carries a `120px` fallback for the
+no-JS case.
 
 `hideAfter()` — how far down the page the header stays pinned — is 220px on
 desktop, 12px on mobile. It rests visible above the hero either way.

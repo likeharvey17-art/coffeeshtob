@@ -89,19 +89,19 @@
 :root {
   /* Near-white base, autumn/coffee accents. Token names kept from the original
      palette; --cream is now near-white rather than literally cream. */
-  --cream: #fdfbf8;      /* page background — near-white */
-  --cream-alt: #f6f0e7;  /* alternating sections — soft cream */
+  --cream: #f7f3ec;      /* page background — warm off-white */
+  --cream-alt: #ede4d5;  /* alternating sections — soft cream */
   --paper: #ffffff;      /* cards — true white, lifts off the page */
   --ink: #241a13;        /* espresso */
   --ink-soft: #4a3b2d;
-  --muted: #7a6a58;
-  --border: #e8ddcd;
+  --muted: #716352;      /* darkened with the backgrounds — see the note below */
+  --border: #e2d5c2;
   --accent: #4a3b30;      /* roasted coffee — primary. Deliberately low
                              saturation (~21%): the previous browns read as
                              orange because they were saturated at this
                              lightness, not because of the hue. */
   --accent-dark: #372b23; /* hover */
-  --accent-mid: #7b6450;  /* light brown — accents on light backgrounds
+  --accent-mid: #77614e;  /* light brown — accents on light backgrounds
                              (4.9:1 on --cream-alt, the tightest pairing) */
   --accent-light: #c6b09a;/* pale brown — the browns above are too dark to
                              read on --dark, so use this on dark surfaces
@@ -213,25 +213,32 @@ p { margin: 0; }
   top: 0;
   z-index: 100;
   padding: 16px 20px;
-  transition: transform 0.28s ease;
+  /* Short on purpose. The bar should be gone before the reader notices it
+     leaving and back before they wonder where it went; a slower slide makes it
+     linger while the page moves underneath, which is what the old scroll-linked
+     mobile version existed to avoid. Same duration at every width. */
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Keeps the bar on its own compositor layer, which also stops in-app webviews
+     repainting it a frame late. */
+  will-change: transform;
 }
-/* Slid away while scrolling down; script.js removes this on any upward scroll
-   and whenever the page is near the top. The extra 12px clears the pill's
-   drop shadow so no sliver stays visible. */
+/* Slid away while scrolling down; script.js removes the class on any upward
+   scroll and whenever the page is near the top.
+
+   The distance comes from --header-hide, measured off the element in script.js.
+   Written as -100% it resolves against the element's own box, and in some
+   in-app webviews — Telegram's among them — the sticky box and the visual
+   viewport disagree, leaving a sliver of the bar stranded on screen. The
+   fallback covers the case where JS never runs. */
 .site-header.is-hidden {
-  transform: translateY(calc(-100% - 12px));
-}
-/* Below 860px the header is moved by an inline transform driven straight from
-   the scroll position (see script.js), so it travels with the page rather than
-   animating on a timer. A transition here would fight every frame of that and
-   put the lag straight back, so there deliberately isn't one. will-change keeps
-   the bar on its own compositor layer, which also stops in-app webviews
-   repainting it a frame late as you scroll. */
-@media (max-width: 860px) {
-  .site-header {
-    transition: none;
-    will-change: transform;
-  }
+  transform: translateY(calc(-1 * var(--header-hide, 120px)));
+  /* Translating a sticky element off-screen is not the same as it being gone —
+     that same webview still paints the sliver — so it is also taken out of the
+     render once it has arrived. The 0.2s delay holds that until the slide
+     finishes; on the way back the base rule applies with no delay, so it
+     reappears the instant the class comes off. */
+  visibility: hidden;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.2s;
 }
 .header-inner {
   position: relative; /* anchors .social-pop */
