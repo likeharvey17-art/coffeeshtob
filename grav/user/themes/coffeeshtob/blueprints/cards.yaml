@@ -1,0 +1,158 @@
+title: Раздел с карточками
+
+# The editing form shared by Окрестности, Гостиная, Команда, Мастера и Сказки.
+# Everything is in Russian on purpose — the person maintaining this site is not
+# a developer and should never have to guess what `card_teaser` means.
+#
+# WHY A BLUEPRINT AT ALL: without one, Grav shows the page's front matter as a
+# raw YAML box. That works, and it is also exactly how a client deletes a colon
+# and takes the site down. A blueprint turns the same data into labelled boxes
+# with no syntax to get wrong.
+#
+# FIELD NAMES ARE THE STABLE IDENTIFIER, labels are not. Names match
+# templates/cards.html.twig one for one; a rename here that is not made there
+# silently blanks that part of the page, because Twig prints nothing for a
+# missing key. .github/scripts/check-content-fields.py compares the two on
+# every deploy so that cannot pass unnoticed.
+#
+# ONE FORM, FIVE PAGES. That is the point: a new section is a new folder with a
+# cards.md in it and nothing else to build.
+
+extends@: default
+
+form:
+  fields:
+    tabs:
+      type: tabs
+      active: 1
+      fields:
+
+        banner:
+          type: tab
+          title: Шапка страницы
+          fields:
+            header.eyebrow:
+              type: text
+              label: Надпись над заголовком
+              help: 'Короткая, заглавными буквами. Например: ОКРЕСТНОСТИ ШТАБА. Можно оставить пустым.'
+            header.intro:
+              type: textarea
+              label: Короткий текст под заголовком
+              rows: 3
+              help: 'Одно-два предложения — он выводится поверх фотографии, длинный текст там читать тяжело.'
+            header.banner_image:
+              type: pagemediaselect
+              label: Фотография в шапке
+              help: 'Сначала загрузите фотографию во вкладке «Медиа» этой страницы, затем выберите её здесь. Фото размывается и затемняется, поэтому подойдёт почти любое — важно, чтобы белый заголовок оставался читаемым.'
+
+        card:
+          type: tab
+          title: Карточка на главной
+          fields:
+            header.card_image:
+              type: pagemediaselect
+              label: Фотография для главной страницы
+              help: 'Этой фотографией раздел показывается в списке разделов на главной. Если не выбрать, там будет серая заглушка.'
+            header.card_teaser:
+              type: text
+              label: Одна строка о разделе
+              help: 'Короткое описание под названием раздела на главной странице.'
+
+        content:
+          type: tab
+          title: Содержание
+          fields:
+            header.layout:
+              type: select
+              label: Как показывать карточки
+              default: grid
+              help: 'Сеткой — для многих коротких карточек (люди, мастера, вещи). В строку — крупные фотографии, которые чередуются слева и справа. Широкие — одна большая фотография на карточку, для длинных текстов.'
+              options:
+                grid: 'Сеткой (много коротких)'
+                alt: 'В строку, фото через одну сторону'
+                wide: 'Широкие блоки, фото сверху'
+            header.lead_title:
+              type: text
+              label: Заголовок над карточками
+              help: 'Необязательно.'
+            header.lead:
+              type: textarea
+              label: Текст над карточками
+              rows: 4
+              help: 'Необязательно. Пустая строка между абзацами начинает новый абзац.'
+            header.items:
+              type: list
+              label: Карточки
+              help: 'Карточки можно добавлять, удалять и перетаскивать. Количество колонок подстраивается само — их может быть сколько угодно, ничего в вёрстке менять не нужно. Пустые поля просто не показываются, поэтому карточку можно завести заранее, с одним названием, и дописать остальное потом.'
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .subtitle:
+                  type: text
+                  label: Подпись под названием
+                  help: 'Необязательно. Например, чем человек занимается в штабе или цена сувенира.'
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 4
+                .text2:
+                  type: textarea
+                  label: Второй абзац
+                  rows: 3
+                  help: 'Необязательно.'
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+                .icon:
+                  type: select
+                  label: Значок
+                  help: 'Необязательно. Значок закреплён за карточкой, поэтому карточки можно свободно менять местами.'
+                  options:
+                    '': 'Без значка'
+                    coffee: Кофе
+                    crate: Ящик
+                    house: Дом
+                    people: Люди
+                    book: Книга
+                    printer: 3D-принтер
+                    music: Музыка
+                    film: Кино
+                    game: Настолки
+                    leaf: Травы
+                    clock: Часы
+
+        outro:
+          type: tab
+          title: Блок в конце
+          fields:
+            header.outro_title:
+              type: text
+              label: Заголовок
+              help: 'Необязательный блок в самом низу страницы. Если оставить пустыми и заголовок, и текст, блок не показывается.'
+            header.outro_text:
+              type: textarea
+              label: Текст
+              rows: 4
+            header.outro_link_text:
+              type: text
+              label: Надпись на ссылке
+              help: 'Ссылка показывается только если заполнены оба поля — и надпись, и адрес.'
+            header.outro_link_url:
+              type: text
+              label: Адрес ссылки
+              help: 'Полный адрес, начиная с https://'
+
+        seo:
+          type: tab
+          title: SEO
+          fields:
+            header.seo_title:
+              type: text
+              label: Заголовок вкладки браузера
+              help: 'Он же в результатах поиска и в превью ссылки. До ~60 знаков.'
+            header.seo_description:
+              type: textarea
+              label: Описание для поиска
+              rows: 3
+              help: 'Показывается под ссылкой в поиске. До ~160 знаков.'

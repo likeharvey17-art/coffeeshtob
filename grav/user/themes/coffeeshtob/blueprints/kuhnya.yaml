@@ -1,0 +1,167 @@
+title: Кухня штаба
+
+# The editing form for /kuhnya. See cards.yaml for the conventions that apply to
+# every blueprint here — Russian labels, field names as the stable identifier,
+# and a CI check comparing this file against templates/kuhnya.html.twig.
+#
+# This page has its own form rather than sharing cards.yaml because the menu is
+# a different shape: its items carry a price and a square thumbnail, and there
+# are two independent lists. The cards below the menu use the same `items` field
+# name as cards.yaml on purpose, so the two forms stay recognisably related.
+
+extends@: default
+
+form:
+  fields:
+    tabs:
+      type: tabs
+      active: 1
+      fields:
+
+        banner:
+          type: tab
+          title: Шапка страницы
+          fields:
+            header.eyebrow:
+              type: text
+              label: Надпись над заголовком
+              help: 'Короткая, заглавными буквами. Можно оставить пустым.'
+            header.intro:
+              type: textarea
+              label: Короткий текст под заголовком
+              rows: 3
+              help: 'Одно-два предложения — он выводится поверх фотографии.'
+            header.banner_image:
+              type: pagemediaselect
+              label: Фотография в шапке
+
+        card:
+          type: tab
+          title: Карточка на главной
+          fields:
+            header.card_image:
+              type: pagemediaselect
+              label: Фотография для главной страницы
+            header.card_teaser:
+              type: text
+              label: Одна строка о разделе
+
+        menu:
+          type: tab
+          title: Меню
+          fields:
+            header.menu_title:
+              type: text
+              label: Заголовок раздела
+            header.menu_sub:
+              type: text
+              label: Подзаголовок
+            header.menu_items:
+              type: list
+              label: Позиции меню
+              help: 'Количество колонок подстраивается само — позиций может быть сколько угодно, ничего в вёрстке менять не нужно.'
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .price:
+                  type: text
+                  label: Цена
+                  help: 'Можно оставить пустым — тогда цена просто не показывается.'
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+            header.drinks_title:
+              type: text
+              label: Заголовок подраздела «другие напитки»
+            header.drinks_sub:
+              type: text
+              label: Подзаголовок подраздела
+            header.drinks_items:
+              type: list
+              label: Другие напитки
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .price:
+                  type: text
+                  label: Цена
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+
+        items:
+          type: tab
+          title: Чем ещё живёт кухня
+          fields:
+            header.items_eyebrow:
+              type: text
+              label: Надпись над заголовком
+            header.items_title:
+              type: text
+              label: Заголовок раздела
+            header.items_sub:
+              type: text
+              label: Подзаголовок
+            header.items:
+              type: list
+              label: Карточки
+              help: 'Крупные карточки под меню — фотографии в них чередуются слева и справа. Пустые поля не показываются.'
+              fields:
+                .title:
+                  type: text
+                  label: Название
+                .subtitle:
+                  type: text
+                  label: Подпись под названием
+                .text:
+                  type: textarea
+                  label: Описание
+                  rows: 4
+                .text2:
+                  type: textarea
+                  label: Второй абзац
+                  rows: 3
+                .image:
+                  type: pagemediaselect
+                  label: Фотография
+                .icon:
+                  type: select
+                  label: Значок
+                  help: 'Необязательно. Значок закреплён за карточкой, поэтому карточки можно свободно менять местами.'
+                  options:
+                    '': 'Без значка'
+                    coffee: Кофе
+                    crate: Ящик
+                    house: Дом
+                    people: Люди
+                    book: Книга
+                    printer: 3D-принтер
+                    music: Музыка
+                    film: Кино
+                    game: Настолки
+                    leaf: Травы
+                    clock: Часы
+
+        seo:
+          type: tab
+          title: SEO
+          fields:
+            header.seo_title:
+              type: text
+              label: Заголовок вкладки браузера
+              help: 'До ~60 знаков.'
+            header.seo_description:
+              type: textarea
+              label: Описание для поиска
+              rows: 3
+              help: 'До ~160 знаков.'

@@ -1,0 +1,119 @@
+title: Контакты и график работы
+
+# The editing form for /kontakty. See cards.yaml for the shared conventions.
+#
+# The address, the note under it and the phone number are NOT here. They live in
+# the theme's own settings (Themes → Кофештаб), because they also appear in the
+# footer of every page and in the data search engines read. One field, one
+# truth: written in two places, the admin would change what this page shows
+# while the footer and the tel: link kept the old number.
+
+extends@: default
+
+form:
+  fields:
+    tabs:
+      type: tabs
+      active: 1
+      fields:
+
+        banner:
+          type: tab
+          title: Шапка страницы
+          fields:
+            header.eyebrow:
+              type: text
+              label: Надпись над заголовком
+            header.intro:
+              type: textarea
+              label: Короткий текст под заголовком
+              rows: 3
+            header.banner_image:
+              type: pagemediaselect
+              label: Фотография в шапке
+
+        card:
+          type: tab
+          title: Карточка на главной
+          fields:
+            header.card_image:
+              type: pagemediaselect
+              label: Фотография для главной страницы
+            header.card_teaser:
+              type: text
+              label: Одна строка о разделе
+
+        hours:
+          type: tab
+          title: График работы
+          fields:
+            header.hours_title:
+              type: text
+              label: Заголовок таблицы с часами
+            header.hours:
+              type: list
+              label: Часы работы
+              help: 'Строки можно добавлять и удалять — например, отдельная строка на летний сезон или на праздничные дни. Это единственный блок на сайте в рамке: так и задумано, его ищут глазами.'
+              fields:
+                .label:
+                  type: text
+                  label: Дни
+                  help: 'Например: БУДНИ (ПН–ПТ)'
+                .time:
+                  type: text
+                  label: Часы
+                  help: 'Например: 15:15–19:00'
+                .days:
+                  type: select
+                  label: Дни недели (для поисковиков)
+                  multiple: true
+                  help: 'Необязательно. Нужно только для того, чтобы Яндекс и Google показывали «открыто до…» рядом с сайтом. На саму страницу не выводится — там показывается то, что написано в поле «Дни».'
+                  options:
+                    Monday: Понедельник
+                    Tuesday: Вторник
+                    Wednesday: Среда
+                    Thursday: Четверг
+                    Friday: Пятница
+                    Saturday: Суббота
+                    Sunday: Воскресенье
+                .opens:
+                  type: text
+                  label: Открытие (для поисковиков)
+                  help: 'Необязательно, в формате 15:15'
+                .closes:
+                  type: text
+                  label: Закрытие (для поисковиков)
+                  help: 'Необязательно, в формате 19:00'
+            header.hours_note:
+              type: text
+              label: Примечание под таблицей
+
+        place:
+          type: tab
+          title: Как нас найти
+          fields:
+            header.address_title:
+              type: text
+              label: Заголовок блока с адресом
+              help: 'Сам адрес и телефон берутся из настроек темы (Themes → Кофештаб), потому что они же показываются в подвале каждой страницы.'
+            header.ferry_title:
+              type: text
+              label: Заголовок «Как перебраться»
+            header.ferry_text:
+              type: textarea
+              label: Текст «Как перебраться»
+              rows: 4
+
+        seo:
+          type: tab
+          title: SEO
+          fields:
+            header.seo_title:
+              type: text
+              label: Заголовок вкладки браузера
+              help: 'До ~60 знаков.'
+            header.seo_description:
+              type: textarea
+              label: Описание для поиска
+              rows: 3
+              help: 'До ~160 знаков.'

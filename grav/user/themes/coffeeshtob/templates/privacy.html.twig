@@ -74,9 +74,9 @@
     <p>Данных о вас у нас нет, удалять нечего. Если что-то непонятно,
     позвоните или заходите.</p>
     <p>
-      {% set tel = theme_config.phone|replace({' ': '', '(': '', ')': '', '-': ''}) %}
-      Телефон: <a class="legal-link" href="tel:{{ tel }}">{{ theme_config.phone }}</a><br>
-      Адрес: {{ theme_config.address }}
+      {% set tel = theme.phone|replace({' ': '', '(': '', ')': '', '-': ''}) %}
+      Телефон: <a class="legal-link" href="tel:{{ tel }}">{{ theme.phone }}</a><br>
+      Адрес: {{ theme.address }}
     </p>
 
     <p class="legal-back">
@@ -93,7 +93,7 @@
   <div class="container">
     <div class="footer-bottom-inner">
       <span>© {{ 'now'|date('Y') }} «Кофештаб»</span>
-      <span>{{ theme_config.address }}</span>
+      <span>{{ theme.address }}</span>
     </div>
   </div>
 </footer>

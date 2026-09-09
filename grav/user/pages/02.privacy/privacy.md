@@ -10,4 +10,9 @@ updated: '5 сентября 2026 года'
 # all still point there. Grav would otherwise route this folder to /02.privacy.
 routes:
   default: /privacy
+
+# Не в меню: ссылка на политику живёт в нижней строке подвала. Меню строится из
+# дерева страниц (partials/nav.html.twig), поэтому без этой строки страница
+# появилась бы в шапке рядом с разделами.
+visible: false
 ---

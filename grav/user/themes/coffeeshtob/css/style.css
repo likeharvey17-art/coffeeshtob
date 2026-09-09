@@ -94,30 +94,41 @@
   --paper: #ffffff;      /* cards — true white, lifts off the page */
   --ink: #241a13;        /* espresso */
   --ink-soft: #4a3b2d;
-  --muted: #6f6150;      /* darkened for the backgrounds AND the texture — see below */
+  --muted: #6d604f;      /* 4.63:1 on the composited --cream-alt — see the
+                            texture note below before changing either */
   --border: #e2d5c2;
   --accent: #4a3b30;      /* roasted coffee — primary. Deliberately low
                              saturation (~21%): the previous browns read as
                              orange because they were saturated at this
                              lightness, not because of the hue. */
   --accent-dark: #372b23; /* hover */
-  --accent-mid: #755f4c;  /* light brown — accents on light backgrounds
-                             (4.9:1 on --cream-alt, the tightest pairing) */
+  --accent-mid: #745e4b;  /* light brown — accents on light backgrounds.
+                             Tied with --muted for the tightest pairing on the
+                             page: 4.62:1 on the COMPOSITED --cream-alt. Both
+                             were darkened again when the paper layer went in.
+                             Darken this rather than lighten it. */
   --accent-light: #c6b09a;/* pale brown — the browns above are too dark to
                              read on --dark, so use this on dark surfaces
                              (8.23:1 on --dark) */
   --dark: #221a12;
   --dark-soft: #33261b;
 
-  /* Grain, ~7.5% alpha baked into the SVG. Used as an extra background
-     layer (never an overlay) so it can't paint over cards. */
-  /* Two background LAYERS, never overlay elements — an overlay would need a
+  /* THREE background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
      `body` and `.section-alt` only, so the white cards stay clean.
 
      Alpha is baked into each SVG (stroke-opacity / rect opacity), not set in
      CSS, so there is one place to adjust each. Order matters where they are
-     used: beans sit above the grain.
+     used: beans on top, then --fibers, then --grain underneath.
+
+     EACH LAYER DARKENS THE COMPOSITE, AND THAT MOVES THE CONTRAST MATHS. The
+     paper layer took --muted and --accent-mid from 4.62:1 to 4.53:1 against
+     --cream-alt, which is still AA but under this project's working margin, so
+     both were darkened again. Measured by compositing the layers onto the
+     background colour in a canvas: --cream-alt renders as rgb(231,223,210), not
+     its token rgb(237,228,213). MEASURE AGAINST THE COMPOSITE, NOT THE TOKEN,
+     whenever a texture or a background changes — every pairing, not just the
+     one a comment happens to name.
 
      baseFrequency went 0.65 -> 0.5 to coarsen the noise — lower frequency means
      larger speckle, which is what reads as "rough" rather than "dithered".
@@ -136,6 +147,25 @@
 
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* The paper layer: slow cloudy tone variation with a scatter of fibres.
+
+     ITS FIRST VERSION WAS INVISIBLE AND THAT WAS MEASURED, NOT GUESSED. It was
+     18 hairlines on a 340px tile — about 0.4% of the pixels at 5% alpha, which
+     moved the background's mean by 0.03 of one level out of 255. Sparse strokes
+     cannot make a surface read as paper; what does is low-frequency mottling,
+     the same thing that makes real stock look uneven under a raking light.
+
+     So the body of it is fractal noise at baseFrequency 0.011 — two orders
+     below --grain's 0.5, which is the difference between "cloudy" and "rough".
+     The two do different jobs and both are needed. 70 hairlines sit on top for
+     the fibre.
+
+     The tile is 700px because low-frequency noise on a small tile repeats as a
+     visible plaid. Generated from a fixed seed so it can be reproduced exactly.
+     Measured effect: mean 237 -> 234.4, standard deviation 0 -> 1.19, range
+     223-237. Quiet, but present. */
+  --fibers: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='p' x='0' y='0' width='100%' height='100%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='700' height='700' filter='url(%23p)' opacity='0.1'/%3E%3Cg fill='none' stroke='%235a4632' stroke-opacity='0.05' stroke-width='0.7' stroke-linecap='round'%3E%3Cpath d='M346.1 156.1Q368.0 163.2 389.0 170.9'/%3E%3Cpath d='M710.3 162.9Q691.3 167.3 669.4 173.2'/%3E%3Cpath d='M22.1 315.1Q33.2 316.9 41.8 319.2'/%3E%3Cpath d='M370.5 319.4Q378.3 334.4 386.2 349.1'/%3E%3Cpath d='M563.2 606.2Q544.5 605.9 524.1 606.3'/%3E%3Cpath d='M587.3 393.2Q597.7 404.3 610.5 414.7'/%3E%3Cpath d='M115.6 668.8Q109.0 673.0 100.6 675.6'/%3E%3Cpath d='M173.3 40.2Q181.0 53.1 189.1 62.7'/%3E%3Cpath d='M137.1 385.7Q122.8 393.2 111.6 399.3'/%3E%3Cpath d='M252.1 74.2Q256.0 84.2 258.0 94.0'/%3E%3Cpath d='M76.4 592.1Q95.3 595.7 117.2 598.3'/%3E%3Cpath d='M426.3 457.9Q411.0 465.6 398.2 476.0'/%3E%3Cpath d='M316.2 524.8Q309.1 545.7 300.9 564.8'/%3E%3Cpath d='M297.0 106.3Q317.3 113.2 336.2 118.0'/%3E%3Cpath d='M249.9 239.7Q251.3 249.0 254.2 259.6'/%3E%3Cpath d='M492.1 328.5Q493.1 342.0 494.1 352.3'/%3E%3Cpath d='M594.0 399.5Q593.9 411.4 593.6 423.6'/%3E%3Cpath d='M488.4 342.5Q473.3 347.0 457.2 351.1'/%3E%3Cpath d='M695.2 156.0Q687.0 170.4 678.9 185.3'/%3E%3Cpath d='M274.9 180.4Q283.7 201.4 289.3 222.8'/%3E%3Cpath d='M155.5 128.6Q139.5 129.8 122.0 130.9'/%3E%3Cpath d='M532.2 217.1Q541.6 217.1 548.7 219.7'/%3E%3Cpath d='M577.2 559.9Q571.6 581.8 563.4 603.7'/%3E%3Cpath d='M231.7 129.0Q218.6 142.6 208.7 154.0'/%3E%3Cpath d='M430.6 258.1Q433.2 264.4 438.0 272.5'/%3E%3Cpath d='M587.9 450.4Q609.3 455.6 631.0 462.3'/%3E%3Cpath d='M50.1 100.4Q61.8 107.9 74.8 115.4'/%3E%3Cpath d='M683.2 649.2Q673.9 656.4 661.2 661.4'/%3E%3Cpath d='M395.0 635.8Q402.6 637.8 407.3 643.2'/%3E%3Cpath d='M72.0 375.7Q74.4 387.1 75.7 395.1'/%3E%3Cpath d='M166.8 62.7Q169.8 73.1 170.8 84.7'/%3E%3Cpath d='M511.7 404.7Q509.8 418.9 507.9 436.7'/%3E%3Cpath d='M200.1 651.9Q188.3 654.9 178.4 656.5'/%3E%3Cpath d='M336.3 373.5Q351.8 373.4 364.6 374.4'/%3E%3Cpath d='M646.8 321.5Q656.6 336.5 666.3 351.1'/%3E%3Cpath d='M333.9 294.6Q336.1 303.6 336.9 313.7'/%3E%3Cpath d='M607.7 601.1Q600.9 604.8 595.8 611.6'/%3E%3Cpath d='M103.2 438.6Q116.6 439.1 127.8 443.1'/%3E%3Cpath d='M618.3 266.6Q627.3 283.6 636.5 301.6'/%3E%3Cpath d='M373.3 676.9Q367.3 681.2 358.8 682.1'/%3E%3Cpath d='M380.5 294.4Q378.0 317.4 377.0 338.4'/%3E%3Cpath d='M358.9 233.9Q355.6 250.1 355.2 265.9'/%3E%3Cpath d='M181.6 619.3Q188.2 631.3 191.6 642.4'/%3E%3Cpath d='M384.8 63.5Q381.1 73.5 375.4 84.1'/%3E%3Cpath d='M517.9 339.5Q520.5 346.1 521.5 354.3'/%3E%3Cpath d='M674.6 267.1Q675.2 283.0 678.9 300.9'/%3E%3Cpath d='M570.1 64.9Q570.4 74.7 569.8 81.6'/%3E%3Cpath d='M46.4 183.6Q51.7 199.4 53.8 212.5'/%3E%3Cpath d='M603.2 557.6Q597.4 561.8 590.8 565.6'/%3E%3Cpath d='M8.6 610.9Q10.1 632.0 12.5 649.8'/%3E%3Cpath d='M482.2 45.5Q481.8 53.8 482.7 60.0'/%3E%3Cpath d='M663.2 371.1Q650.2 379.5 638.2 385.1'/%3E%3Cpath d='M107.9 265.3Q93.0 271.1 78.7 279.1'/%3E%3Cpath d='M347.9 349.4Q361.3 359.4 372.1 371.7'/%3E%3Cpath d='M477.5 408.8Q483.9 422.0 487.5 433.2'/%3E%3Cpath d='M258.9 494.5Q246.4 509.4 236.4 522.4'/%3E%3Cpath d='M37.9 133.3Q47.1 145.0 59.1 159.4'/%3E%3Cpath d='M152.1 440.1Q164.9 457.5 177.6 475.9'/%3E%3Cpath d='M525.5 310.2Q513.6 320.5 499.1 327.5'/%3E%3Cpath d='M434.8 82.3Q436.1 92.2 436.6 99.3'/%3E%3Cpath d='M42.3 340.1Q49.1 362.4 56.0 383.7'/%3E%3Cpath d='M437.0 94.9Q449.0 107.8 461.7 122.1'/%3E%3Cpath d='M79.5 378.5Q83.0 392.3 85.9 407.7'/%3E%3Cpath d='M557.1 462.3Q555.7 470.6 557.4 479.5'/%3E%3Cpath d='M627.7 410.6Q647.8 423.1 664.9 435.6'/%3E%3Cpath d='M432.2 97.7Q455.7 100.6 476.8 102.2'/%3E%3Cpath d='M695.3 48.1Q683.1 49.4 668.3 54.3'/%3E%3Cpath d='M148.0 297.0Q138.2 311.3 128.1 324.0'/%3E%3Cpath d='M567.1 -6.5Q573.1 14.0 580.1 36.0'/%3E%3Cpath d='M114.3 113.4Q101.3 121.7 89.7 127.1'/%3E%3C/g%3E%3C/svg%3E");
 
   --radius-full: 999px;
   --radius-lg: 22px;
@@ -167,7 +197,7 @@ html, body { overflow-x: hidden; }
 body {
   margin: 0;
   background-color: var(--cream);
-  background-image: var(--beans), var(--grain);
+  background-image: var(--beans), var(--fibers), var(--grain);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.6;
@@ -318,6 +348,16 @@ p { margin: 0; }
   transition: background 0.2s ease, color 0.2s ease;
 }
 .main-nav a:hover { background: var(--cream-alt); color: var(--ink); }
+
+/* Seven labels are a tight fit between the dropdown breakpoint and a wide
+   desktop, so the row tightens through that band rather than dropping to a
+   hamburger on every laptop. Above 1200px it relaxes back to the comfortable
+   padding. */
+@media (min-width: 1001px) and (max-width: 1200px) {
+  .main-nav { gap: 1px; }
+  .main-nav a { padding: 10px 9px; font-size: 0.88rem; }
+  .header-inner { gap: 16px; }
+}
 .main-nav a.is-active { background: var(--cream-alt); color: var(--ink); }
 
 .nav-social-btn { padding: 10px 22px; font-size: 0.9rem; flex-shrink: 0; }
@@ -331,11 +371,11 @@ p { margin: 0; }
    *absence of the nav* that needs correcting, and matching that structurally
    covers both legal pages at once and any future one, with no way to add a page
    and forget the class. On index.html the nav sits between the two, so this
-   never matches there. Below 860px it is redundant — .nav-social-btn already
+   never matches there. Below 1000px it is redundant — .nav-social-btn already
    takes `margin-left: auto` on every page — but harmless, being the same value. */
 .brand + .nav-social-btn { margin-left: auto; }
 
-/* Three plain lines — no circle, no border. Shown only below 860px. */
+/* Three plain lines — no circle, no border. Shown only below 1000px. */
 .nav-toggle {
   display: none;
   flex-direction: column;
@@ -604,7 +644,7 @@ p { margin: 0; }
 }
 .section-alt {
   background-color: var(--cream-alt);
-  background-image: var(--beans), var(--grain);
+  background-image: var(--beans), var(--fibers), var(--grain);
 }
 
 .section-head {
@@ -646,18 +686,52 @@ p { margin: 0; }
 }
 
 /* ===== Image placeholders ===== */
+/* Photos have to sit IN the page, not on top of it.
+
+   They used to carry a 1px solid border, which against a flat background was
+   fine and against a textured one read as a cut-out pasted on: a hard, even
+   line is the one edge quality nothing else on the page has. Four things
+   replace it, and they work together — dropping any one brings the sticker
+   back:
+
+   1. An inset hairline instead of a border, at half the old alpha. It defines
+      the edge without drawing a frame, and being inset it does not add to the
+      element's box, so no layout shifts.
+   2. A soft, warm, low shadow. A photo that casts nothing looks stuck to the
+      surface; a photo with a grey shadow looks stuck to a different surface.
+   3. A wash of the page colour over the image (::after), which pulls the photo
+      a few percent toward the paper it lies on, plus a faint inner vignette so
+      the edges settle instead of stopping dead.
+   4. Slightly reduced saturation on the image itself. These are phone photos
+      with phone-camera colour; the page is warm and muted, and 6% off the
+      saturation is enough to stop them shouting without looking washed out.
+
+   The ::after must not intercept clicks — .card-link wraps a whole frame. */
 .img-frame {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-md);
   background: var(--cream-alt);
-  border: 1px solid rgba(123, 100, 80, 0.22); /* --accent-mid, softened */
+  box-shadow:
+    inset 0 0 0 1px rgba(123, 100, 80, 0.11),
+    0 1px 2px rgba(58, 43, 30, 0.05),
+    0 10px 24px -12px rgba(58, 43, 30, 0.22);
 }
 .img-frame img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: saturate(0.94);
+}
+.img-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(115% 95% at 50% 45%, rgba(58, 43, 30, 0) 58%, rgba(58, 43, 30, 0.13) 100%),
+    linear-gradient(rgba(247, 243, 236, 0.07), rgba(247, 243, 236, 0.07));
 }
 /* Was --square at 1:1, when these sat two-across as small thumbnails. As a
    half-width row beside a short paragraph a square is far too tall and leaves
@@ -667,6 +741,7 @@ p { margin: 0; }
 .img-frame--feature { aspect-ratio: 4 / 3; margin-bottom: 20px; }
 .img-frame--about { aspect-ratio: 4 / 3; }
 .img-frame--wide { aspect-ratio: 16 / 10; margin-bottom: 22px; }
+.img-frame--card { aspect-ratio: 4 / 3; margin-bottom: 16px; }
 
 .hero-bg {
   position: absolute;
@@ -718,13 +793,13 @@ p { margin: 0; }
   grid-template-columns: 1fr;
   row-gap: 64px;
 }
-.feature-card h3, .life-card h3, .info-card h3 {
+.feature-card h3, .life-card h3, .info-card h3, .card-item h3 {
   font-size: 1.2rem;
   line-height: 1.25;
   margin-bottom: 10px;
 }
 .info-card h3 { font-size: 1.15rem; }
-.feature-card p, .life-card p, .info-card p {
+.feature-card p, .life-card p, .info-card p, .card-item p {
   color: var(--ink-soft);
   font-size: 0.96rem;
 }
@@ -943,12 +1018,6 @@ p { margin: 0; }
 .footer-phone svg { color: var(--accent-light); flex-shrink: 0; }
 .footer-phone:hover { color: var(--accent-light); }
 
-/* Zero-height marker carrying the #contacts anchor; see index.html. It must
-   not add height, or it would put a gap under the footer. */
-.anchor-end {
-  height: 0;
-  overflow: hidden;
-}
 
 .footer-bottom { padding: 22px 0; }
 .footer-bottom-inner {
@@ -1064,6 +1133,136 @@ p { margin: 0; }
 .to-top.is-visible { opacity: 1; visibility: visible; transform: translateY(0); }
 .to-top:hover { background: var(--accent-dark); }
 
+/* ===== Compact card grid =====
+
+   The third card layout, alongside the alternating .feature-grid rows and the
+   stacked .life-grid blocks. It is for pages with MANY short entries — people,
+   masters, the things in the Гостиная — where a full-width row per item would
+   turn eight entries into eight screens.
+
+   Same rule as .menu-list, for the same reason: the column count comes from the
+   available width, never from the item count, so a page can gain or lose cards
+   in the admin and never leave an orphan on the last row. Nothing here changes
+   when the client adds a person.
+
+   No background, no border, no padding — these sit directly on the page like
+   every other entry on the site. The photo, the heading and the whitespace do
+   the grouping. Adding a card background walks back a decision made
+   deliberately across the whole design. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(276px, 1fr));
+  column-gap: 40px;
+  row-gap: 46px;
+}
+
+/* A short line under a heading — a person's role, a souvenir's price, a
+   building's address. Distinct from the description below it, which is
+   --ink-soft body text. */
+.card-sub {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-mid);
+  margin-bottom: 8px;
+}
+.card-item p + p { margin-top: 12px; }
+
+/* The whole card is the link on the home page's section grid. It has to say so
+   without becoming a button: only the photo lifts and the heading colours, and
+   both are suppressed under prefers-reduced-motion further down. */
+.card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.card-link .img-frame {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-link:hover .img-frame {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 0 0 1px rgba(123, 100, 80, 0.11),
+    0 2px 4px rgba(58, 43, 30, 0.06),
+    0 18px 34px -14px rgba(58, 43, 30, 0.3);
+}
+.card-link h3 { transition: color 0.2s ease; }
+.card-link:hover h3 { color: var(--accent); }
+.card-link .link-arrow { margin-top: 10px; }
+
+/* ===== Inner-page banner =====
+
+   Home keeps the full-screen hero; the other seven pages open with this. It
+   borrows the hero's mechanics deliberately so the two read as one family:
+
+   - The same negative top margin and matching top padding, so the photo runs up
+     behind the sticky header instead of leaving a band of page colour above it.
+     The two cancel exactly — change one and change the other.
+   - The same blur-and-scale pairing. blur() feathers an element's own edges,
+     which on a full-bleed image shows as a pale halo down the sides; the scale
+     pushes that feathered edge out of frame. Never keep one without the other.
+   - The same heavy overlay, because the photo comes from the admin and could be
+     anything from a snowy embankment to a dim interior.
+
+   It does NOT get the hero's scroll parallax. On a band this short the travel
+   would be over before the reader noticed it, and seven pages of the same trick
+   is the point at which an effect stops being a flourish. */
+.page-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 340px;
+  min-height: 42svh;
+  overflow: hidden;
+  margin-top: calc(-1 * var(--header-h));
+  padding-top: calc(var(--header-h) + 44px);
+  padding-bottom: 52px;
+}
+/* No photo yet: a plain dark band, using the same colour as the footer so it
+   still reads as part of the site rather than as a hole in it. */
+.page-banner--plain { background: var(--dark); }
+.banner-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: blur(4px);
+  transform: scale(1.08);
+}
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 13, 8, 0.74) 0,
+    rgba(26, 18, 11, 0.5) calc(var(--header-h) + 24px),
+    rgba(21, 14, 9, 0.8) 100%
+  );
+  pointer-events: none;
+}
+.banner-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  text-align: left;
+}
+.page-banner .eyebrow { color: var(--accent-light); }
+.page-banner h1 {
+  font-size: clamp(2rem, 4.6vw, 3.1rem);
+  line-height: 1.12;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.banner-lead {
+  font-size: 1.06rem;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 620px;
+  margin-top: 14px;
+}
+
 /* ===== Reveal animation ===== */
 .reveal {
   opacity: 0;
@@ -1079,7 +1278,22 @@ p { margin: 0; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
 
-@media (max-width: 860px) {
+/* THE DROPDOWN BREAKPOINT IS 1000px, NOT 860px, AND THE NUMBER IS MEASURED.
+
+   With six in-page anchors the row fitted comfortably below 900px. Seven
+   section links do not: measured at a 900px viewport, the nav ran to x=901 and
+   the «Соцсети» button landed at x=925..1032 — entirely outside the window,
+   clipped silently by the `overflow-x: clip` on html/body rather than showing
+   as a scrollbar. Nothing looked broken; the button was just gone.
+
+   Brand (166px) + nav (~566px tightened) + button (107px) + the gaps and
+   padding need ~950px, so 1000px is the first round number with margin. If a
+   nav label is ever added or renamed, re-measure — this is not a number to
+   guess at, and the failure mode is invisible.
+
+   script.js carries the same number twice (min-width: 1001px); all three move
+   together or the panel state and the CSS disagree. */
+@media (max-width: 1000px) {
   /* The links move into a dropdown panel opened by the ☰ toggle. The panel is
      absolutely positioned so opening it never changes the sticky header's
      height (which --header-h and the anchor offsets depend on). */
@@ -1134,6 +1348,15 @@ p { margin: 0; }
 
 @media (max-width: 640px) {
   .container { padding: 0 18px; }
+  /* Matches the hero's own ≤640 padding: the pull-up and the top padding cancel
+     exactly, so both have to move together or the banner's content box shifts. */
+  .page-banner {
+    min-height: 300px;
+    min-height: 34svh;
+    padding-top: calc(var(--header-h) + 30px);
+    padding-bottom: 36px;
+  }
+  .banner-lead { font-size: 1rem; }
   .hero {
     /* Unlike desktop this keeps a small bottom padding rather than zeroing it.
        It biases the buttons ~12px above true centre, which is imperceptible,
@@ -1200,6 +1423,7 @@ p { margin: 0; }
   }
   .reveal { opacity: 1; transform: none; }
   .btn:hover, .to-top:hover { transform: none; }
+  .card-link:hover .img-frame { transform: none; }
 }
 
 /* ===== About: alternating photo / text rows (desktop) ===== */
@@ -1216,9 +1440,23 @@ p { margin: 0; }
 @media (min-width: 961px) {
   .feature-grid { row-gap: 78px; }
 
-  .feature-card {
+  /* Full-width rows with the photo alternating sides down the page.
+
+     EVERY RULE HERE IS SCOPED TO `.feature-grid >`. Written on `.feature-card`
+     alone — as it was — the alternation applied to any card with that class
+     anywhere, so reusing the card inside the compact .card-grid silently gave
+     it a two-column layout and an odd/even flip. The parent decides the
+     layout; the card only describes itself.
+
+     The text is wrapped in .feature-body rather than placed row by row. The
+     old version assigned the icon, heading and paragraph to fixed grid rows
+     between two 1fr spacers, which centred them nicely and broke the moment a
+     card had no icon: row 2 stayed reserved and left a gap above the heading.
+     A wrapper plus `align-items: center` centres any combination of optional
+     elements against the photo, with no rule per element. */
+  .feature-grid > .feature-card {
     display: grid;
-    grid-template-rows: 1fr auto auto auto 1fr;
+    align-items: center;
     column-gap: 54px;
   }
 
@@ -1230,23 +1468,16 @@ p { margin: 0; }
      Written once as `0.95fr 1fr` the narrow column stayed on the left, so the
      photo came out 506px on even rows and 532px on odd ones — measured — and
      the photos changed size down the page as they changed sides. */
-  .feature-card:nth-child(odd)  { grid-template-columns: 1fr 0.95fr; }
-  .feature-card:nth-child(even) { grid-template-columns: 0.95fr 1fr; }
+  .feature-grid > .feature-card:nth-child(odd)  { grid-template-columns: 1fr 0.95fr; }
+  .feature-grid > .feature-card:nth-child(even) { grid-template-columns: 0.95fr 1fr; }
 
-  .feature-card .img-frame {
-    grid-row: 1 / -1;
-    align-self: center;
-    margin-bottom: 0;
-  }
-  .feature-card .feature-icon { grid-row: 2; align-self: end; }
-  .feature-card h3 { grid-row: 3; }
-  .feature-card p  { grid-row: 4; align-self: start; }
+  .feature-grid > .feature-card .img-frame { margin-bottom: 0; }
 
-  /* Odd cards put the photo on the right, even cards on the left. Everything
-     that is not the photo takes the other column — written as :not() so adding
-     a fourth element to a card needs no new rule here. */
-  .feature-card:nth-child(odd) .img-frame { grid-column: 2; }
-  .feature-card:nth-child(odd) > :not(.img-frame) { grid-column: 1; }
-  .feature-card:nth-child(even) .img-frame { grid-column: 1; }
-  .feature-card:nth-child(even) > :not(.img-frame) { grid-column: 2; }
+  /* Odd cards put the photo on the right, even cards on the left. Both children
+     are pinned to row 1 so the grid never invents a second row for them. */
+  .feature-grid > .feature-card:nth-child(odd) .img-frame     { grid-column: 2; grid-row: 1; }
+  .feature-grid > .feature-card:nth-child(odd) .feature-body  { grid-column: 1; grid-row: 1; }
+  .feature-grid > .feature-card:nth-child(even) .img-frame    { grid-column: 1; grid-row: 1; }
+  .feature-grid > .feature-card:nth-child(even) .feature-body { grid-column: 2; grid-row: 1; }
 }
+

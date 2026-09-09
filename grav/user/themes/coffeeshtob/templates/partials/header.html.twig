@@ -1,18 +1,21 @@
-{# Carried over verbatim from the static index.html. Nothing here is editable
-   and nothing here should become editable: the nav anchors have to match the
-   section ids in home.html.twig, and the three social links are the business's
-   own channels, not content.
+{# The sticky header. The nav itself lives in partials/nav.html.twig and comes
+   from the page tree — see the note there.
+
+   Nothing else here is editable and nothing here should become editable: the
+   three social links are the business's own channels, not content.
 
    Two details that took real debugging and must survive any edit:
    - The ☰ toggle is three bare <span>s with no border or background. That was
      asked for explicitly after a circular button was rejected.
-   - id="top" sits on the header, which is why both logo links are driven by JS
-     in script.js rather than by the href — once the header is stuck, the
-     browser treats #top as already in view and an anchor jump only scrolls by
-     the scroll-padding. The href stays as the no-JS fallback. #}
+   - The logo points at the real home URL and carries `data-home`. It used to be
+     href="#top", driven by JS because a stuck header counts as already in view
+     and an anchor jump only scrolled by the scroll-padding. With real pages
+     that trick would have broken the logo on every page but one, so the href is
+     now genuine and script.js only intercepts it when you are ALREADY on that
+     page, turning it back into a scroll to the top. Works with JS off. #}
 <header class="site-header" id="top">
   <div class="header-inner">
-    <a class="brand" href="#top" aria-label="Кофештаб — на главную">
+    <a class="brand" href="{{ base_url }}/" data-home aria-label="Кофештаб — на главную">
       <span class="brand-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
@@ -29,12 +32,7 @@
     </a>
 
     <nav class="main-nav" id="main-nav">
-      <a href="#about">О штабе</a>
-      <a href="#menu">Меню</a>
-      <a href="#life">Жизнь штаба</a>
-      <a href="#schedule">График</a>
-      <a href="#guests">Гостям города</a>
-      <a href="#contacts">Контакты</a>
+      {% include 'partials/nav.html.twig' %}
     </nav>
 
     <a class="btn btn-accent nav-social-btn" id="socialBtn" href="#social"

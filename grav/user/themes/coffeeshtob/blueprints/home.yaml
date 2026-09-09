@@ -1,22 +1,26 @@
 title: Главная страница
 
-# The editing form the client actually uses. Everything is in Russian on
-# purpose — the person maintaining this site is not a developer and should
-# never have to guess what `hero_lead` means.
+# The editing form the client actually uses for the landing page.
+#
+# Everything is in Russian on purpose — the person maintaining this site is not
+# a developer and should never have to guess what `hero_lead` means.
 #
 # WHY A BLUEPRINT AT ALL: without one, Grav shows the page's front matter as a
 # raw YAML box. That works, and it is also exactly how a client deletes a colon
 # and takes the site down. A blueprint turns the same data into labelled text
 # boxes with no syntax to get wrong.
 #
-# FIELD NAMES ARE THE STABLE IDENTIFIER, labels are not. `drinks_title` reads
-# «Также в штабе» today; the owner changes headings freely. Refer to sections
-# by field name (menu_items, drinks_items), never by what the heading says.
+# FIELD NAMES ARE THE STABLE IDENTIFIER, labels are not. Names match
+# templates/home.html.twig one for one. A rename here that is not made there
+# silently blanks that part of the page, because Twig prints nothing for a
+# missing key. .github/scripts/check-content-fields.py compares them on every
+# deploy so that cannot pass unnoticed.
 #
-# Names match home.html.twig one for one. A rename here that is not made there
-# silently blanks that part of the page — Twig prints nothing for a missing
-# key. The check in .github/workflows/deploy-staging.yml compares the two
-# lists on every deploy so that cannot pass unnoticed.
+# THIS FORM IS MUCH SHORTER THAN IT USED TO BE. The menu, the schedule and the
+# «Жизнь штаба» blocks are their own pages now, each with its own form. There is
+# deliberately no field here listing the sections shown on the landing page:
+# that grid is built from the page tree, so it can never advertise a section
+# that has been renamed or removed.
 
 extends@: default
 
@@ -34,7 +38,7 @@ form:
             header.hero_title:
               type: text
               label: Заголовок
-              help: Крупная надпись поверх фотографии.
+              help: 'Крупная надпись поверх фотографии.'
             header.hero_lead:
               type: textarea
               label: Короткий текст под заголовком
@@ -42,11 +46,24 @@ form:
             header.hero_badge:
               type: text
               label: Адрес в плашке сверху
-              help: Короткая строка рядом со значком метки.
+              help: 'Короткая строка рядом со значком метки.'
             header.hero_image:
               type: pagemediaselect
               label: Фон первого экрана
               help: 'Сначала загрузите фотографию во вкладке «Медиа» этой страницы, затем выберите её здесь. Фото размывается и затемняется, поэтому подойдёт почти любое — важно, чтобы белый заголовок оставался читаемым.'
+            header.cta1_text:
+              type: text
+              label: Первая кнопка — надпись
+              help: 'Кнопка показывается только если заполнены оба поля — и надпись, и страница.'
+            header.cta1_url:
+              type: pages
+              label: Первая кнопка — куда ведёт
+            header.cta2_text:
+              type: text
+              label: Вторая кнопка — надпись
+            header.cta2_url:
+              type: pages
+              label: Вторая кнопка — куда ведёт
 
         about:
           type: tab
@@ -62,169 +79,19 @@ form:
               type: textarea
               label: Текст о штабе
               rows: 8
-              help: 'Пустая строка между абзацами начинает новый абзац.'
-            header.features:
-              type: list
-              label: Карточки «чем мы хороши»
-              help: 'У первых четырёх карточек есть свои значки. Пятая и далее выводятся без значка — это сделано намеренно, чтобы значок не повторялся случайно.'
-              fields:
-                .title:
-                  type: text
-                  label: Заголовок
-                .text:
-                  type: textarea
-                  label: Описание
-                  rows: 3
-                .image:
-                  type: pagemediaselect
-                  label: Фотография
+              help: 'Пустая строка между абзацами начинает новый абзац. Это короткое представление на главной — подробная история живёт в разделе «Сказки штаба».'
 
-        menu:
+        sections:
           type: tab
-          title: Меню
+          title: Список разделов
           fields:
-            header.menu_title:
+            header.sections_title:
               type: text
-              label: Заголовок раздела
-            header.menu_sub:
+              label: Заголовок над списком разделов
+            header.sections_sub:
               type: text
               label: Подзаголовок
-            header.menu_items:
-              type: list
-              label: Позиции меню
-              help: 'Количество колонок подстраивается само — позиций может быть сколько угодно, ничего в вёрстке менять не нужно.'
-              fields:
-                .title:
-                  type: text
-                  label: Название
-                .price:
-                  type: text
-                  label: Цена
-                  help: 'Можно оставить пустым — тогда цена просто не показывается.'
-                .text:
-                  type: textarea
-                  label: Описание
-                  rows: 3
-                .image:
-                  type: pagemediaselect
-                  label: Фотография
-            header.drinks_title:
-              type: text
-              label: Заголовок подраздела «другие напитки»
-            header.drinks_sub:
-              type: text
-              label: Подзаголовок подраздела
-            header.drinks_items:
-              type: list
-              label: Другие напитки
-              fields:
-                .title:
-                  type: text
-                  label: Название
-                .price:
-                  type: text
-                  label: Цена
-                .text:
-                  type: textarea
-                  label: Описание
-                  rows: 3
-                .image:
-                  type: pagemediaselect
-                  label: Фотография
-
-        life:
-          type: tab
-          title: Жизнь штаба
-          fields:
-            header.life_title:
-              type: text
-              label: Заголовок раздела
-            header.life_sub:
-              type: text
-              label: Подзаголовок
-            header.life_items:
-              type: list
-              label: Блоки
-              fields:
-                .title:
-                  type: text
-                  label: Заголовок
-                .text:
-                  type: textarea
-                  label: Первый абзац
-                  rows: 4
-                .text2:
-                  type: textarea
-                  label: Второй абзац (необязательно)
-                  rows: 3
-                .image:
-                  type: pagemediaselect
-                  label: Фотография
-
-        schedule:
-          type: tab
-          title: График и гостям
-          fields:
-            header.schedule_title:
-              type: text
-              label: Заголовок раздела
-            header.schedule_sub:
-              type: text
-              label: Подзаголовок
-            header.hours_title:
-              type: text
-              label: Заголовок таблицы с часами
-            header.hours:
-              type: list
-              label: Часы работы
-              help: 'Строки можно добавлять и удалять — так же, как позиции меню. Например, отдельная строка на летний сезон или на праздничные дни. Это единственный блок на странице в рамке: так и задумано, его ищут глазами.'
-              fields:
-                .label:
-                  type: text
-                  label: Дни
-                  help: 'Например: БУДНИ (ПН–ПТ)'
-                .time:
-                  type: text
-                  label: Часы
-                  help: 'Например: 15:15–19:00'
-                .days:
-                  type: select
-                  label: Дни недели (для поисковиков)
-                  multiple: true
-                  help: 'Необязательно. Нужно только для того, чтобы Яндекс и Google показывали «открыто до…» рядом с сайтом. На саму страницу не выводится — там показывается то, что написано в поле «Дни».'
-                  options:
-                    Monday: Понедельник
-                    Tuesday: Вторник
-                    Wednesday: Среда
-                    Thursday: Четверг
-                    Friday: Пятница
-                    Saturday: Суббота
-                    Sunday: Воскресенье
-                .opens:
-                  type: text
-                  label: Открытие (для поисковиков)
-                  help: 'Необязательно, в формате 15:15'
-                .closes:
-                  type: text
-                  label: Закрытие (для поисковиков)
-                  help: 'Необязательно, в формате 19:00'
-            header.hours_note:
-              type: text
-              label: Примечание под таблицей
-            header.guests_title:
-              type: text
-              label: Заголовок «Гостям города»
-            header.guests_text:
-              type: textarea
-              label: Текст «Гостям города»
-              rows: 6
-            header.ferry_title:
-              type: text
-              label: Заголовок «Как перебраться»
-            header.ferry_text:
-              type: textarea
-              label: Текст «Как перебраться»
-              rows: 4
+              help: 'Сами разделы в этот список добавлять не нужно: они берутся из дерева страниц. Чтобы изменить порядок — переставьте страницы в разделе Pages; чтобы поменять фотографию или описание раздела — откройте саму страницу, вкладка «Карточка на главной».'
 
         seo:
           type: tab

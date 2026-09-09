@@ -34,11 +34,17 @@ What changed, in one pass:
 Known open items, in rough priority order:
 
 1. **The client has no way to edit their own site — until the cutover.**
-   Everything else is done and verified on staging: the theme renders, all 23
-   page fields and 5 lists come from the Russian editing form, images resize,
-   and every URL the static site serves exists there too. What remains is
-   entirely on Beget — see "The cutover" below.
-2. **Three menu items still show `images/placeholder.svg`** — waiting on photos.
+   Everything else is done and verified: eight pages render, 49 fields and 5
+   lists across four Russian editing forms, images resize, and every URL the
+   static site serves exists too. What remains is entirely on Beget — see "The
+   cutover" below.
+2. **Content is waiting on the owner.** Окрестности has four named-but-empty
+   cards (Казанский храм и колокольня, Склон труда и отдыха, Библиотека, Зелёный
+   дом); Команда, Мастера and Сказки are placeholder cards throughout; Мастера,
+   Сказки and Контакты have no banner photo; three menu items still have no
+   photo. All of it renders cleanly as-is — empty fields omit their element and
+   a missing photo falls back to the placeholder — so none of it blocks the
+   cutover.
 3. **`admin/` is 4.9 MB of non-functional Decap** still being deployed. It goes
    when Grav lands; deleting it earlier is harmless if the client is told.
 4. **`og-image.jpg` is hand-uploaded on the STATIC site only.** It is excluded
@@ -89,8 +95,9 @@ one setting rather than a restore:
 3. Point `coffeeshtob.ru`'s document root at that folder.
 4. Update the `REMOTE_DIR` repository secret to the new path.
 5. Commit `.deploy-mode` containing `grav`, and push. That push installs the
-   production `.htaccess` and then checks all twelve URLs return 200 and an
-   unknown path still 404s.
+   production `.htaccess` and then runs `verify-site.py` against the live domain:
+   all nine routes, the nine static files, the navigation on every page, image
+   processing, and an unknown path still 404ing.
 
 Rollback at any point: point the document root back, set `.deploy-mode` to
 `static`.
@@ -98,6 +105,12 @@ Rollback at any point: point the document root back, set `.deploy-mode` to
 **Also required before handing it over:** PHP 8.4 on that site (Grav 2 dies with
 a blank 500 on 5.6, which already cost an evening), Configuration → System →
 Pages → Expires set to `0`, and a Grav account for the client that is not yours.
+
+**The eight-page split means the pages have to be re-seeded onto staging before
+the cutover copies it.** Seven of the folders and all the per-page photos do not
+exist there yet, and the seed only runs on a manual `workflow_dispatch` of the
+staging workflow — a push will not do it. Run it once, confirm the staging job is
+green, and only then copy the install.
 
 **The interlock that makes this safe.** In static mode the deploy mirrors plain
 HTML with `--delete`; run once against a Grav install it would erase Grav, the
@@ -123,58 +136,138 @@ Staging is `http://test.tryphopx.beget.tech`, deployed by
 `.github/workflows/deploy-staging.yml`. **Production is still the static site**;
 nothing below is live yet.
 
+**THE SITE IS EIGHT PAGES, NOT ONE.** It was a single scroll with anchor links
+until the owner asked for real sections. The static site was deliberately NOT
+split with it: it is frozen and dies at the cutover, and duplicating the split
+would have meant copy-pasting a header into nine HTML files with no build step,
+plus a per-page JSON scheme for `render.js`, all of it to be deleted.
+
+**As a consequence the root `style.css` / `script.js` and the theme's copies
+have intentionally diverged, and the theme is the source of truth.** An earlier
+version of this file said they were kept in sync. They are not, and must not be
+re-synced — the root copies still serve the one-page static site.
+
 Layout under `grav/`, mirroring Grav's own tree so only *our* files are in the
 repo — `system/` and `vendor/` are Grav's 60+ MB and are updated from its admin
 panel:
 
-- `user/themes/coffeeshtob/templates/home.html.twig` — the page. Every value
-  comes from `page.header.*`; nothing is hardcoded.
-- `user/themes/coffeeshtob/templates/partials/{base,header,footer}.html.twig` —
-  head, sticky header, footer. `base` sets `<title>`, the OG tags and the
-  canonical from `base_url_absolute`, which is why the 14 hardcoded absolute
-  URLs of the static site do not exist here.
-- `user/themes/coffeeshtob/blueprints/home.yaml` — the client's editing form,
-  in Russian, tabbed by section. Without it Grav shows raw YAML front matter,
-  which is how a client deletes a colon and takes the site down.
-- `user/pages/01.home/home.md` — the content. Generated from
-  `content/home.json`, not retyped.
-- `default.html.twig` — a safety net, not a real template. Grav picks a template
-  from the page filename, so a page named `default.md` (which Grav's stock
-  install ships) hard-errors on a theme that only provides `home.html.twig`.
-  That is exactly how first activation failed.
+| Folder | Route | Nav | Template |
+|---|---|---|---|
+| `01.home` | `/` | — (`visible: false`; the logo goes here) | `home` |
+| `02.privacy` | `/privacy` | — (`visible: false`) | `privacy` |
+| `03.okrestnosti` | `/okrestnosti` | Окрестности | `cards` |
+| `04.kuhnya` | `/kuhnya` | Кухня | `kuhnya` |
+| `05.gostinaya` | `/gostinaya` | Гостиная | `cards` |
+| `06.komanda` | `/komanda` | Команда | `cards` |
+| `07.mastera` | `/mastera` | Мастера | `cards` |
+| `08.skazki` | `/skazki` | Сказки | `cards` |
+| `09.kontakty` | `/kontakty` | Контакты | `kontakty` |
 
-**Three files must name the same fields, and nothing complains when they
-don't.** Twig renders a missing key as an empty string, so a rename shows up as
-a silently blank section on the live site — the identical trap the Decap setup
-had across `index.html`, `home.json` and `admin/config.yml`. It is checked
-rather than documented: `.github/scripts/check-content-fields.py` compares
-template, form and content, and runs before the staging deploy touches the
-server. Run it directly after editing any of the three.
+**`01.home` and `02.privacy` keep their numbers.** Renaming `02.privacy` would
+be silently destructive: the seed mirror runs without `--delete`, so the old
+folder would linger on the server and render a second copy of the page.
 
-**Images are page media**, not theme assets: `home.md` stores a bare filename
-which Grav resolves against `user/pages/01.home/`, so the client uploads a photo
-in the same place they edit the text. The seed mirrors `images/uploads/` into
-that folder rather than committing the same 5.2 MB twice. An empty filename
-falls back to `theme://images/placeholder.svg` — which is what the three menu
-items still awaiting photos rely on, so don't "fix" the empty values.
+**Grav picks a template from the page FILENAME**, which is why the five card
+pages are all a file called `cards.md`. Rename one to match its folder and it
+routes to `default.html.twig` and renders a blank body — exactly how the first
+activation of this theme failed. Four content templates cover eight pages.
 
-**The feature-card icons stay hardcoded and positional.** They are four
-different drawings tied to card order, not content. A fifth card renders with no
-icon on purpose: the old CMS preserved them only by cloning template nodes by
-index, which is the fragile mechanism this replaces.
+Templates in `user/themes/coffeeshtob/templates/`:
 
-Two things the old CMS could not reach are fields now: the hero address badge,
-and the second paragraph of each Жизнь штаба card.
+- `home.html.twig` — hero, a short intro, and a grid of the sections **generated
+  from the page tree**. Each section supplies its own `card_image` and
+  `card_teaser`, so the landing page cannot advertise a section that has been
+  renamed or removed.
+- `cards.html.twig` — the workhorse: banner, optional intro, one list of cards in
+  one of three layouts chosen per page by `layout` — `alt` (full-width rows,
+  photo alternating sides), `wide` (one big 16:10 photo per entry, for long
+  text), `grid` (compact auto-filling grid, for many short entries).
+- `kuhnya.html.twig` — the two menu lists plus the alternating cards under them.
+  Its own template because menu items carry a price and a square thumbnail.
+- `kontakty.html.twig` — the hours panel, the address block and the ferry card.
+- `partials/nav.html.twig` — **the navigation, in one place**, built from
+  `pages.children.visible`. Header, footer and the 404 all include it.
+- `partials/banner.html.twig` — the compact inner-page banner.
+- `partials/icon.html.twig` — named line icons.
+- `partials/{base,header,footer}.html.twig` — head, sticky header, footer.
+- `privacy.html.twig`, `error.html.twig` — override the header/footer blocks with
+  a two-item variant and carry their copy in the template on purpose.
+- `default.html.twig` — a safety net, not a real template, and it matters more
+  now: a client adding a page in the admin lands here rather than on a 500.
 
-**The JSON-LD is carried across and is now driven by the page's own fields.**
-The static version hardcoded `openingHoursSpecification`, which was safe only
-while a developer was the one changing the hours; once the client edits them in
-the admin it would go stale on the first change, and a wrong «открыто до 19:00»
-in search results is invisible from the site itself. Each `hours` row therefore
-carries optional `days` / `opens` / `closes` fields feeding the schema, seeded
-from the values already in the static markup. A row missing any of them is
-skipped, and with no qualifying row the property is omitted entirely — an absent
-rich result is a small loss where a wrong one sends people to a closed café.
+**The nav is generated, and nothing may reintroduce a hardcoded copy.** It used
+to be six in-page anchors written out three times — header, footer, and the
+static 404. `p.active` supplies the current-page highlight server-side, so it is
+right before the first paint and right with JS off.
+
+**The scrollspy that used to compute that highlight is deleted, and must not come
+back.** It matched `link.getAttribute('href') === '#' + id`, so with real URLs no
+link could ever match — and because it called `toggle` on every intersection it
+would not merely have stopped working, it would have actively stripped the class
+Grav now renders.
+
+**`theme`, NOT `theme_config`.** This one shipped broken and nobody noticed.
+`theme_config` is the Grav 1.x name; the string appears nowhere in Grav 2.0.24's
+source. Twig renders an unknown variable as an empty string, so the footer
+address, the `tel:` link, the phone number and the `telephone` in the structured
+data were **all empty on live staging** from the day of the port. Measured on the
+staging URL, not inferred. `check-content-fields.py` now fails on the old name.
+
+**Three files must name the same fields, and nothing complains when they don't.**
+Twig renders a missing key as an empty string, so a rename shows up as a silently
+blank section on the live site. It is checked rather than documented:
+`.github/scripts/check-content-fields.py` **walks every template/blueprint/page
+triple it finds on disk** — it used to be three hardcoded paths pointing at the
+home page, which would have left seven pages unchecked. It also knows about the
+two places one page renders another page's fields (the landing grid's
+`card_image`/`card_teaser`, and the JSON-LD's reach into `/kontakty` for the
+hours), asserts routes are unique and that `pages.find()` resolves, and refuses
+a hardcoded nav anchor. Ten mutations were used to prove it fails when it should.
+
+**Images are page media**, resolved against *each page's own folder*: a photo
+used on `/kuhnya` has to sit in `04.kuhnya/`, and a photo used on two pages has
+to sit in both. `.github/scripts/page-media.py` derives that mapping by reading
+the page files, so it cannot drift from the content; the seed step places each
+photo one folder at a time. It used to mirror all of `images/uploads/` into
+`01.home`, which was right with one page and would now give the landing page a
+media picker listing every photo on the site and leave the others with none.
+
+An empty filename falls back to `theme://images/placeholder.svg` — which is what
+the sections still awaiting photos rely on, so don't "fix" the empty values. A
+page with no `banner_image` gets a plain dark band instead of a blurred
+placeholder: the placeholder is a line-art picture frame, and stretched across a
+banner it reads as a broken image rather than as "a photo is coming".
+
+**The feature-card icons are a named field now, not positional.** They used to be
+a `loop.index == 1..4` chain inherited from the old CMS, which meant reordering
+the cards silently swapped their icons and a fifth card rendered with none. The
+client picks one from a dropdown and it travels with its card. Гостиная
+deliberately uses none: its entries are too varied for a coherent set, and an
+icon on only some cards in a row knocked the headings 21px out of line.
+
+**The JSON-LD is driven by the page's own fields and reaches across for the
+hours.** `openingHoursSpecification` reads `pages.find('/kontakty').header.hours`
+— the one cross-page dependency in the theme. It fails safe (no page, no
+property) rather than emitting stale hours, and the CI check asserts the route
+resolves. A row missing `days`/`opens`/`closes` is skipped: an absent rich result
+is a small loss where a wrong one sends people to a closed café.
+
+**Testing the theme locally needs a real Grav**, because `system/` and `vendor/`
+are not in the repo. Download the core (`https://getgrav.org/download/core/grav/latest`
+— 2.0.24 matches what the theme declares), unzip it outside the repo, copy the
+theme and pages in, place the photos per `page-media.py`, copy `grav/root/`'s
+files to the docroot, add a `user/config/system.yaml` with
+`pages: {theme: coffeeshtob, expires: 0}` and caching off, then
+`php -S 127.0.0.1:PORT system/router.php`. Grav also needs an `images/` folder in
+the docroot — it is the processed-image cache, and without it every page is a
+500 that says "Essential Folders".
+
+**In the Browser pane the tab is hidden, so CSS transitions never run and
+scrolled screenshots do not paint.** Elements with `.reveal` read as
+`opacity: 0` forever and a scrolled screenshot comes back blank. Neither is a
+site bug — check `document.hidden` before believing either. Inject
+`*{transition:none}` plus `.reveal{opacity:1}` for screenshots, and hide the
+sections above the one you want rather than scrolling to it.
 
 ## Stack
 
@@ -512,10 +605,26 @@ chmod: Access failed: 550 SITE CHMOD command failed. (./inter-latin.woff2)
 Every file transferred, the site updated, and the job went red anyway — through
 *three separate investigations* into a file that was never broken. `--no-perms`
 stops lftp attempting chmod at all, and even then the exit code stayed
-unreliable. **So neither workflow gates on it.** Production gates on a manifest
-check that lists the server and compares it to the upload set; staging gates on
-fetching the page and finding the site's own markup. Both are measurements of
-the outcome rather than opinions about the transfer.
+unreliable. **So neither workflow gates on it.** Production's static mode gates
+on a manifest check that lists the server and compares it to the upload set;
+both Grav jobs gate on `.github/scripts/verify-site.py`, which fetches the
+deployed site. All are measurements of the outcome rather than opinions about
+the transfer.
+
+**`verify-site.py` derives its routes from the page tree**, so a section added in
+the admin is covered from the next deploy and the two jobs cannot drift into
+checking different things. It replaced three hand-written gates that asserted a
+`.menu-item` on the home page, listed the URLs by hand, and summed the images on
+one page — all correct for a single-page site, all wrong now, and the first would
+have failed the cutover deploy for a reason unrelated to the cutover. It checks:
+every route 200 with a non-empty `<h1>` and no template error text; the nav on
+every page listing every visible section exactly once with exactly one correct
+current-page marker; a `.menu-item` where the menu now lives; the static files;
+that unknown paths 404; that **every photo is served through Grav's image
+processor** rather than straight from the page folder; and a per-page image
+budget of 1200 KB. That last pair replaced a single 1.5 MB whole-page budget —
+the processor check is a direct test of the thing the budget was only a proxy
+for. Measured: the heaviest page is 631 KB, the whole site 1742 KB.
 
 **2. Some data connections are dropped mid-transfer.** One file
 (`fonts/inter-latin.woff2`, and earlier `og-image.jpg`) failed on every run
@@ -595,11 +704,16 @@ directory alone, and page content is seeded only on a manual
 Unlike Cloudflare, the repo root is no longer the web root, and `.htaccess`
 denies the private files anyway.
 
-## Sections (in DOM order)
+## Sections
 
-`#top` header → hero → `#about` (О штабе) → `#menu` (`menu_items` + `drinks_items`)
-→ `#life` (Жизнь штаба) → `#schedule` (includes `#guests` sub-anchor) →
-footer (`#social`, and `#contacts` at the very end).
+**This describes the STATIC site, which is one page and is frozen.** The Grav
+site is eight pages; see "The Grav theme" above for its structure. The two are
+kept apart deliberately — the static one dies at the cutover.
+
+On the static page: `#top` header → hero → `#about` (О штабе) →
+`#menu` (`menu_items` + `drinks_items`) → `#life` (Жизнь штаба) →
+`#schedule` (includes `#guests` sub-anchor) → footer (`#social`, and `#contacts`
+at the very end).
 
 **`#contacts` is a zero-height marker at the end of the footer, not the footer
 element itself.** Anchoring the footer aligned its *top*, and the footer is
@@ -613,8 +727,10 @@ test browser it stalled after a few pixels while native anchor navigation worked
 — and an in-app webview is exactly where that sort of thing goes wrong. Keep the
 marker zero-height, or it adds a gap under the footer.
 
-Nav links and footer nav both point at these same anchor IDs — keep them in
-sync if sections are renamed or reordered.
+**None of this survives into Grav.** With Контакты a real page nothing links to
+that anchor, so the marker and its `.anchor-end` rule are gone from the theme.
+The trick and the reason for it are recorded here in case an in-page anchor to
+the document end is ever needed again.
 
 `#schedule`'s `.info-grid` is two columns at every width above 640px: «График
 работы» and «Гостям города» (which carries the `#guests` anchor) share the
@@ -721,32 +837,41 @@ A 320×568 phone is exactly that case. Don't "tidy" it back to zero.
     (section eyebrow labels, the feature icons). Darken it rather than lighten
     it if you change it.
 
-  **The tightest pairing on the page is `--muted` on `--cream-alt`, currently
-  4.62:1.** An older note here named `--accent-mid` at 4.69:1; measuring found
-  that wrong on both counts. The two now sit level, because when the backgrounds
-  were darkened both text colours had to move with them — `--muted` and
-  `--accent-mid` each dropped below 4.5 against the new `--cream-alt` and were
-  darkened until they cleared it. **Any further darkening of a background means
-  re-measuring every pairing**, not just the one this file happens to name.
+  **The tightest pairings are `--accent-mid` and `--muted` on `--cream-alt`, at
+  4.61 and 4.62:1 measured against the COMPOSITED background.** They have been
+  darkened twice, both times because a texture layer was added and quietly took
+  them under the line — 4.62 → 4.53 when the paper layer went in, and 4.62 → 4.48
+  when the beans did. **Any change to a background or a texture means
+  re-measuring every pairing**, not just the one this file happens to name. All
+  19 currently clear 4.6.
   - `--accent-light` — light brown, the only one legible on `--dark`
     (footer icons and links, hero badge icon).
-- `--grain` and `--beans`: two inline-SVG textures applied as extra *background
-  layers* on `body` and `.section-alt` (never as overlay elements, which would
-  risk painting over cards). Cards stay clean white. Alpha is baked into each
-  SVG — `opacity` on the grain's `<rect>`, `stroke-opacity` on the beans — so
-  there is one place to adjust each, not two.
+- `--grain`, `--beans` and `--fibers`: three inline-SVG textures applied as extra
+  *background layers* on `body` and `.section-alt` (never as overlay elements,
+  which would risk painting over cards). Cards stay clean white. Alpha is baked
+  into each SVG, so there is one place to adjust each.
 
-  **The texture changes the contrast maths, and that is not obvious.** Measured
-  by compositing the layers onto the background in a canvas: `--cream-alt`
-  renders at rgb(233,225,211) rather than its token rgb(237,228,213), which
-  dropped `--muted` and `--accent-mid` from 4.62:1 to **4.48 and 4.49** — both
-  under AA, invisibly. Both were darkened again to clear 4.6 against the
-  *rendered* colour. **Measure against the composite, not the token**, whenever
-  the texture or a background changes.
+  They do three different jobs and all three are needed: `--beans` is the motif
+  (7 beans on a 260px tile at 10%), `--grain` is the tooth (high-frequency noise,
+  baseFrequency 0.5, at 13%), `--fibers` is the paper (low-frequency cloudy
+  mottling at baseFrequency 0.011 plus 70 hairlines, on a 700px tile).
 
-  The beans were also dialled back once: 13% opacity on a 200px tile read as
-  wallpaper with the repeat visible in rows. 10% on a 260px tile with seven
-  irregularly placed beans is the version that reads as texture.
+  **The paper layer's first version was invisible, and that was measured rather
+  than argued about.** 18 hairlines on a 340px tile is ~0.4% of the pixels at 5%
+  alpha, which moved the background's mean by 0.03 of one level out of 255.
+  Sparse strokes cannot make a surface read as paper; low-frequency mottling can,
+  because that is what makes real stock look uneven. The current version moves
+  the mean 237 → 234.4 with a standard deviation of 1.19. The 700px tile is not
+  decoration either — low-frequency noise on a small tile repeats as a visible
+  plaid. Both are generated from a fixed seed so they can be reproduced exactly.
+
+  The beans were also dialled back once: 13% on a 200px tile read as wallpaper
+  with the repeat visible in rows.
+
+  **THE TEXTURE CHANGES THE CONTRAST MATHS AND THAT IS NOT OBVIOUS.** Composite
+  the layers onto the background in a canvas and measure against the result:
+  `--cream-alt` renders as rgb(231,223,210), not its token rgb(237,228,213).
+  **Measure against the composite, not the token**, every time.
 - Type: `Playfair Display` (serif, headings) + `Inter` (sans, body),
   **self-hosted from `fonts/`** — see "Fonts are self-hosted" below.
 - Shape language: pill buttons/nav (`--radius-full`), rounded cards
@@ -785,7 +910,20 @@ alternates from there. Two details that are easy to get wrong:
 - **The column ratio flips with the side.** Written once as `0.95fr 1fr` the
   narrow column stays on the left, so the photos came out 506px on even rows
   and 532px on odd ones — they changed size as they changed sides. Each parity
-  sets its own ratio.
+  sets its own ratio. Re-measured after the rescope below: all rows 506px.
+- **Every rule is scoped to `.feature-grid >`.** Written on `.feature-card`
+  alone — as it was — the alternation applied to any card with that class
+  anywhere, so reusing the card inside the compact `.card-grid` silently gave it
+  two columns and an odd/even flip. The parent decides the layout; the card only
+  describes itself.
+- **The text is wrapped in `.feature-body`.** The old version assigned the icon,
+  heading and paragraph to fixed grid rows between two `1fr` spacers. That
+  centred them nicely and broke the moment a card had no icon: row 2 stayed
+  reserved and left a gap above the heading. A wrapper plus `align-items: center`
+  centres any combination of optional elements with no rule per element. The
+  earlier note here said a wrapper was avoided so the static markup and the Twig
+  template would not both need editing — that reason died with the split, since
+  the theme is now the only copy.
 
 No wrapper element was added around the icon/heading/paragraph: the card is a
 five-row grid, the photo spans all five, and the text sits in rows 2–4 between
@@ -928,12 +1066,12 @@ to still be reachable at `/yandex_11df7f8b41641d66.html`, or the site quietly
 loses verification. Grav's own root is where it goes.
 
 `llms.txt` is a plain-language summary for assistants and crawlers — hours,
-address, phone, what the place does. Keep it in step with the page; it is the
-one file that repeats content rather than linking to it.
+address, phone, what the place does, and a line per section. Keep it in step with
+the site; it is the one file that repeats content rather than linking to it.
 
-Absolute URLs to the production host live in **14 places across five files** —
-verify with `grep -rn 'coffeeshtob\.ru' . --exclude-dir=.git`, which is the
-authoritative list rather than this paragraph:
+Absolute URLs to the production host live in **14 places across five files on the
+STATIC site** — verify with `grep -rn 'coffeeshtob\.ru' . --exclude-dir=.git`,
+which is the authoritative list rather than this paragraph:
 
 - `index.html` (6) — `canonical`, `og:url`, `og:image`, `twitter:image`, and
   `url` + `image` in the JSON-LD
@@ -941,6 +1079,15 @@ authoritative list rather than this paragraph:
 - `sitemap.xml` (2) — both `<loc>` entries
 - `llms.txt` (2) — the two links at the bottom
 - `robots.txt` (1) — the `Sitemap:` line
+
+**The Grav theme has none of them**, which is the point: `base_url_absolute`
+supplies the host, so staging advertises staging and production advertises
+production with nothing to keep in sync. The only absolute URLs left under
+`grav/` are in files a third party fetches by fixed URL and cannot be
+templated — `grav/root/sitemap.xml` (9 `<loc>` entries, one per route) and
+`grav/root/llms.txt` (9 links). **Both list every page, and adding a page means
+adding it to both**; `verify-site.py` asserts the routes resolve on the live
+site but cannot tell you the sitemap has fallen behind the page tree.
 
 **They must all change together** if the host ever changes again, and the new
 `/admin/` URL has to be registered as a GitLab Redirect URI *before* the switch,
@@ -983,6 +1130,18 @@ Two things learned from those uploads:
   are not worth renaming — the paths live in `content/home.json`, which the CMS
   rewrites.
 
+**Photos sit IN the page, not on top of it, and that took four things at once.**
+`.img-frame` used to carry a 1px solid border. Against a flat background that
+was fine; against a textured one it read as a cut-out pasted on, because a hard
+even line is the one edge quality nothing else on the page has. What replaced it,
+and none of it works alone: an inset hairline at half the old alpha (inset, so it
+adds nothing to the box and shifts no layout); a soft warm low shadow, because a
+photo that casts nothing looks stuck to the surface and a grey shadow looks stuck
+to a different one; an `::after` carrying a wash of the page colour and a faint
+inner vignette; and `filter: saturate(0.94)` on the image, because these are
+phone photos with phone-camera colour on a warm muted page. The `::after` must
+keep `pointer-events: none` — `.card-link` wraps whole frames.
+
 Every remaining placeholder spot still has a real `<img>` tag pointing at
 `images/placeholder.svg`, wrapped in a `.img-frame` div that fixes the aspect
 ratio (so swapping images later causes no layout shift):
@@ -1012,9 +1171,9 @@ what should be there), and leave the wrapping `.img-frame*` class alone.
 
 ## Responsive behavior
 
-Breakpoints: 960px (grids go 4/3-col → 2-col, About image+text stacks),
-860px (nav links move into a dropdown panel opened by the ☰ toggle; the
-header stays one compact row with brand + «Соцсети» + toggle), 640px
+Breakpoints: 1000px (nav links move into a dropdown panel opened by the ☰
+toggle; the header stays one compact row with brand + «Соцсети» + toggle),
+960px (grids go 4/3-col → 2-col, About image+text stacks), 640px
 (everything single-column, hero padding tightens), 480px (further
 spacing/type tightening, badge wraps, brand subtitle hidden to keep the
 header compact).
@@ -1041,6 +1200,18 @@ modifier class on purpose: it is the *absence of the nav* that needs correcting,
 and matching it structurally covers both legal pages and any future one with no
 way to add a page and forget the class. On `index.html` the nav sits between the
 two, so it never matches there.
+
+**THE DROPDOWN BREAKPOINT IS 1000px AND THE NUMBER IS MEASURED.** It was 860px
+while the nav was six in-page anchors. Seven section links do not fit: measured
+at a 900px viewport the nav ran to x=901 and the «Соцсети» button landed at
+x=925..1032 — entirely outside the window, clipped silently by the
+`overflow-x: clip` on html/body rather than showing as a scrollbar. Nothing
+looked broken; the button was simply gone. Brand (166px) + nav (~566px, tightened
+through a 1001–1200px band) + button (107px) + gaps and padding need ~950px.
+Verified across 9 routes × 6 widths: row mode down to 1001px with 48px to spare,
+☰ at 1000px and below, no overflow anywhere down to 320px. **`script.js` carries
+the same number twice (`min-width: 1001px`); all three move together**, and if a
+nav label is ever added or renamed, re-measure — the failure mode is invisible.
 
 The header hides on scroll-down and reappears on scroll-up, by **one mechanism
 at every width**: `script.js` toggles `.is-hidden` and a 0.2s CSS transition
@@ -1115,8 +1286,15 @@ Two scroll traps worth knowing about, both caused by `scroll-padding-top`:
   still walks straight into it.
 - `id="top"` sits on the sticky header, so once the header is stuck the browser
   treats it as already in view and an `href="#top"` jump only scrolls by the
-  scroll-padding instead of returning to the top. Both logo links are therefore
-  driven by JS (`scrollToTop`); the `href` stays as a no-JS fallback.
+  scroll-padding instead of returning to the top. On the static site both logo
+  links are therefore driven by JS (`scrollToTop`), with the `href` as a no-JS
+  fallback. **In the Grav theme the logos point at the real home URL and carry
+  `data-home`** — with eight pages that trick would have broken the logo
+  everywhere but home. JS now intercepts only the case it was ever really for:
+  you are already on that page, where navigating would be a pointless reload. It
+  compares `pathname`, not `href`, because the two differ over a hash, a query
+  string, or an absolute-vs-relative href — any of which would make a same-page
+  click navigate instead.
 
 **`overflow-x` on `html, body` must be `clip`, never `hidden`.** `hidden`
 forces the used value of `overflow-y` to `auto`, which makes html/body scroll
@@ -1167,6 +1345,11 @@ Conventions that come from the owner, not from the code:
 - **The owner pushes.** `git push` runs in their own terminal because the
   credential prompt is interactive. Commit locally and tell them; don't try to
   push.
+- **Placeholders are named, never invented.** The empty cards on Окрестности
+  carry the names the owner gave and nothing else; the ones on Команда and
+  Мастера say «Имя мастера» / «Цена» so they read as a form to fill in. No
+  description, address or price has been written for a place, person or object
+  nobody has described — that is the same rule as prices and opening hours.
 - **The repo root is the web root.** Every file added is world-readable at its
   path, `CLAUDE.md` included. Nothing secret goes in.
 - **Design direction: fewer boxes, less "AI landing page".** This has come up
@@ -1185,9 +1368,22 @@ Verification habits that were learned the hard way here:
 - **Assert expected counts before trusting an extraction.** A regex HTML edit
   once silently produced one item per list instead of four, and only an explicit
   count assertion caught it.
-- **Measure contrast on rendered elements**, not on the token values — the
-  tightest pairing on the page (`--accent-mid` on `--cream-alt`, 4.69:1) was only
-  visible that way.
+- **Measure contrast on the COMPOSITED background**, not on token values and not
+  on the rendered element alone. Every texture layer darkens the ground, and
+  twice now that has taken the tightest pairings under the line invisibly. Paint
+  the layers onto the background colour in a canvas and measure against the
+  average.
+- **`.claude/launch.json` serves the STATIC site.** The Grav theme cannot be
+  previewed from the repo — `system/` and `vendor/` are not in it — so testing
+  it means building a real Grav install outside the repo (recipe under "The Grav
+  theme"). Do not point launch.json at that install: the path is temporary and
+  means nothing on another machine.
+- **The Browser pane's tab is hidden, and two things follow that look like
+  bugs.** CSS transitions never run, so anything with `.reveal` reads as
+  `opacity: 0` forever; and a screenshot taken after scrolling comes back blank
+  because the page never composites. Check `document.hidden` before believing
+  either. Inject `*{transition:none}` plus `.reveal{opacity:1}` for screenshots,
+  and hide the sections above the one you want instead of scrolling to it.
 - **Don't conclude a deploy has broken from one stale response.** That call was
   made once on edge-cache evidence and led to a push on a wrong premise. Check
   the Cloudflare deployment log.

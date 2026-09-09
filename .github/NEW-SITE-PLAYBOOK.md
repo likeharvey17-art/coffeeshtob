@@ -130,6 +130,34 @@ grav/
       partials/{base,header,footer}.html.twig
 ```
 
+**Contact details use `theme.X` in Twig, NOT `theme_config.X`.** `theme_config`
+is the Grav 1.x name; the string appears nowhere in Grav 2's source, and Twig
+renders an unknown variable as an empty string. On this project it meant a blank
+footer address, an empty `tel:` link and an empty `telephone` in the structured
+data, live, for weeks, with no error anywhere. Assert it in the field check.
+
+**If the site is more than one page:**
+
+- **Grav picks the template from the page FILENAME**, not the folder. Several
+  pages sharing a layout are several folders each containing the same
+  `cards.md`, sharing one `cards.html.twig` and one `cards.yaml`. Rename one to
+  match its folder and it silently routes to `default.html.twig`.
+- **Build the nav from `pages.children.visible` in one partial** that the header,
+  footer and 404 all include, with `p.active` for the current-page highlight.
+  Hardcoded anchors mean three copies to forget, and any JS scrollspy is worse
+  than useless: it cannot match real URLs and will strip a server-rendered
+  highlight.
+- **Page media is per folder.** A photo used on two pages must sit in both. Do
+  not commit them twice — derive the mapping by reading the page files and place
+  them at seed time.
+- **Measure the nav breakpoint, do not guess it.** Seven labels needed 1000px
+  where six needed 860px, and the overflow was invisible: `overflow-x: clip`
+  clipped the «Соцсети» button off-screen with no scrollbar and nothing broken
+  looking.
+- **Make the field check WALK the templates.** Hardcoded to one page, it leaves
+  every other page unchecked — which is precisely where the silent blank section
+  comes from.
+
 **`default.html.twig` is mandatory even though nothing uses it.** Grav picks a
 template from the page's filename, and its stock install ships `default.md`. A
 theme with only `home.html.twig` hard-errors on first activation. Also delete

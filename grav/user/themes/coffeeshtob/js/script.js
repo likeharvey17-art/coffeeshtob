@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* Leaving the mobile layout must not strand the dropdown open. */
-    window.matchMedia('(min-width: 861px)').addEventListener('change', (e) => {
+    window.matchMedia('(min-width: 1001px)').addEventListener('change', (e) => {
       if (e.matches) setNavOpen(false);
     });
   }
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
      If the scroll-linked version is ever wanted back, the reason it existed is
      that a *slow* transition makes the bar linger while the page moves under
      it. Keep the duration short (0.2s) and that does not arise. */
-  const desktop = window.matchMedia('(min-width: 861px)');
+  const desktop = window.matchMedia('(min-width: 1001px)');
   const hideAfter = () => (desktop.matches ? 220 : 12);
   const DELTA = 4;        // ignore sub-pixel jitter and momentum wobble
   let lastY = window.scrollY;
@@ -273,14 +273,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (toTopBtn) toTopBtn.addEventListener('click', scrollToTop);
 
-  /* Both logos link to #top, but that id sits on the sticky header itself.
-     Once the header is stuck to the viewport top, the browser considers it
-     already in view and scrolls only far enough to satisfy
-     `scroll-padding-top` — so clicking the logo nudged the page up by exactly
-     that padding instead of returning to the top. Drive it ourselves. The
-     href stays as a no-JS fallback. */
-  document.querySelectorAll('a[href="#top"]').forEach((link) => {
+  /* Both logos point at the home page for real. They used to be href="#top",
+     driven entirely by JS because that id sits on the sticky header: once the
+     header is stuck the browser considers it already in view and scrolls only
+     far enough to satisfy `scroll-padding-top`, so clicking the logo nudged the
+     page by exactly that padding instead of returning to the top.
+
+     With seven other pages that trick would have broken the logo everywhere but
+     home, so the href is genuine now and this only intercepts the case it was
+     ever really for: you are ALREADY on the page the logo points to, where a
+     navigation would be a pointless reload. Everything else — and the whole
+     thing with JS off — is an ordinary link.
+
+     Comparing `pathname` rather than `href` on purpose: the two differ over a
+     hash, a query string or an absolute-vs-relative href, and any of those
+     would make a same-page click navigate instead. */
+  document.querySelectorAll('a[data-home]').forEach((link) => {
     link.addEventListener('click', (event) => {
+      if (link.pathname !== window.location.pathname) return;
       event.preventDefault();
       scrollToTop();
     });
@@ -288,11 +298,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* Scroll-reveal for content blocks.
 
-     Written as a rescan rather than a one-off, because render.js rebuilds the
-     card grids from the CMS *after* this runs — those are brand new elements
-     the observer has never seen. Without the `cms:rendered` hook below they
-     would keep `.reveal`'s opacity: 0 and the sections would look empty. */
-  const REVEAL_SELECTOR = '.feature-card, .menu-item, .life-card, .info-card, .about-text';
+     Written as a rescan rather than a one-off. On the static site that was
+     because render.js rebuilt the card grids from JSON *after* this ran, and
+     without a rescan the new elements kept `.reveal`'s opacity: 0 forever.
+     Grav renders server-side so nothing is rebuilt now, but the rescan and the
+     WeakSet stay: they cost nothing, and identity — not the `.reveal` class —
+     is the only safe marker for "already handled" if anything ever does inject
+     markup again. */
+  const REVEAL_SELECTOR = '.feature-card, .menu-item, .life-card, .info-card, .card-item, .about-text';
   const supportsObserver = 'IntersectionObserver' in window;
 
   const revealObserver = supportsObserver
@@ -329,28 +342,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   scanReveal();
-  document.addEventListener('cms:rendered', scanReveal);
 
-  /* Active nav link highlighting */
-  const sections = ['about', 'menu', 'life', 'schedule', 'guests', 'contacts']
-    .map((id) => document.getElementById(id))
-    .filter(Boolean);
-  const navLinks = document.querySelectorAll('#main-nav a');
+  /* The active-nav highlight used to be computed here by an IntersectionObserver
+     over a hardcoded list of section ids. It is gone, and must not come back.
 
-  if ('IntersectionObserver' in window && sections.length) {
-    const navObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.id;
-            navLinks.forEach((link) => {
-              link.classList.toggle('is-active', link.getAttribute('href') === `#${id}`);
-            });
-          }
-        });
-      },
-      { rootMargin: '-45% 0px -50% 0px' }
-    );
-    sections.forEach((section) => navObserver.observe(section));
-  }
+     With the sections split into real pages, nav hrefs are `/kuhnya`, not
+     `#menu`. That code matched `link.getAttribute('href') === '#' + id`, so no
+     link could ever match again — and because it called `toggle` on every
+     intersection it would not merely have stopped working, it would have
+     actively stripped the `is-active` class that Grav now renders server-side.
+
+     partials/nav.html.twig sets it from `p.active`, which is correct before the
+     first paint and correct with JS disabled. */
 });

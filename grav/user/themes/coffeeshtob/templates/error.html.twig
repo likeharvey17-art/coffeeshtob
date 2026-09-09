@@ -44,6 +44,14 @@
     <h1>Такой страницы нет</h1>
     <p>Возможно, она переехала или в адресе опечатка. А кофе на месте — заходите
     на главную и посмотрите, что у нас есть.</p>
+    {# The sections, so a wrong URL is one click from the right one rather than
+       a dead end. It is the same include the header and footer use, so it can
+       never list a page that no longer exists — the static 404 carried its own
+       hardcoded copy of the nav, which was a third place to forget. No link is
+       marked current here, correctly: you are not on any of them. #}
+    <nav class="notfound-nav" aria-label="Разделы сайта">
+      {% include 'partials/nav.html.twig' %}
+    </nav>
     <p class="legal-back">
       <a class="link-arrow" href="{{ base_url }}/">← Вернуться на главную</a>
     </p>
@@ -56,7 +64,7 @@
   <div class="container">
     <div class="footer-bottom-inner">
       <span>© {{ 'now'|date('Y') }} «Кофештаб»</span>
-      <span>{{ theme_config.address }}</span>
+      <span>{{ theme.address }}</span>
     </div>
   </div>
 </footer>

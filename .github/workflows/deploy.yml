@@ -567,36 +567,15 @@ jobs:
       # static site and would otherwise disappear silently at cutover — a 404 on
       # /privacy is a broken link in the footer of every page, and a 404 on the
       # Yandex token quietly loses search verification.
-      - name: Confirm production serves every URL the static site did
+      # The same script the staging job runs, against production. It derives the
+      # routes from the page tree rather than listing them here, so a section
+      # added in the admin is covered from the next deploy — and the two jobs
+      # cannot drift into checking different things.
+      #
+      # It replaced a hand-written list that asserted a `.menu-item` on the home
+      # page. That was true of the single-page site and is false now: the menu
+      # lives on /kuhnya. Left alone it would have failed the cutover deploy for
+      # a reason that had nothing to do with the cutover.
+      - name: Confirm production renders every page
         if: env.MODE == 'grav'
-        run: |
-          set -uo pipefail
-          fail=0
-          for u in / /privacy /sitemap.xml /robots.txt /llms.txt \
-                   /favicon.ico /apple-touch-icon.png \
-                   /icon-192.png /icon-512.png /og-image.jpg \
-                   /yandex_11df7f8b41641d66.html; do
-            code=""
-            for i in 1 2 3 4 5 6; do
-              code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 \
-                     "https://coffeeshtob.ru$u?ci=$GITHUB_RUN_ID-$i" || true)
-              [ "$code" = "200" ] && break
-              sleep 10
-            done
-            printf '  %-34s %s\n' "$u" "$code"
-            [ "$code" = "200" ] || fail=1
-          done
-          # An unknown path must still 404 rather than 200 — a catch-all that
-          # answers everything would make the checks above meaningless.
-          nf=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
-               "https://coffeeshtob.ru/definitely-not-a-page-$GITHUB_RUN_ID" || true)
-          printf '  %-34s %s (want 404)\n' "/definitely-not-a-page" "$nf"
-          [ "$nf" = "404" ] || fail=1
-          body=$(curl -sS -L --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID" || true)
-          h1=$(echo "$body" | grep -oE '<h1[^>]*>[^<]{3,}</h1>' | head -1)
-          items=$(echo "$body" | grep -c 'class="menu-item"' || true)
-          echo "  h1: ${h1:-<empty>}   menu items: $items"
-          { [ -n "$h1" ] && [ "$items" -ge 1 ]; } || fail=1
-          [ "$fail" -eq 0 ] || { echo "FAIL — see above"; exit 1; }
-          echo "all good"
-
+        run: python3 .github/scripts/verify-site.py https://coffeeshtob.ru --run-id "$GITHUB_RUN_ID"

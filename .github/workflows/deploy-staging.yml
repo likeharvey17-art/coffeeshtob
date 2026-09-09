@@ -189,132 +189,60 @@ jobs:
             rm -rf '$STAGING_DIR/user/pages/02.typography';
           " || echo "(seed reported errors; the render check below decides)"
 
-          # Images are PAGE MEDIA in Grav: home.md stores a bare filename and
-          # Grav resolves it against the page folder. So the photos have to live
-          # beside home.md, not in the theme — and until they do, every image on
-          # the page falls back to the placeholder and the client's media picker
-          # is empty.
+          # Images are PAGE MEDIA in Grav: a page stores a bare filename and
+          # Grav resolves it against that page's OWN folder. So a photo used on
+          # /kuhnya has to physically sit in user/pages/04.kuhnya/, and a photo
+          # used on two pages has to sit in both. Until it does, the image falls
+          # back to the placeholder and the client's media picker is empty.
           #
-          # They are mirrored from images/uploads/ rather than committed a
-          # second time under grav/: 5.2 MB of the same JPEGs already in this
-          # repo is not worth duplicating. Client uploads land in this same
-          # folder, and no --delete here means they survive every later deploy.
+          # This used to mirror all of images/uploads/ into 01.home, which was
+          # right while there was one page and is wrong now: it would give the
+          # landing page a media picker listing every photo on the site and leave
+          # the other seven with none.
           #
-          # .htaccess is skipped deliberately: it belongs to the static site's
-          # docroot (it blocks PHP execution in an uploads folder that is served
-          # directly) and has no business inside Grav's pages tree.
-          echo "Seeding page media from images/uploads/"
-          lftp -c "
-            set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set net:max-retries 8; set net:timeout 40;
-            set cmd:fail-exit false;
-            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --no-perms --verbose --parallel=1 \
-              --exclude-glob .htaccess \
-              images/uploads/ '$STAGING_DIR/user/pages/01.home';
-          " || echo "(media seed reported errors; images may fall back to the placeholder)"
+          # page-media.py works out the mapping by reading the page files, so it
+          # cannot drift from the content the way a hand-kept manifest would —
+          # and it exits non-zero if a page names a photo that is not in
+          # images/uploads/, which is either a typo or a file the client uploaded
+          # straight into Grav and that would not survive a reseed.
+          #
+          # The photos are not committed a second time under grav/: 5.2 MB of the
+          # same JPEGs already in this repo is not worth duplicating.
+          echo "Seeding page media, one folder at a time"
+          python3 .github/scripts/page-media.py > /tmp/media.tsv
+          echo "  $(wc -l < /tmp/media.tsv) photo(s) to place"
+
+          # Client uploads land in these same folders and no --delete is used
+          # anywhere here, so they survive every later deploy.
+          while IFS=$'\t' read -r page file; do
+            [ -n "$page" ] || continue
+            echo "  $file -> $page"
+            lftp -c "
+              set ftp:ssl-allow true; set ftp:ssl-force true;
+              set ftp:ssl-protect-data false; set ssl:verify-certificate no;
+              set net:max-retries 8; set net:timeout 40;
+              set cmd:fail-exit false;
+              open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+              mkdir -p '$STAGING_DIR/user/pages/$page';
+              put -O '$STAGING_DIR/user/pages/$page' 'images/uploads/$file';
+            " || echo "    (reported errors; the image check at the end decides)"
+          done < /tmp/media.tsv
 
       # Beget serves a JavaScript interstitial to clients that do not carry a
       # `beget=begetok` cookie — a 273-byte page that sets the cookie and
       # reloads. Without it every check here reads the challenge instead of the
       # site and reports nonsense. Browsers pass it invisibly; curl does not.
-      - name: Confirm staging still renders
-        run: |
-          # Prove the CONTENT rendered, not just that the theme did. Matching
-          # the word "Кофештаб" was not enough: it comes from the header
-          # partial, so it would keep matching happily while every editable
-          # field on the page rendered blank.
-          #
-          # The evidence is structural rather than a literal string. Keying this
-          # to a phrase out of home.md would have meant the check started
-          # failing the first time the client edited that phrase in the admin —
-          # a gate that breaks on correct use is worse than none.
-          #
-          #   a non-empty <h1>      hero_title reached the page
-          #   a .menu-item article  the loops ran over page.header.*
-          #   no Twig error text    Grav rendered rather than trapped
-          for i in $(seq 1 10); do
-            body=$(curl -sS -L --max-redirs 5 -H 'Cookie: beget=begetok' \
-                   --max-time 30 "http://test.tryphopx.beget.tech/?ci=$GITHUB_RUN_ID-$i" || true)
-            h1=$(echo "$body" | grep -oE '<h1[^>]*>[^<]{3,}</h1>' | head -1)
-            items=$(echo "$body" | grep -c 'class="menu-item"' || true)
-            if [ -n "$h1" ] && [ "$items" -ge 1 ]; then
-              echo "staging renders page content: $h1 ($items menu items)"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "h1=[$h1] menu-items=[${items:-0}]"
-          echo "staging did not render expected content. Last response:"
-          echo "$body" | head -c 600
-          exit 1
-
-      # Every URL the static site serves has to exist here too, or the cutover
-      # silently 404s them. /privacy is the one that matters most: it is linked
-      # from the footer of every page and it is the privacy notice.
-      - name: Confirm the other URLs exist
-        run: |
-          set -uo pipefail
-          fail=0
-          for u in /privacy /sitemap.xml /robots.txt /llms.txt \
-                   /favicon.ico /apple-touch-icon.png \
-                   /icon-192.png /icon-512.png /og-image.jpg \
-                   /yandex_11df7f8b41641d66.html; do
-            code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 \
-                   -H 'Cookie: beget=begetok' \
-                   "http://test.tryphopx.beget.tech$u?ci=$GITHUB_RUN_ID" || true)
-            printf '  %-34s %s\n' "$u" "$code"
-            [ "$code" = "200" ] || fail=1
-          done
-          nf=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
-               -H 'Cookie: beget=begetok' \
-               "http://test.tryphopx.beget.tech/no-such-page-$GITHUB_RUN_ID" || true)
-          printf '  %-34s %s (want 404)\n' "/no-such-page" "$nf"
-          [ "$nf" = "404" ] || fail=1
-          [ "$fail" -eq 0 ] || { echo "FAIL — see above"; exit 1; }
-
-      # The photos come straight off a phone: 3.6 MB across the page, with a
-      # 821 KB JPEG behind a thumbnail that displays at 76 pixels. Grav resizes
-      # them in the template, but that only helps while the resize is actually
-      # happening — if image processing is unavailable on the host, Grav serves
-      # the original and nothing looks broken, it is just slow again. This is
-      # the audience that reported the site taking "forever" to load, so the
-      # weight is worth gating rather than trusting.
-      - name: Measure what the page actually weighs
-        run: |
-          set -uo pipefail
-          base=http://test.tryphopx.beget.tech
-          body=$(curl -sS -L -H 'Cookie: beget=begetok' --max-time 30 "$base/?w=$GITHUB_RUN_ID")
-          urls=$(echo "$body" | grep -oE '<img[^>]+src="[^"]+"' | sed -E 's/.*src="([^"]+)".*/\1/' | sort -u)
-          total=0
-          while IFS= read -r u; do
-            [ -n "$u" ] || continue
-            case "$u" in http*) full="$u";; *) full="$base$u";; esac
-            sz=$(curl -sS -o /dev/null -H 'Cookie: beget=begetok' --max-time 30 -w '%{size_download}' "$full" || echo 0)
-            total=$((total + sz))
-            printf '  %7s KB  %s\n' "$((sz / 1024))" "$u"
-          done <<< "$urls"
-          echo "total image weight: $((total / 1024)) KB"
-          # THE BUDGET IS 1.5 MB, AND THE NUMBER IS NOT ARBITRARY. Measured:
-          # unresized this page carried 3.6 MB, with a 821 KB JPEG behind a
-          # thumbnail displayed at 76 pixels. Resized it came to 944 KB.
-          #
-          # This gate exists to catch resizing SILENTLY STOPPING — if image
-          # processing is unavailable on the host, Grav serves the originals and
-          # nothing looks broken, it is just slow again. So the threshold sits
-          # between those two figures, near enough to 944 KB to notice a real
-          # regression and far enough below 3.6 MB to be unambiguous, with room
-          # for the client to add photos without tripping it.
-          #
-          # It was 900 KB first, which failed a run where resizing was working
-          # perfectly — and said "resizing is not being applied", which was
-          # simply false. A gate that misreports the cause is worse than no gate:
-          # it sends whoever reads it looking in the wrong place.
-          if [ "$total" -gt 1572864 ]; then
-            echo "FAIL: $((total / 1024)) KB of images, over the 1536 KB budget."
-            echo "Either resizing has stopped being applied (compare against the"
-            echo "3.6 MB unresized figure), or the photos have genuinely grown."
-            exit 1
-          fi
-          echo "OK — $((total / 1024)) KB, within the 1536 KB budget"
+      # verify-site.py sends the cookie on every request.
+      #
+      # This replaced three hand-written gates. They asserted a `.menu-item` on
+      # the home page, listed the URLs to check by hand, and summed the images on
+      # one page — all correct for a single-page site and all wrong now. The menu
+      # moved to /kuhnya, and a list of routes typed into a workflow goes stale
+      # the moment a page is added. The script derives the routes from the page
+      # tree, exactly as the site's own navigation does, so a new section is
+      # covered from the next deploy with nothing to remember.
+      #
+      # Every assertion is about the delivered page, never the transfer: lftp's
+      # exit code is unreliable on this host and is not consulted anywhere.
+      - name: Confirm staging renders every page
+        run: python3 .github/scripts/verify-site.py http://test.tryphopx.beget.tech --run-id "$GITHUB_RUN_ID"
