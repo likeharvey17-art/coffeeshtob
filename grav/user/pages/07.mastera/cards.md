@@ -15,7 +15,7 @@ banner_image: ''
 card_image: ''
 card_teaser: 'Работы романовских мастеров и сувениры на память'
 
-layout: 'grid'
+layout: 'alt'
 
 items:
   - title: 'Имя мастера'

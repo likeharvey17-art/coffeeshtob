@@ -178,10 +178,13 @@ Templates in `user/themes/coffeeshtob/templates/`:
   from the page tree**. Each section supplies its own `card_image` and
   `card_teaser`, so the landing page cannot advertise a section that has been
   renamed or removed.
-- `cards.html.twig` — the workhorse: banner, optional intro, one list of cards in
-  one of three layouts chosen per page by `layout` — `alt` (full-width rows,
-  photo alternating sides), `wide` (one big 16:10 photo per entry, for long
-  text), `grid` (compact auto-filling grid, for many short entries).
+- `cards.html.twig` — the workhorse: banner, optional intro, one list of cards.
+  **Every section uses `layout: alt`** — full-width rows, text left and photo
+  right, flipping each row — so the whole site reads as one continuous zig-zag
+  from the home page's About block onward. `wide` and `grid` are kept as options
+  and are currently unused; `alt` is the default in both the template's fallback
+  and the editing form, so a page the client creates matches the rest without
+  their having to know that.
 - `kuhnya.html.twig` — the two menu lists plus the alternating cards under them.
   Its own template because menu items carry a price and a square thumbnail.
 - `kontakty.html.twig` — the hours panel, the address block and the ferry card.

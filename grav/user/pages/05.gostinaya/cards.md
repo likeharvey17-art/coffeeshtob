@@ -16,7 +16,7 @@ banner_image: 'img_4980.jpg'
 card_image: 'img_4980.jpg'
 card_teaser: 'Квартирники, кино на печи, книги, музыка и настольный хоккей'
 
-layout: 'grid'
+layout: 'alt'
 
 items:
   - title: 'Квартирники и Квартальники'
