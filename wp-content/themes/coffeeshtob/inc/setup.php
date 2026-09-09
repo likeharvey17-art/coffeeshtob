@@ -78,3 +78,18 @@ function shtob_preload_fonts() {
     }
 }
 add_action('wp_head', 'shtob_preload_fonts', 1);
+
+/**
+ * `is-legal` on the two pages that use the stripped header and footer.
+ *
+ * WordPress already emits `error404` and a page-template class, but the second
+ * one is derived from the filename and would change if the template were ever
+ * renamed. One class the theme controls is what the sticky-footer rule keys off.
+ */
+function shtob_body_class($classes) {
+    if (is_404() || is_page_template('template-privacy.php')) {
+        $classes[] = 'is-legal';
+    }
+    return $classes;
+}
+add_filter('body_class', 'shtob_body_class');

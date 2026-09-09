@@ -222,6 +222,21 @@ gets a plain dark band instead** (`.page-banner--plain`): the placeholder is a
 line-art picture frame, and blurred across a banner it reads as a broken image
 rather than as "a photo is coming".
 
+**Photos are clipped to the page**, with a stroke-only paperclip over the
+top-left corner (`.img-frame::before`). That is the SECOND attempt: the first was
+a solid binder clip straddling the top edge, which is the literal reading of
+"clip" and wrong twice over — every other mark on this site is line art at
+stroke-width 2, so a filled shape was the one heavy object on a page of
+outlines, and at the size a 506px photo wants its two levers merged into what
+read as a handbag handle. Judged by looking at it, which is the only way this
+kind of thing can be judged.
+
+The clip is why **`.img-frame` is `overflow: visible`**. The rounding moved onto
+the image and the vignette (`border-radius: inherit`), which is what overflow was
+doing for them anyway; a frame that clips its own children would cut the clip in
+half. The frames carry a matching `margin-top` so it has somewhere to overhang
+into.
+
 **Icons are named, never positional.** They were a `loop.index == 1..4` chain
 inherited from the first CMS: reordering cards silently swapped their icons and a
 fifth card got none. Adding one means adding a case in `parts/icon.php` **and**
@@ -244,9 +259,18 @@ buttons and links on light; `--accent-mid` for small accents on light; and
 `--grain`, `--beans` and `--fibers` are three inline-SVG textures applied as
 extra *background layers* on `body` and `.section-alt` — never as overlay
 elements, which would risk painting over cards. `--beans` is the motif (7 beans
-on a 260px tile at 10%), `--grain` the tooth (baseFrequency 0.5 at 13%),
-`--fibers` the paper (low-frequency mottling at 0.011 plus 70 hairlines on a
-700px tile).
+on a 344px tile at 6.8% stroke opacity), `--grain` the tooth (baseFrequency 0.5
+at 13%), `--fibers` the paper (low-frequency mottling at 0.011 plus 70 hairlines
+on a 700px tile).
+
+The beans have been resized twice and both times the tile moved with them: 13%
+on a 200px tile read as wallpaper with the repeat visible in rows, and the
+current 344px tile came with the beans being enlarged and simultaneously faded
+(0.10 → 0.068) — larger shapes at a lighter weight, which is what "bigger but
+blending in more" resolves to. **Generate the data URI rather than hand-editing
+it**: it is a one-line URL-encoded string with seven transform groups in it, and
+nudging coordinates by hand is how a bean ends up half off the tile with nothing
+to show it.
 
 **The paper layer's first version was invisible, and that was measured rather
 than argued about.** 18 hairlines on a 340px tile is ~0.4% of pixels at 5% alpha
@@ -257,8 +281,9 @@ either: low-frequency noise on a small tile repeats as a visible plaid.
 
 **THE TEXTURE CHANGES THE CONTRAST MATHS AND THAT IS NOT OBVIOUS.** `--cream-alt`
 renders as rgb(231,223,210), not its token rgb(237,228,213). The tightest
-pairings — `--accent-mid` and `--muted` on `--cream-alt` — are 4.61 and 4.62:1
-against the **composited** background. They have been darkened twice, both times
+pairings — `--accent-mid` and `--muted` on `--cream-alt` — are 4.62 and 4.63:1
+against the **composited** background (re-measured after the beans were
+enlarged and faded; all 16 pairings clear 4.6). They have been darkened twice, both times
 because a texture layer quietly took them under the line (4.62 → 4.53 when the
 paper went in, 4.62 → 4.48 when the beans did). **Any change to a background or
 a texture means re-measuring every pairing**, by compositing the layers onto the
@@ -303,6 +328,22 @@ header stranded off-screen at `y=0`.
 `.site-header`; every reference to an element the legal pages lack (`#toTop`,
 `#main-nav`, `#socialBtn`, `#navToggle`) is guarded — one unguarded null throws
 on `DOMContentLoaded` and silently kills every other behaviour in the file.
+
+**The legal pages hold their footer at the bottom of the viewport**
+(`body.is-legal`). The 404 and the policy are both shorter than a screen, and
+without it their one-line footer floated wherever the text happened to end with a
+field of empty cream below — it read as the page having failed to finish loading
+rather than as a short page. It is keyed on `is-legal`, a class the theme adds
+itself, rather than on WordPress's `page-template-…` class, which is derived from
+the filename and would break silently if the template were renamed. The marketing
+pages must NOT get it: making `<body>` a flex container there fights the sticky
+header for no gain.
+
+**The 404's section links are a grid, not a wrapped row**, for the same reason
+`.menu-list` is one: the column count follows the width, never the item count.
+Seven pills at their natural widths broke 6 + 1 at 1280px, leaving «Контакты»
+stranded alone and looking like a mistake. Equal columns break 4 + 3, and a
+renamed or added section cannot bring the orphan back.
 
 The legal pages carry a **two-item header** — brand, then «На главную» — with no
 `.main-nav` to take up the slack. `.brand + .nav-social-btn { margin-left: auto }`

@@ -163,7 +163,7 @@ Tags: custom-menu, custom-logo, translation-ready
      wallpaper, and the repeat becomes obvious the moment you notice one. At
      13% stroke opacity it is a texture you find rather than one that announces
      itself. */
-  --beans: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cg fill='none' stroke='%2343362c' stroke-opacity='0.1' stroke-width='1.1'%3E%3Cg transform='translate(34 40) rotate(-24)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(150 22) rotate(38)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(232 96) rotate(-8)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(88 128) rotate(64)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(196 186) rotate(-46)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(28 214) rotate(16)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3Cg transform='translate(126 246) rotate(-30)'%3E%3Cellipse rx='8' ry='11.5'/%3E%3Cpath d='M0 -9.5C3.2 -4.5 3.2 4.5 0 9.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --beans: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27344%27%20height%3D%27344%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%2343362c%27%20stroke-opacity%3D%270.068%27%20stroke-width%3D%271.15%27%3E%3Cg%20transform%3D%27translate%2845%2053%29%20rotate%28-24%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28198%2029%29%20rotate%2838%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28307%20127%29%20rotate%28-8%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28116%20169%29%20rotate%2864%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28259%20246%29%20rotate%28-46%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%2837%20283%29%20rotate%2816%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28167%20325%29%20rotate%28-30%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -729,7 +729,11 @@ p { margin: 0; }
    The ::after must not intercept clicks — .card-link wraps a whole frame. */
 .img-frame {
   position: relative;
-  overflow: hidden;
+  /* NOT overflow:hidden. The clip below has to overhang the top edge, and a
+     frame that clips its own children would cut it in half. The rounding moves
+     onto the image and the vignette instead, which is what overflow was doing
+     for them anyway. */
+  overflow: visible;
   border-radius: var(--radius-md);
   background: var(--cream-alt);
   box-shadow:
@@ -742,6 +746,7 @@ p { margin: 0; }
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: inherit;
   filter: saturate(0.94);
 }
 .img-frame::after {
@@ -749,6 +754,7 @@ p { margin: 0; }
   position: absolute;
   inset: 0;
   pointer-events: none;
+  border-radius: inherit;
   background:
     radial-gradient(115% 95% at 50% 45%, rgba(58, 43, 30, 0) 58%, rgba(58, 43, 30, 0.13) 100%),
     linear-gradient(rgba(247, 243, 236, 0.07), rgba(247, 243, 236, 0.07));
@@ -1098,13 +1104,20 @@ p { margin: 0; }
 }
 /* 404 page: the section links, laid out as a simple wrapped list. Shares the
    .legal container so the two non-marketing pages stay visually consistent. */
+/* A GRID, NOT A WRAPPED ROW, and for the same reason .menu-list is one: the
+   column count follows the available width, never the item count. Seven pills
+   of their natural widths broke 6 + 1 at 1280px, leaving «Контакты» stranded
+   alone on a second line looking like a mistake. Equal columns break 4 + 3 and
+   read as deliberate, and a renamed or added section cannot reintroduce the
+   orphan. */
 .notfound-nav {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 10px 12px;
   margin: 18px 0 8px;
 }
 .notfound-nav a {
+  text-align: center;
   padding: 9px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
@@ -1121,6 +1134,24 @@ p { margin: 0; }
 
 .legal-back { margin-top: 40px; }
 .legal-footer { padding-top: 0; }
+
+/* THE 404 AND THE POLICY ARE SHORTER THAN THE SCREEN, and without this their
+   one-line footer floated wherever the text happened to end, with a field of
+   empty cream below it — it read as the page having failed to finish loading
+   rather than as a short page.
+
+   Scoped to `is-legal`, a class the theme adds itself (inc/setup.php), rather
+   than to WordPress's `page-template-…` class, which is derived from the
+   filename and would break silently if the template were renamed. The marketing
+   pages are all taller than the viewport and must NOT get this: making <body> a
+   flex container there would fight the sticky header for no gain. */
+body.is-legal {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+body.is-legal .legal { flex: 1 0 auto; }
+body.is-legal .legal-footer { margin-top: auto; }
 
 @media (max-width: 640px) {
   .legal { padding: 36px 0 64px; }
@@ -1501,6 +1532,62 @@ p { margin: 0; }
   .feature-grid > .feature-card:nth-child(even) .feature-body { grid-column: 2; grid-row: 1; }
 }
 
+
+/* ── Photos are clipped to the page ──────────────────────────────────────────
+   Asked for directly: the paper texture wanted something holding the pictures
+   onto it.
+
+   A PAPERCLIP, STROKE-ONLY, AND THAT IS THE SECOND ATTEMPT. The first was a
+   solid binder clip straddling the top edge — the literal reading, and wrong
+   twice over: every other mark on this site is line art at stroke-width 2, so a
+   filled shape was the one heavy object on a page of outlines; and at the size
+   a 506px photo wants, its two levers merged into what read as a handbag
+   handle. A wire clip over the corner is unmistakable at any size, covers
+   almost none of the photograph, and speaks the same language as the icons.
+
+   It sits on ::before because ::after is the vignette, and it needs .img-frame
+   to be overflow:visible — see the note there. pointer-events:none for the same
+   reason the vignette has it: .card-link wraps whole frames.
+
+   The frames gain a matching margin-top so the clip has somewhere to overhang
+   into and cannot collide with whatever sits above. */
+.img-frame::before {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: 26px;
+  width: 44px;
+  height: 44px;
+  z-index: 2;
+  pointer-events: none;
+  transform: rotate(-24deg);
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2044%2044%27%3E%3Cpath%20d%3D%27M15%2035.5V13.5a6.5%206.5%200%200%201%2013%200v19a4.2%204.2%200%200%201-8.4%200V16.5%27%20fill%3D%27none%27%20stroke%3D%27%233a2b1e%27%20stroke-opacity%3D%270.62%27%20stroke-width%3D%272.4%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+  /* A wire clip casts a real shadow onto the paper — without it the clip looks
+     printed on the photograph rather than resting on top of it. */
+  filter: drop-shadow(0 1.5px 1.5px rgba(58, 43, 30, 0.3));
+}
+
+/* The hero has no frame, and the menu thumbnails are far too small to carry
+   one — a 44px clip on a 64px thumbnail is a joke rather than a detail. */
+.menu-thumb::before { content: none; }
+
+.img-frame--feature,
+.img-frame--about,
+.img-frame--wide,
+.img-frame--card { margin-top: 18px; }
+
+@media (max-width: 640px) {
+  .img-frame::before {
+    top: -12px;
+    left: 18px;
+    width: 34px;
+    height: 34px;
+  }
+  .img-frame--feature,
+  .img-frame--about,
+  .img-frame--wide,
+  .img-frame--card { margin-top: 14px; }
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
    WORDPRESS INTEGRATION
