@@ -19,8 +19,14 @@ name: Deploy to Beget
 # entire installation and every photograph the client has ever uploaded.
 #
 # SETUP — Settings → Secrets and variables → Actions:
-#   Secrets    FTP_HOST, FTP_USER, FTP_PASSWORD, REMOTE_DIR
-#   Variable   SITE_URL   e.g. https://coffeeshtob.ru
+#   Secrets tab    FTP_HOST, FTP_USER, FTP_PASSWORD, REMOTE_DIR
+#   Variables tab  SITE_URL   e.g. https://coffeeshtob.ru
+#
+# Those are two separate tabs on one page, which is a genuinely easy thing to
+# miss — the first two runs of this workflow both died on it. SITE_URL is
+# therefore read from EITHER tab; the variable is preferred only because a
+# secret is masked as *** in the logs, which makes a failure here harder to
+# read.
 #
 # SITE_URL is a variable rather than a hardcoded string because this project has
 # now changed hosting three times, and each move meant editing a URL buried in a
@@ -60,7 +66,7 @@ jobs:
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ vars.SITE_URL || secrets.SITE_URL }}
         run: |
           missing=
           for v in FTP_HOST FTP_USER FTP_PASSWORD REMOTE_DIR SITE_URL; do
@@ -68,8 +74,16 @@ jobs:
           done
           if [ -n "$missing" ]; then
             echo "Missing:$missing"
-            echo "Secrets and the SITE_URL variable live under"
-            echo "Settings → Secrets and variables → Actions."
+            echo
+            echo "All of them live under Settings → Secrets and variables → Actions,"
+            echo "but that page has TWO TABS and they are easy to confuse:"
+            echo
+            echo "  Secrets tab    FTP_HOST, FTP_USER, FTP_PASSWORD, REMOTE_DIR"
+            echo "  Variables tab  SITE_URL   e.g. https://coffeeshtob.ru"
+            echo
+            echo "SITE_URL is read from either tab, so if it is easier to add it as a"
+            echo "secret that works too — it will just come out masked as *** in these"
+            echo "logs, which makes a failure here harder to read."
             exit 1
           fi
 
@@ -221,7 +235,7 @@ jobs:
 
       # The gate. Everything above is a transfer; this is the site.
       - name: Confirm the site renders every page
-        run: python3 .github/scripts/verify-site.py "${{ vars.SITE_URL }}" --run-id "$GITHUB_RUN_ID"
+        run: python3 .github/scripts/verify-site.py "${{ vars.SITE_URL || secrets.SITE_URL }}" --run-id "$GITHUB_RUN_ID"
 
       - name: What to do next on a fresh install
         if: ${{ inputs.upload_seed }}
