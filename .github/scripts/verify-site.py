@@ -205,6 +205,17 @@ def main():
 
     print()
     if problems:
+        # The commonest cause of a wall of 404s is not a broken deploy: pages are
+        # seeded only on a manual workflow_dispatch, deliberately, so that a push
+        # cannot overwrite what the client edited in the admin. A push that adds
+        # a new section therefore deploys the template and finds no page behind
+        # it. Say so, rather than leaving whoever reads the red run to guess.
+        missing = [r for r in routes if r != '/' and f'{r}: HTTP 404' in ' '.join(problems)]
+        if len(missing) >= 2:
+            print('NOTE: %d page routes 404. Pages are seeded only by running this '
+                  'workflow manually\n      (Run workflow), never by a push — that is '
+                  'what stops a deploy overwriting\n      the client\'s edits. If '
+                  'sections were just added, seed them and re-run.\n' % len(missing))
         print(f'FAIL — {len(problems)} problem(s):')
         for p in problems:
             print('  - ' + p)
