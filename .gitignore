@@ -16,3 +16,8 @@ package-lock.json
 
 # Logs
 *.log
+
+# Local Grav preview install (Grav core + a copy of the theme and pages).
+# Built by .github/scripts/grav-dev.sh. Never deployed: the static upload set
+# comes from `git ls-files`, which cannot list an ignored path.
+.grav-dev/

@@ -3,12 +3,8 @@
   "configurations": [
     {
       "name": "site",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8765"
-      ],
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "127.0.0.1:8765", "-t", ".grav-dev", ".grav-dev/dev-router.php"],
       "port": 8765
     }
   ]

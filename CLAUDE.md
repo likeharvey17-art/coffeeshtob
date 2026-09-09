@@ -253,14 +253,33 @@ resolves. A row missing `days`/`opens`/`closes` is skipped: an absent rich resul
 is a small loss where a wrong one sends people to a closed café.
 
 **Testing the theme locally needs a real Grav**, because `system/` and `vendor/`
-are not in the repo. Download the core (`https://getgrav.org/download/core/grav/latest`
-— 2.0.24 matches what the theme declares), unzip it outside the repo, copy the
-theme and pages in, place the photos per `page-media.py`, copy `grav/root/`'s
-files to the docroot, add a `user/config/system.yaml` with
-`pages: {theme: coffeeshtob, expires: 0}` and caching off, then
-`php -S 127.0.0.1:PORT system/router.php`. Grav also needs an `images/` folder in
-the docroot — it is the processed-image cache, and without it every page is a
-500 that says "Essential Folders".
+are not in the repo. `.github/scripts/grav-dev.sh` builds one: it downloads the
+core once, copies the theme and pages in, places the photos per `page-media.py`,
+copies `grav/root/`'s files to the docroot, and writes a `system.yaml` with the
+theme selected and caching off. Run it with no argument to sync and then use the
+editor preview (`.claude/launch.json` serves it), or with a port to sync and
+serve in one go.
+
+**`.claude/launch.json` serves the GRAV site, not the repo root.** Pointing a
+plain static server at the repo root serves `index.html` — the one-page static
+site, frozen — which looks exactly like the new work having failed to appear.
+That is the trap; the entry exists to stop anyone falling into it.
+
+Three things about that install were each a dead end first:
+
+- It lives in `.grav-dev/` **inside** the repo, which needs justifying because
+  the repo root is the static site's web root. It is gitignored, and the static
+  upload set is built from `git ls-files`, which cannot list an ignored path —
+  verified. Outside the repo is safer and was the first attempt; the editor's
+  preview sandbox cannot reach the parent directory.
+- Grav's `system/router.php` does `require 'index.php'` **relative to the working
+  directory**, and the preview runs php from the repo root, so it died with
+  "Failed to open stream". The script generates a `dev-router.php` shim that
+  chdirs first and returns whatever the real router returns — that value matters,
+  because the router returns `false` for static files it wants the built-in
+  server to handle.
+- Grav needs an `images/` folder in the docroot. It is the processed-image cache,
+  and without it every page is a 500 that says "Essential Folders".
 
 **In the Browser pane the tab is hidden, so CSS transitions never run and
 scrolled screenshots do not paint.** Elements with `.reveal` read as
