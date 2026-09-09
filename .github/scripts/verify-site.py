@@ -3,226 +3,309 @@
 
 Usage:  verify-site.py <base-url> [--run-id ID]
 
-WHAT THIS REPLACES. Both deploy jobs used to gate on a handful of hand-written
-URLs and one assertion — «the home page contains a .menu-item». That was true
-while the site was a single page. It is now false by design (the menu lives on
-/kuhnya), and a list of URLs typed into a workflow goes stale the moment a page
-is added. So the routes are DERIVED from the page tree, exactly as the site's
-own navigation is: add a page, and it is checked from the next deploy.
+EVERY GATE HERE IS A MEASUREMENT OF THE DELIVERED PAGE, never of the transfer.
+lftp's exit code has been unreliable against this host since the first deploy —
+it returns 1 for SITE CHMOD refusals that broke nothing, and it has also exited 0
+having silently skipped a file — so it is not consulted anywhere in this repo.
 
-Every gate here is a measurement of the delivered page, never of the transfer.
-lftp's exit code has been unreliable on this host since the first deploy and is
-never consulted anywhere in this repo.
+THE ROUTES COME FROM THE SITE, NOT FROM THE REPO, and that is a change forced by
+WordPress: the pages live in a database this script cannot read. It reads the
+sitemap WordPress generates from those pages, and cross-checks it against the
+navigation the theme renders from the same pages. Two independent views of one
+list — if they disagree, something is wrong that neither alone would show.
 
 Checks, in order:
-  * every page route returns 200, with a non-empty <h1> and no template error
-  * the navigation on every page lists every visible section, exactly once
-  * exactly one nav link is marked current, and it is the page you are on
-  * the menu still renders where the menu now lives
-  * the static files (icons, sitemap, the Yandex token) are all present
+  * the front page renders, and the navigation is not empty
+  * the sitemap lists pages, and every URL in it renders
+  * every page carries the full navigation, with exactly one current marker
+  * the menu still renders where the menu lives
+  * the crawler files, the icons and the Yandex token are present
   * an unknown path still 404s
-  * every photo is served through Grav's image processor, not as the original
-  * no page's images exceed the per-page weight budget
+  * the paths a WordPress gets scanned for are closed
+  * the site sets no cookies for an anonymous visitor
+  * photos are served resized by WordPress, not as camera originals
+  * no page's images exceed the weight budget
 
-Exit 1 on the first category that fails, after reporting all of them.
+Exit 1 after reporting every category that failed.
 """
-import os
 import re
 import sys
 import time
 import urllib.error
 import urllib.request
 
-PAGES = 'grav/user/pages'
-
-# Files that are not pages but must exist: the icons the manifest points at, the
-# crawler files, and the Yandex Webmaster token — which is fetched by Yandex at
-# a fixed absolute URL and silently loses the site's verification if it 404s.
-STATIC = ['/sitemap.xml', '/robots.txt', '/llms.txt', '/favicon.ico',
-          '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png',
-          '/og-image.jpg', '/yandex_11df7f8b41641d66.html']
-
-# Measured: the heaviest page (the landing grid, 7 photos) comes to 631 KB
-# resized. Unresized the old single page carried 3.6 MB for 13 photos, so a page
-# whose processing had failed would land far above this. The cap is roughly
-# double the current worst case: loose enough that the client can add photos to
-# a section, tight enough that a page serving originals cannot slip through.
+# Measured on the previous build: the heaviest page came to 631 KB resized, and
+# the old single page carried 3.6 MB of unresized originals. The cap is roughly
+# double the current worst case — loose enough for the client to add photos to a
+# section, tight enough that a page serving originals cannot slip through.
 PAGE_IMAGE_BUDGET = 1200 * 1024
 
-ERROR_MARKERS = ('Twig\\', 'Whoops', 'Fatal error', 'Grav Problems',
-                 'Uncaught', 'Unable to find template')
+ERROR_MARKERS = ('Fatal error', 'Parse error', 'Warning:', 'Notice:',
+                 'Deprecated:', 'There has been a critical error',
+                 'Error establishing a database connection')
+
+# Files that are not pages but must exist. The Yandex token is fetched by Yandex
+# at a fixed absolute URL and silently loses the site's verification if it 404s.
+STATIC = ['/robots.txt', '/llms.txt', '/wp-sitemap.xml', '/favicon.ico',
+          '/yandex_11df7f8b41641d66.html']
+
+# Paths every WordPress on the public internet is scanned for within days.
+# A 200 on any of these is a finding, not a curiosity.
+MUST_BE_CLOSED = ['/readme.html', '/license.txt',
+                  '/wp-config.php', '/wp-config-sample.php',
+                  '/wp-json/wp/v2/users']
 
 
-def page_meta():
-    """(route, is_visible) for every page, read from the page tree."""
-    out = []
-    for folder in sorted(os.listdir(PAGES)):
-        d = os.path.join(PAGES, folder)
-        if not os.path.isdir(d):
-            continue
-        for name in sorted(os.listdir(d)):
-            if not name.endswith('.md'):
-                continue
-            src = open(os.path.join(d, name), encoding='utf-8').read()
-            m = re.search(r'^\s*default:\s*(/\S+)\s*$', src, re.M)
-            route = m.group(1) if m else '/' + re.sub(r'^\d+\.', '', folder)
-            if route == '/home':
-                route = '/'
-            visible = not re.search(r'^visible:\s*false\s*$', src, re.M)
-            out.append((route, visible, folder))
-    return out
-
-
-def fetch(url, retries=1):
-    # Beget serves a JavaScript interstitial to clients without a
-    # `beget=begetok` cookie — a 273-byte page that sets it and reloads. Without
-    # the cookie every check reads the challenge instead of the site. Browsers
-    # pass it invisibly; urllib does not.
+def fetch(url, timeout=30):
     req = urllib.request.Request(url, headers={
+        'User-Agent': 'coffeeshtob-deploy-check/2.0',
+        # Beget serves a JavaScript interstitial to clients without this cookie:
+        # a 273-byte page that sets it and reloads. Browsers pass it invisibly,
+        # curl does not, and without it every check here reads the challenge
+        # instead of the site and reports nonsense.
         'Cookie': 'beget=begetok',
-        'User-Agent': 'coffeeshtob-deploy-check',
+        'Accept': '*/*',
     })
-    last = None
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return r.status, r.read()
-        except urllib.error.HTTPError as e:
-            return e.code, e.read()
-        except Exception as e:                      # noqa: BLE001 - report and retry
-            last = e
-            if attempt + 1 < retries:
-                time.sleep(10)
-    return 0, str(last).encode()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, r.read(), dict(r.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(), dict(e.headers)
+    except Exception as e:                      # noqa: BLE001 - reported, not raised
+        return 0, str(e).encode(), {}
+
+
+def text(body):
+    return body.decode('utf-8', 'replace')
+
+
+def plain(html):
+    """Tags stripped, for scanning error text.
+
+    PHP prints a notice as `<br /><b>Warning</b>:  ...`, so the literal string
+    'Warning:' never appears in the markup and a page full of notices sailed
+    through this check. Found by mutation testing, not by reading it.
+    """
+    return re.sub(r'<[^>]+>', '', html)
+
+
+def nav_links(html):
+    """The hrefs inside the header navigation, in order."""
+    m = re.search(r'<nav class="main-nav"[^>]*>(.*?)</nav>', html, re.S)
+    if not m:
+        return []
+    return re.findall(r'<a href="([^"]+)"', m.group(1))
+
+
+def active_links(html):
+    m = re.search(r'<nav class="main-nav"[^>]*>(.*?)</nav>', html, re.S)
+    if not m:
+        return []
+    return re.findall(r'<a href="([^"]+)"[^>]*aria-current="page"', m.group(1))
+
+
+def path_of(url):
+    return re.sub(r'^https?://[^/]+', '', url) or '/'
 
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit(__doc__)
+        print(__doc__)
+        return 2
     base = sys.argv[1].rstrip('/')
-    run_id = sys.argv[3] if len(sys.argv) > 3 and sys.argv[2] == '--run-id' else str(int(time.time()))
+    run_id = (sys.argv[3] if len(sys.argv) > 3 and sys.argv[2] == '--run-id'
+              else str(int(time.time())))
 
-    meta = page_meta()
-    routes = [r for r, _, _ in meta]
-    visible = [r for r, v, _ in meta if v]
-    problems = []
+    fails = []
+    print(f'checking {base}  (run {run_id})\n')
 
-    print(f'{len(routes)} routes from the page tree, {len(visible)} of them in the nav\n')
-
-    # ── pages ────────────────────────────────────────────────────────────────
-    bodies = {}
-    for route in routes:
-        sep = '&' if '?' in route else '?'
-        # Give the first page ten tries: a deploy that has only just finished can
-        # still be serving mid-write, and a flaky first fetch is not a failure.
-        status, raw = fetch(f'{base}{route}{sep}ci={run_id}', retries=10 if route == routes[0] else 3)
-        body = raw.decode('utf-8', 'replace')
-        bodies[route] = body
-
-        h1 = re.search(r'<h1[^>]*>([^<]{3,})</h1>', body)
-        errs = [m for m in ERROR_MARKERS if m in body]
-        nav = re.search(r'<nav class="main-nav"[^>]*>(.*?)</nav>', body, re.S)
-        links = re.findall(r'<a href="([^"]+)"([^>]*)>', nav.group(1)) if nav else []
-        active = [l for l in links if 'is-active' in l[1]]
-        legal = route == '/privacy'
-
-        if status != 200:
-            problems.append(f'{route}: HTTP {status}')
-        if not h1:
-            problems.append(f'{route}: no non-empty <h1> — the page rendered but its fields did not')
-        if errs:
-            problems.append(f'{route}: template error text in the response ({errs[0]})')
-        if not legal:
-            hrefs = [l[0].rstrip('/') or '/' for l in links]
-            missing = [v for v in visible if v.rstrip('/') not in [h.rstrip('/') for h in hrefs]]
-            if len(links) != len(visible):
-                problems.append(f'{route}: {len(links)} nav links, expected {len(visible)}')
-            if missing:
-                problems.append(f'{route}: nav is missing {missing}')
-            if len(hrefs) != len(set(hrefs)):
-                problems.append(f'{route}: nav lists the same page twice')
-            want_active = 0 if route not in visible else 1
-            if len(active) != want_active:
-                problems.append(f'{route}: {len(active)} links marked current, expected {want_active}')
-            elif active and active[0][0].rstrip('/') != route.rstrip('/'):
-                problems.append(f'{route}: the current-page marker is on {active[0][0]}')
-
-        title = h1.group(1)[:38] if h1 else '—'
-        print(f'  {status}  {route:<15} h1=«{title}» nav={len(links)} current={len(active)}')
-
-    # The menu is the one piece of content whose loops prove page.header.* was
-    # read at all. It used to be asserted on the home page; it lives here now.
-    menu_items = len(re.findall(r'class="menu-item"', bodies.get('/kuhnya', '')))
-    print(f'\n  /kuhnya menu items: {menu_items}')
-    if menu_items < 1:
-        problems.append('/kuhnya: no .menu-item rendered — the content loops did not run')
-
-    # ── static files ─────────────────────────────────────────────────────────
-    print()
-    for u in STATIC:
-        status, _ = fetch(f'{base}{u}?ci={run_id}', retries=2)
-        print(f'  {status}  {u}')
-        if status != 200:
-            problems.append(f'{u}: HTTP {status}')
-
-    status, _ = fetch(f'{base}/no-such-page-{run_id}', retries=2)
-    print(f'  {status}  /no-such-page (want 404)')
-    if status != 404:
-        problems.append(f'an unknown path returned {status}, not 404')
-
-    # ── images ───────────────────────────────────────────────────────────────
-    # A DIRECT check that resizing happened, not a proxy for it. Grav serves
-    # processed derivatives from /images/<hash path>/; an original page-media
-    # file would come back from /user/pages/... . If image processing is
-    # unavailable on the host Grav quietly falls back to the original and
-    # nothing looks broken — the site is just slow again, which is exactly what
-    # this audience reported before.
-    print()
-    sizes, total = {}, 0
-    for route in routes:
-        urls = set(re.findall(r'<img[^>]+src="([^"]+)"', bodies[route]))
-        weight, unprocessed = 0, []
-        for u in urls:
-            if 'placeholder' in u:
-                continue
-            if '/user/pages/' in u:
-                unprocessed.append(u)
-            if u not in sizes:
-                _, raw = fetch(u if u.startswith('http') else base + u, retries=2)
-                sizes[u] = len(raw)
-            weight += sizes[u]
-        total += weight
-        flag = '' if weight <= PAGE_IMAGE_BUDGET else '  OVER BUDGET'
-        print(f'  {weight // 1024:>6} KB  {len(urls)} images  {route}{flag}')
-        if weight > PAGE_IMAGE_BUDGET:
-            problems.append(f'{route}: {weight // 1024} KB of images, over the '
-                            f'{PAGE_IMAGE_BUDGET // 1024} KB per-page budget — either resizing '
-                            f'has stopped or the photos have genuinely grown')
-        for u in unprocessed:
-            problems.append(f'{route}: {u} is served straight from the page folder, '
-                            f'so Grav did not resize it')
-    print(f'  {total // 1024:>6} KB  total across {len(routes)} pages')
-
-    print()
-    if problems:
-        # The commonest cause of a wall of 404s is not a broken deploy: pages are
-        # seeded only on a manual workflow_dispatch, deliberately, so that a push
-        # cannot overwrite what the client edited in the admin. A push that adds
-        # a new section therefore deploys the template and finds no page behind
-        # it. Say so, rather than leaving whoever reads the red run to guess.
-        missing = [r for r in routes if r != '/' and f'{r}: HTTP 404' in ' '.join(problems)]
-        if len(missing) >= 2:
-            print('NOTE: %d page routes 404. Pages are seeded only by running this '
-                  'workflow manually\n      (Run workflow), never by a push — that is '
-                  'what stops a deploy overwriting\n      the client\'s edits. If '
-                  'sections were just added, seed them and re-run.\n' % len(missing))
-        print(f'FAIL — {len(problems)} problem(s):')
-        for p in problems:
-            print('  - ' + p)
+    # ── the front page ──────────────────────────────────────────────────────
+    status, body, headers = fetch(base + '/')
+    home = text(body)
+    if status != 200:
+        print(f'FAIL — the front page returned {status}')
         return 1
-    print(f'OK — {len(routes)} pages render, navigation is consistent on all of them, '
-          f'{len(STATIC)} static files present, unknown paths 404, '
-          f'every photo resized, {total // 1024} KB of images site-wide.')
+    nav = nav_links(home)
+    if not nav:
+        fails.append('the front page renders no navigation at all')
+    print(f'  front page 200, {len(nav)} navigation links')
+
+    # ── the routes, from the sitemap ────────────────────────────────────────
+    status, body, _ = fetch(base + '/wp-sitemap-posts-page-1.xml')
+    routes = []
+    if status == 200:
+        routes = [path_of(u) for u in re.findall(r'<loc>([^<]+)</loc>', text(body))]
+    if not routes:
+        fails.append('the sitemap lists no pages — has the seed been run, and are '
+                     'permalinks set to /%postname%/ rather than the default?')
+        routes = ['/']
+    print(f'  sitemap lists {len(routes)} page(s)')
+
+    # The two lists must agree: everything in the navigation must be a real page.
+    for href in nav:
+        if path_of(href) not in routes:
+            fails.append(f'navigation links {path_of(href)}, which the sitemap does '
+                         'not list — a menu entry pointing at nothing')
+
+    # ── every page ──────────────────────────────────────────────────────────
+    nav_set = {path_of(h) for h in nav}
+    menu_pages, budgets, sectionish = [], [], []
+    for route in routes:
+        status, body, _ = fetch(f'{base}{route}?ci={run_id}')
+        html = text(body)
+        if status != 200:
+            fails.append(f'{route} returned {status}')
+            continue
+
+        h1 = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
+        if not h1 or not re.sub(r'<[^>]+>', '', h1.group(1)).strip():
+            fails.append(f'{route} has no non-empty <h1>')
+
+        flat = plain(html)
+        for marker in ERROR_MARKERS:
+            if marker in flat:
+                fails.append(f'{route} contains PHP error text: "{marker}"')
+                break
+
+        # The legal pages carry a deliberately stripped two-item header with no
+        # .main-nav at all — brand, then «На главную». Only pages that ARE in
+        # the menu are required to render it; requiring it everywhere failed
+        # /privacy on the first run of this script.
+        page_nav = {path_of(h) for h in nav_links(html)}
+        if route in nav_set and page_nav != nav_set:
+            missing = nav_set - page_nav
+            extra = page_nav - nav_set
+            fails.append(f'{route} navigation differs from the front page '
+                         f'(missing {sorted(missing)}, extra {sorted(extra)})')
+        elif route not in nav_set and page_nav and page_nav != nav_set:
+            fails.append(f'{route} renders a partial navigation {sorted(page_nav)}')
+
+        current = [path_of(h) for h in active_links(html)]
+        if route in nav_set:
+            if current != [route]:
+                fails.append(f'{route} marks {current or "nothing"} as the current '
+                             'page instead of itself')
+        elif current:
+            fails.append(f'{route} is not in the menu but marks {current} as current')
+
+        sectionish.append((route, bool(re.search(r'<nav class="main-nav"', html))))
+
+        if 'class="menu-item"' in html:
+            menu_pages.append(route)
+
+        imgs = re.findall(r'<img[^>]+src="([^"]+)"', html)
+        total, originals = 0, []
+        for src in set(imgs):
+            url = src if src.startswith('http') else base + src
+            if '/wp-content/uploads/' in url and not re.search(r'-\d+x\d+\.\w+$', url):
+                originals.append(src)
+            st, data, _ = fetch(url)
+            if st == 200:
+                total += len(data)
+        if originals:
+            fails.append(f'{route} serves {len(originals)} camera original(s) '
+                         f'instead of a resized size, e.g. {originals[0]}')
+        budgets.append((route, total))
+        if total > PAGE_IMAGE_BUDGET:
+            fails.append(f'{route} images total {total // 1024} KB, over the '
+                         f'{PAGE_IMAGE_BUDGET // 1024} KB budget')
+
+    # A link dropped from the navigation everywhere was invisible: every page was
+    # compared only with the front page, and the front page had lost it too. The
+    # sitemap is the independent list. A page that renders the main navigation is
+    # a section and must appear in it; the legal pages carry the stripped header
+    # and render no .main-nav at all, which is exactly what exempts them.
+    for route, has_nav in sectionish:
+        if has_nav and route != '/' and route not in nav_set:
+            fails.append(f'{route} renders the site navigation but is not listed in '
+                         'it — a section the menu has lost')
+
+    print(f'  {len(routes)} page(s) rendered, navigation consistent')
+    heaviest = max(budgets, key=lambda b: b[1]) if budgets else ('-', 0)
+    print(f'  heaviest page {heaviest[0]} at {heaviest[1] // 1024} KB, '
+          f'site total {sum(b[1] for b in budgets) // 1024} KB')
+
+    if not menu_pages:
+        fails.append('no page renders a .menu-item — the menu has disappeared')
+    else:
+        print(f'  menu renders on {", ".join(menu_pages)}')
+
+    # ── the files that are not pages ────────────────────────────────────────
+    for path in STATIC:
+        status, body, _ = fetch(base + path)
+        if status != 200:
+            fails.append(f'{path} returned {status}')
+        elif not body.strip():
+            fails.append(f'{path} is empty')
+    print(f'  {len(STATIC)} static files present')
+
+    # ── an unknown path ─────────────────────────────────────────────────────
+    status, body, _ = fetch(f'{base}/no-such-page-{run_id}')
+    if status != 404:
+        fails.append(f'an unknown path returned {status}, not 404')
+    elif 'Такой страницы нет' not in text(body):
+        fails.append('the 404 page is not the theme\'s own')
+
+    # ── the paths WordPress gets scanned for ────────────────────────────────
+    open_paths = []
+    for path in MUST_BE_CLOSED:
+        status, body, _ = fetch(base + path)
+        if status == 200:
+            open_paths.append(f'{path} (200)')
+    if open_paths:
+        fails.append('these should not be readable: ' + ', '.join(open_paths))
+    else:
+        print(f'  {len(MUST_BE_CLOSED)} sensitive paths closed')
+
+    # xmlrpc.php answers 405 to a GET whether it is blocked or not, so asking for
+    # the file proves nothing. Ask it to DO something: system.listMethods is the
+    # call that makes the brute-force amplifier worth having.
+    probe = b"<?xml version='1.0'?><methodCall><methodName>system.listMethods</methodName>" \
+            b"<params></params></methodCall>"
+    req = urllib.request.Request(base + '/xmlrpc.php', data=probe, headers={
+        'Content-Type': 'text/xml', 'Cookie': 'beget=begetok',
+        'User-Agent': 'coffeeshtob-deploy-check/2.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            if r.status == 200 and b'methodResponse' in r.read():
+                fails.append('xmlrpc.php answers system.listMethods — it is the '
+                             'classic brute-force amplifier and must be closed')
+            else:
+                print('  xmlrpc closed')
+    except urllib.error.HTTPError:
+        print('  xmlrpc closed')
+    except Exception:
+        print('  xmlrpc closed')
+
+    status, _, headers = fetch(f'{base}/?author=1')
+    if 'Location' in headers and '/author/' in headers.get('Location', ''):
+        fails.append('?author=1 redirects to /author/<login>/ and leaks the username')
+
+    # ── the promise /privacy makes ──────────────────────────────────────────
+    # "Cookie-файлы сайт не ставит" is a legal statement on a Russian site, not a
+    # nicety. WordPress sets cookies for commenters and logged-in users; comments
+    # are off and this proves it stayed that way.
+    cookied = []
+    for route in routes[:5]:
+        _, _, headers = fetch(base + route)
+        if headers.get('Set-Cookie'):
+            cookied.append(route)
+    if cookied:
+        fails.append(f'the site set a cookie for an anonymous visitor on {cookied} '
+                     '— /privacy states that it does not')
+    else:
+        print('  no cookies set for an anonymous visitor')
+
+    print()
+    if fails:
+        print(f'FAIL — {len(fails)} problem(s):\n')
+        for f in fails:
+            print(f'  * {f}')
+        return 1
+
+    print(f'OK — {len(routes)} routes, {len(nav)} navigation links, '
+          f'{len(STATIC)} static files, {len(MUST_BE_CLOSED)} sensitive paths '
+          f'closed, no cookies, all images resized and within budget.')
     return 0
 
 

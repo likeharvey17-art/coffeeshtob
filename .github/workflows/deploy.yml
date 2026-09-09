@@ -1,23 +1,49 @@
 name: Deploy to Beget
 
-# Replaces the GitLab FTPS job, which died with the GitLab account. Beget is
-# plain file hosting — it has no idea the repo changed — so without this, an
-# edit lands in git and never reaches visitors.
+# Beget is plain file hosting — it has no idea the repo changed — so without this
+# an edit lands in git and never reaches visitors.
 #
-# SETUP — repo Settings > Secrets and variables > Actions > New repository secret:
-#   FTP_HOST      tryphopx.beget.tech
-#   FTP_USER      the FTP account login
-#   FTP_PASSWORD  its password
-#   REMOTE_DIR    /coffeeshtob.ru/public_html
+# WHAT THIS DEPLOYS, AND WHAT IT MUST NEVER TOUCH.
+#
+# The site is WordPress. WordPress itself, its plugins and — above all —
+# wp-content/uploads/ and wp-config.php belong to the SERVER, not to this repo.
+# The client edits pages in wp-admin and uploads photographs; none of that is in
+# git and none of it can be recreated from git. So this job writes exactly two
+# places:
+#
+#   wp-content/themes/coffeeshtob/   ours, mirrored with --delete
+#   the document root                four files, mirrored WITHOUT --delete
+#
+# The second one matters more than it looks: its neighbours are wp-config.php,
+# wp-content/ and WordPress's own core files. A --delete there would remove the
+# entire installation and every photograph the client has ever uploaded.
+#
+# SETUP — Settings → Secrets and variables → Actions:
+#   Secrets    FTP_HOST, FTP_USER, FTP_PASSWORD, REMOTE_DIR
+#   Variable   SITE_URL   e.g. https://coffeeshtob.ru
+#
+# SITE_URL is a variable rather than a hardcoded string because this project has
+# now changed hosting three times, and each move meant editing a URL buried in a
+# workflow. Moving to another Beget account is four secrets and one variable.
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'wp-content/**'
+      - 'web-root/**'
+      - '.github/workflows/deploy.yml'
+      - '.github/scripts/**'
   workflow_dispatch:
+    inputs:
+      upload_seed:
+        description: 'Also upload the one-time starting content (a fresh install only)'
+        type: boolean
+        default: false
 
-# Never let two deploys interleave over the same FTP tree. Queue instead of
-# cancelling: a half-finished mirror that gets cancelled leaves the site in a
-# mixed state, which is worse than waiting.
+# Never let two deploys interleave over the same FTP tree. Queue rather than
+# cancel: a half-finished mirror that gets cancelled leaves the site in a mixed
+# state, which is worse than waiting.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -28,291 +54,46 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # WHAT THIS SITE IS depends on where the cutover has got to, and getting it
-      # wrong is the worst thing this repo can do. The mode lives in a tracked
-      # file rather than a repo variable so the state is visible in the diff, and
-      # so flipping it is a reviewable commit made at the same moment as the
-      # Beget docroot change.
-      - name: Read the deploy mode
-        run: |
-          set -euo pipefail
-          MODE=$(tr -d '[:space:]' < .deploy-mode)
-          case "$MODE" in
-            static|grav) ;;
-            *) echo ".deploy-mode must be 'static' or 'grav', found '$MODE'"; exit 1 ;;
-          esac
-          echo "MODE=$MODE" >> "$GITHUB_ENV"
-          echo "deploying in '$MODE' mode"
-
-      - name: Check the secrets exist
+      - name: Check the secrets and the site URL exist
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+          SITE_URL: ${{ vars.SITE_URL }}
         run: |
           missing=
-          for v in FTP_HOST FTP_USER FTP_PASSWORD REMOTE_DIR; do
+          for v in FTP_HOST FTP_USER FTP_PASSWORD REMOTE_DIR SITE_URL; do
             [ -n "${!v}" ] || missing="$missing $v"
           done
           if [ -n "$missing" ]; then
-            echo "Missing repository secret(s):$missing"
-            echo "Add them under Settings > Secrets and variables > Actions."
+            echo "Missing:$missing"
+            echo "Secrets and the SITE_URL variable live under"
+            echo "Settings → Secrets and variables → Actions."
             exit 1
           fi
 
-      # THE INTERLOCK. In static mode the very next steps mirror plain HTML into
-      # the docroot with --delete, which against a Grav install would delete
-      # Grav's core, the client's pages and every photo they ever uploaded — a
-      # loss no deploy can undo, caused by nothing more than a stray push after
-      # the cutover.
-      #
-      # So it is checked against the server rather than assumed: `system/defines.php`
-      # exists in every Grav install and in no static site. If it is there, this
-      # job refuses to run in static mode and says what to do about it.
-      #
-      # This is deliberately a server-side fact, not a re-reading of .deploy-mode.
-      # The file says what we intend; this says what is actually there, and the
-      # dangerous case is precisely the one where the two disagree.
-      - name: Refuse to overwrite a Grav install with static files
-        if: env.MODE == 'static'
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
-        run: |
-          set -uo pipefail
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
-          found=$(lftp -c "
-            set ftp:ssl-allow true; set ftp:ssl-force true;
-            set ssl:verify-certificate no; set cmd:fail-exit false;
-            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            cls -1 '$REMOTE_DIR/system/defines.php';
-          " </dev/null 2>/dev/null | grep -c . || true)
-          if [ "$found" -gt 0 ]; then
-            echo "REFUSING TO DEPLOY."
-            echo
-            echo "$REMOTE_DIR contains system/defines.php, so it is a Grav install,"
-            echo "but .deploy-mode still says 'static'. Mirroring static files over it"
-            echo "with --delete would destroy Grav and every edit the client has made."
-            echo
-            echo "If the cutover has happened, commit .deploy-mode containing 'grav'."
-            echo "If it has not, check REMOTE_DIR points at the static site's docroot."
-            exit 1
-          fi
-          echo "target is not a Grav install — safe to continue in static mode"
-
-      # Built from `git ls-files` rather than mirroring the checkout, so the
-      # upload set is exactly what is tracked — no .git, no runner droppings,
-      # and nothing that happens to be lying around.
-      #
-      # `grav/` is excluded because it belongs to the OTHER site. It holds the
-      # Grav theme for the staging install and has no meaning on the static
-      # production site. Adding it to the repo without adding it here shipped
-      # the whole theme — CSS, fonts, images, templates, page content — to
-      # coffeeshtob.ru, where /grav/user/themes/coffeeshtob/css/style.css was
-      # publicly serving 200. Whenever a directory is added to this repo for a
-      # different deploy target, it has to be excluded here in the same commit.
-      - name: Assemble the upload set
-        if: env.MODE == 'static'
-        run: |
-          set -euo pipefail
-          rm -rf _deploy && mkdir _deploy
-          git ls-files \
-            | grep -vE '^(CLAUDE\.md|\.gitignore|\.github/|\.claude/|grav/)' \
-            | while IFS= read -r f; do
-                mkdir -p "_deploy/$(dirname "$f")"
-                cp "$f" "_deploy/$f"
-              done
-
-          # Assert rather than hope. A silently empty or half-built set would
-          # be mirrored with --delete and would take the live site with it.
-          test -f _deploy/index.html            || { echo "no index.html"; exit 1; }
-          test -f _deploy/.htaccess             || { echo "no root .htaccess"; exit 1; }
-          test -f _deploy/images/uploads/.htaccess || { echo "no uploads .htaccess"; exit 1; }
-          test ! -e _deploy/CLAUDE.md           || { echo "CLAUDE.md leaked"; exit 1; }
-          test ! -e _deploy/.git                || { echo ".git leaked"; exit 1; }
-          n=$(find _deploy -type f | wc -l)
-          [ "$n" -ge 40 ] || { echo "only $n files assembled — refusing to deploy"; exit 1; }
-          echo "assembled $n files"
-
-      # nginx serves static files on Beget and ignores .htaccess, so its own
-      # cache headers win (style.css comes back with a week-long max-age). No
-      # filename here carries a content hash, so the URL carries the version
-      # instead. Stamping it from the commit means a deploy always reaches
-      # people who have already visited, without anyone remembering to bump it.
-      - name: Stamp asset version from the commit
-        if: env.MODE == 'static'
-        run: |
-          set -euo pipefail
-          V="${GITHUB_SHA::7}"
-          # An empty V is the dangerous case, not a missing one: sed would
-          # happily write "?v=" and the count check below would still see seven
-          # matches and pass, shipping an unversioned site that looks fine. This
-          # was caught in a local dry run where GITHUB_SHA happened to be unset.
-          [ -n "$V" ] || { echo "GITHUB_SHA is empty — refusing to stamp"; exit 1; }
-          for f in index.html privacy.html 404.html; do
-            sed -i -E "s/\?v=[A-Za-z0-9_.-]+/?v=$V/g" "_deploy/$f"
-          done
-          n=$(grep -ho "?v=$V" _deploy/index.html _deploy/privacy.html _deploy/404.html | wc -l)
-          [ "$n" -eq 7 ] || { echo "expected 7 versioned refs, stamped $n"; exit 1; }
-          echo "stamped ?v=$V on $n references"
+      # Cheap, offline, and it runs before anything is uploaded. WordPress
+      # returns an empty string for a meta key that does not exist, so a renamed
+      # field is a blank section with a 200 response — no error anywhere. This is
+      # the third platform this project has used and the third on which that same
+      # bug was possible; it is checked rather than remembered.
+      - name: Check the theme's field names agree
+        run: python3 .github/scripts/check-fields.py
 
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # ABOUT THE DATA CHANNEL, AND WHAT IS ACTUALLY ESTABLISHED.
+      # THE INTERLOCK. Everything below writes into a directory it assumes is a
+      # WordPress root. Pointed at the wrong path — a stale REMOTE_DIR after an
+      # account move, most likely — it would scatter a theme directory into
+      # somebody else's docroot and then report success, because the URL checks
+      # at the end run against SITE_URL and not against what was actually
+      # written.
       #
-      # Beget loses some files during a mirror — deterministically the same
-      # ones, independent of size, type and directory. og-image.jpg has failed
-      # this way since the first deploy. lftp reported only "max-retries
-      # exceeded", which produced four wrong theories; asked with debug 3, the
-      # server said what it was doing:
-      #
-      #   <--- 426 Failure reading network stream.
-      #
-      # The repair ladder was built to find which transport survives, and the
-      # first result looked conclusive — with the mirror on an encrypted data
-      # channel, the encrypted rung failed and the plaintext rung succeeded, so
-      # the mirrors were switched to plaintext.
-      #
-      # THE NEXT RUN UNDERCUT THAT. With the mirror on plaintext, the mirror
-      # still lost og-image.jpg, and the repair's FIRST rung — the identical
-      # setting — put it there without complaint. So encryption is not the
-      # discriminator. What differs is that the repair issues one `put` on a
-      # fresh connection, while the mirror is a long-lived session that has
-      # already moved dozens of files by the time it reaches this one.
-      #
-      # That is an observation, not a theory to act on: two runs is not enough
-      # to name a cause, and this project has already spent days on confident
-      # explanations of this exact symptom. What IS established is that the
-      # repair pass lands the file every time and the URL checks prove the
-      # outcome. Plaintext is kept because it costs nothing — the control
-      # connection stays TLS, so the password is never in the clear, and the
-      # file bytes are about to be public anyway — not because it was shown to
-      # be the fix.
-      - name: Mirror to Beget over FTPS
-        if: env.MODE == 'static'
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
-        run: |
-          # --no-perms is why this job stopped going red on every single run.
-          #
-          # lftp's mirror sets permissions on each file after transferring it,
-          # and Beget's FTP server refuses outright:
-          #
-          #   chmod: Access failed: 550 SITE CHMOD command failed. (./inter-latin.woff2)
-          #   Error: Process completed with exit code 1
-          #
-          # Every file transferred correctly — the deploy always worked, the
-          # site always updated — and lftp still exited 1 because the chmod
-          # calls were rejected. Every red run up to this point was that, and it
-          # sent three separate investigations chasing a broken file that was
-          # never broken. --no-perms stops lftp attempting chmod at all.
-          #
-          # This is also the most credible explanation yet for og-image.jpg (see
-          # below): a chmod failure mid-mirror plausibly aborted the remaining
-          # queue. That has NOT been confirmed, and the exclude stays until a
-          # green run proves the flag works on its own.
-          #
-          # --delete makes the server match the repo exactly, so a file deleted
-          # here disappears there and stale assets cannot accumulate. That is
-          # also what makes the two excludes below load-bearing:
-          #
-          #   cgi-bin/     Beget creates it in every docroot. It is not in the
-          #                repo, so --delete would remove it.
-          #   .well-known/ where Let's Encrypt writes its ACME challenge. Wiping
-          #                it mid-renewal breaks certificate renewal every 90
-          #                days, and the failure would look like nothing to do
-          #                with deploys.
-          #
-          #   og-image.jpg is parked behind this exclude, and the CAUSE IS NOW
-          #     KNOWN — it is a transfer failure, not anything about the file.
-          #
-          #     The repair script printed it:
-          #
-          #       put: _deploy/fonts/inter-latin.woff2: Fatal error: max-retries exceeded
-          #
-          #     A second file, fonts/inter-latin.woff2, started failing the same
-          #     way. Both are ordinary files that upload fine by hand; an 85 KB
-          #     font sitting beside the failing 48 KB one goes up without
-          #     complaint, so it was never size, type or location. lftp simply
-          #     exhausts its retries on some transfers against this server.
-          #
-          #     --parallel=1 and the raised retry/timeout settings above were
-          #     an attempt at a per-account connection limit on Beget's FTP.
-          #     THAT THEORY IS DISPROVEN — run #15 serialised every transfer and
-          #     inter-latin.woff2 went missing exactly as before. The settings
-          #     stay because serial transfers cost nothing here and remove a
-          #     variable, not because they fixed anything.
-          #
-          #     Four theories have now failed, all of them guesses at a message
-          #     that never named a cause. The verification step below now runs
-          #     `debug 3` on whatever is still missing, so the next red run
-          #     prints what the server actually says instead of inviting a
-          #     fifth guess.
-          #
-          #     The exclude stays only until a run proves inter-latin.woff2
-          #     transfers reliably. If it does, remove this exclude — the
-          #     manifest check will then say plainly whether og-image.jpg
-          #     follows. Until then the file must be uploaded by hand, and this
-          #     exclude is what stops --delete removing that copy.
-          #
-          # WHEN GRAV LANDS: content will be edited on the server rather than
-          # committed, at which point --delete will destroy the client's work on
-          # the next push. Add --exclude user/ (or whatever holds content and
-          # uploads) then, or drop --delete.
-          # lftp's exit code is NOT the gate here, deliberately. On this host it
-          # returns 1 for things that are not failures — SITE CHMOD refusals
-          # were the first, and --no-perms did not make it exit 0, so there is
-          # at least one more. Meanwhile the transfers themselves have worked
-          # every single time: the site updated on every one of those red runs.
-          #
-          # So this step reports, and the manifest check that follows decides.
-          # That check compares every expected file against a remote listing and
-          # repairs anything missing — a direct measurement of the outcome we
-          # actually care about, rather than a tool's opinion about it. A real
-          # transfer failure still fails the job, just one step later and with
-          # the missing filenames printed.
-          set +e
-          lftp -c "
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data false;
-            set ssl:verify-certificate no;
-            set net:max-retries 8;
-            set net:timeout 40;
-            set net:reconnect-interval-base 5;
-            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --no-perms --verbose --parallel=1 \
-              --exclude-glob cgi-bin/ \
-              --exclude-glob .well-known/ \
-              --exclude-glob og-image.jpg \
-              _deploy/ '$REMOTE_DIR';
-          "
-          rc=$?
-          set -e
-          [ $rc -eq 0 ] && echo "mirror exited cleanly" \
-                        || echo "mirror exited $rc — verification below decides whether that mattered"
-
-      # lftp exits 0 having silently skipped files. Confirmed on this host:
-      # og-image.jpg — tracked, in the upload set, 42 KB, a valid JPEG — was
-      # skipped by `mirror` on two consecutive runs, while uploading the same
-      # file by hand through Beget's File Manager worked first time and served
-      # correctly. So the server is fine and lftp is the problem, and the cause
-      # is not reproducible without this specific FTP endpoint.
-      #
-      # Rather than keep guessing at why, repair it: the comparison already
-      # knows exactly which files are missing, so put them individually and
-      # check again. A single skipped file here is invisible — og-image.jpg is
-      # the social card, and its absence shows up only as a broken Telegram or
-      # VK link preview weeks later.
-      - name: Verify every file arrived, and repair what did not
-        if: env.MODE == 'static'
+      # wp-load.php exists in every WordPress install and nowhere else. This asks
+      # the server rather than trusting the secret.
+      - name: Refuse to deploy into something that is not WordPress
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -320,225 +101,105 @@ jobs:
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -uo pipefail
-
-          remote_list() {
-            lftp -c "
-              set ftp:ssl-allow true; set ftp:ssl-force true;
-              set ssl:verify-certificate no;
-              set net:max-retries 3; set net:timeout 20;
-              open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-              cd '$REMOTE_DIR';
-              find;
-            " 2>/dev/null | sed 's|^\./||' | sed 's|/$||' | grep -v '^$' | sort
-          }
-
-          # og-image.jpg is deliberately not expected here — see the mirror step.
-          # It is excluded from the mirror so --delete stops removing it, and
-          # therefore cannot be checked for or repaired by this step either.
-          #
-          # KNOWN LIMIT: this compares names, not sizes. A file that arrived
-          # truncated counts as present and passes. That has never been observed
-          # here — the failure mode on this host is a file that is wholly absent
-          # — but it is the reason og-image.jpg is not simply folded back in:
-          # STOR truncates the remote file when it opens it, so a mirror that
-          # tried and failed would leave a 0-byte social card that this check
-          # would call fine. Fix the mirror's transport first, or compare sizes
-          # (the live site serves them, so a HEAD per file would do it).
-          ( cd _deploy && find . -type f | sed 's|^\./||' ) \
-            | grep -v '^og-image\.jpg$' | sort > /tmp/expected.txt
-          remote_list > /tmp/remote.txt
-          comm -23 /tmp/expected.txt /tmp/remote.txt > /tmp/missing.txt || true
-
-          echo "expected $(wc -l < /tmp/expected.txt) files"
-          if [ ! -s /tmp/missing.txt ]; then
-            echo "all files present"
-            exit 0
-          fi
-
-          echo "missing after mirror — repairing:"
-          sed 's/^/  /' /tmp/missing.txt
-
-          # THE SERVER FINALLY NAMED IT (run #16, via debug 3):
-          #
-          #   <--- 250 Directory successfully changed.
-          #   <--- 426 Failure reading network stream.
-          #
-          # 426 is the data connection dying mid-transfer — not a permission,
-          # not a refusal, not a missing path. `du -hs` in the same run reported
-          # 11M, so quota is out too; that was the last standing guess.
-          #
-          # It is also deterministic. The same file fails on every attempt while
-          # its neighbours transfer, which is not what flakiness looks like.
-          # Something about this particular data stream is being dropped.
-          #
-          # So stop guessing which layer drops it and try the ways around it in
-          # order, reporting which works: the data channel unencrypted (PROT C),
-          # the connection direction reversed (active mode), and EPSV off. The
-          # one that succeeds is the setting the mirror itself should carry.
-          #
-          # CAUTION for whoever extends this: each attempt deletes the remote
-          # file before writing. That is deliberate — a half-written or
-          # broken-inode remote file would otherwise defeat every retry — but it
-          # means this must never be pointed at a file whose ONLY copy lives on
-          # the server. og-image.jpg is exactly that today (hand-uploaded, and
-          # excluded from the expected list above), which is why it stays out.
-          attempt() {
-            mode=$1; settings=$2; f=$3
-            d=$(dirname "$f"); base=$(basename "$f")
-            [ "$d" = "." ] && rd="$REMOTE_DIR" || rd="$REMOTE_DIR/$d"
-            lftp -c "
-              set ftp:ssl-allow true; set ftp:ssl-force true;
-              set ssl:verify-certificate no;
-              set net:max-retries 2; set net:timeout 25;
-              set cmd:fail-exit false;
-              $settings
-              open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-              mkdir -p '$rd';
-              rm -f '$rd/$base';
-              put -O '$rd' '_deploy/$f';
-            " </dev/null >/dev/null 2>&1
-            # Existence on the server is the only verdict worth trusting. lftp's
-            # exit code has been wrong on this host since the first deploy — it
-            # returned 1 through every run that transferred perfectly — so it is
-            # not consulted here at all.
-            if lftp -c "
-                 set ftp:ssl-allow true; set ftp:ssl-force true;
-                 set ssl:verify-certificate no; set cmd:fail-exit false;
-                 open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-                 cls -1 '$rd/$base';
-               " </dev/null 2>/dev/null | grep -q .; then
-              echo "  $mode: OK"
-              # Surface the winning rung on the run's summary page. Which
-              # transport works is the one fact needed to fix the mirror itself,
-              # and it should not have to be dug out of a 300-line log — the
-              # first time it was found, it wasn't, and the mirror kept the
-              # broken setting for another two runs.
-              echo "- \`$f\` repaired via **$mode**" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-              return 0
-            fi
-            echo "  $mode: failed"
-            return 1
-          }
-
-          echo "### FTP repair fired" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-          echo "" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-          while IFS= read -r f; do
-            echo "repairing $f ($(wc -c < "_deploy/$f") bytes)"
-            attempt "encrypted data channel (current setting)" "" "$f" && continue
-            attempt "plaintext data channel"  "set ftp:ssl-protect-data false;" "$f" && continue
-            attempt "active mode"             "set ftp:passive-mode false;"     "$f" && continue
-            attempt "passive, no EPSV"        "set ftp:prefer-epsv false;"      "$f" && continue
-            echo "  every transport failed for $f"
-            echo "- \`$f\` — **every transport failed**" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-          done < /tmp/missing.txt
-          echo "" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-          echo "If a rung other than the first won, put that setting in the" \
-               "mirror step so new files stop needing repair." >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-
-          remote_list > /tmp/remote2.txt
-          still=$(comm -23 /tmp/expected.txt /tmp/remote2.txt || true)
-          if [ -n "$still" ]; then
-            echo "STILL MISSING after every transport — failing the deploy:"
-            echo "$still" | sed 's/^/  /'
-
-            # Keep printing the dialogue. It is what turned this from four
-            # rounds of guessing into a named cause, and if all four transports
-            # fail then the reason has changed again and will be in here.
-            one=$(echo "$still" | head -1)
-            dir=$(dirname "$one")
-            [ "$dir" = "." ] && dest="$REMOTE_DIR" || dest="$REMOTE_DIR/$dir"
-            echo "--- diagnosing $one ($(wc -c < "_deploy/$one") bytes) ---"
-            {
-              echo "debug -o /tmp/ftp.log 3;"
-              echo "set ftp:ssl-allow true; set ftp:ssl-force true;"
-              echo "set ssl:verify-certificate no;"
-              echo "set net:max-retries 1; set net:timeout 20;"
-              echo "set cmd:fail-exit false;"
-              echo "open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';"
-              echo "du -hs '$REMOTE_DIR';"
-              echo "put -O '$dest' '_deploy/$one';"
-            } > /tmp/diag.lftp
-            lftp -f /tmp/diag.lftp || true
-            echo "--- FTP dialogue ---"
-            sed -E 's/^(.*(PASS|USER|ACCT)).*/\1 ***REDACTED***/' /tmp/ftp.log \
-              | tail -80 | sed 's/^/  /'
-            echo "--------------------"
+          found=$(lftp -c "
+            set ftp:ssl-allow true; set ftp:ssl-force true;
+            set ssl:verify-certificate no; set cmd:fail-exit false;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            cls -1 '$REMOTE_DIR/wp-load.php';
+          " </dev/null 2>/dev/null | grep -c . || true)
+          if [ "$found" -eq 0 ]; then
+            echo "REFUSING TO DEPLOY."
+            echo
+            echo "$REMOTE_DIR does not contain wp-load.php, so it is not a"
+            echo "WordPress installation. Either WordPress has not been installed"
+            echo "there yet, or REMOTE_DIR points somewhere else — check it after"
+            echo "any hosting move."
             exit 1
           fi
-          echo "repair succeeded; all files present"
+          echo "target is a WordPress install — continuing"
 
-      # Retry rather than check once. The first run failed here despite having
-      # deployed correctly: it looked 5 seconds after the upload, got the old
-      # HTML, and went red on a site that was in fact fine. A single check makes
-      # this step a coin toss, and a deploy job that cries wolf gets ignored,
-      # which is worse than not having the check at all.
-      - name: Confirm the live site is serving this commit
-        if: env.MODE == 'static'
+      # Assembled rather than mirrored straight from the checkout, so the upload
+      # set is exactly what we mean to send.
+      #
+      # seed/ is 3.7 MB of starting content and photographs that are used ONCE,
+      # on a fresh install, by Инструменты → Наполнить сайт. Sending it on every
+      # push would be 3.7 MB over an FTP connection this host already drops
+      # files on, for a folder the site never reads again.
+      - name: Assemble the theme
+        env:
+          UPLOAD_SEED: ${{ inputs.upload_seed }}
         run: |
-          V="${GITHUB_SHA::7}"
-          for i in $(seq 1 12); do
-            got=$(curl -sS --max-time 30 "https://coffeeshtob.ru/?ci=$GITHUB_RUN_ID-$i" 2>/dev/null \
-                  | grep -o "style.css?v=[A-Za-z0-9_.-]*" | head -1 || true)
-            if [ "$got" = "style.css?v=$V" ]; then
-              echo "live site is serving $V (after $i attempt(s))"
-              exit 0
-            fi
-            sleep 10
+          set -euo pipefail
+          rm -rf _theme && mkdir -p _theme
+          cp -R wp-content/themes/coffeeshtob/. _theme/
+          if [ "${UPLOAD_SEED:-false}" != "true" ]; then
+            rm -rf _theme/seed
+            echo "seed excluded (pass upload_seed on a manual run for a fresh install)"
+          else
+            test -f _theme/seed/content.php || { echo "seed requested but missing"; exit 1; }
+            echo "seed included: $(du -sh _theme/seed | cut -f1)"
+          fi
+
+          # Assert rather than hope. A half-built set would be mirrored with
+          # --delete and would take the live theme with it.
+          for f in style.css functions.php header.php footer.php front-page.php index.php; do
+            test -f "_theme/$f" || { echo "missing $f"; exit 1; }
           done
-          echo "After ~2 minutes the live site still reports: ${got:-<nothing>}"
-          echo "Expected style.css?v=$V. The upload and manifest checks passed,"
-          echo "so this is either caching or the domain pointing somewhere else."
-          exit 1
+          n=$(find _theme -type f | wc -l)
+          [ "$n" -ge 25 ] || { echo "only $n files assembled — refusing"; exit 1; }
+          echo "assembled $n files"
 
-      # ======================================================================
-      # GRAV MODE — everything below runs only after the cutover.
-      # ======================================================================
-      # The shape is deliberately different from static mode, and the difference
-      # is the whole point: on a Grav site the server holds content that exists
-      # nowhere else. The client's edits, their uploaded photos and their admin
-      # account are all under user/, and none of it is in this repo. So nothing
-      # here mirrors the docroot, and --delete never points at anything but our
-      # own theme directory.
-
-      - name: Check the content fields agree
-        if: env.MODE == 'grav'
-        run: python3 .github/scripts/check-content-fields.py
-
-      - name: Deploy the theme
-        if: env.MODE == 'grav'
+      # ABOUT lftp's EXIT CODE, WHICH IS NOT CONSULTED ANYWHERE IN THIS REPO.
+      #
+      # On this host it returns 1 for things that are not failures — SITE CHMOD
+      # refusals were the first, and --no-perms did not make it exit 0, so there
+      # is at least one more. It has also exited 0 having silently skipped a
+      # file. Three separate investigations were spent on a font that was never
+      # broken.
+      #
+      # So the mirror reports and the checks that follow decide: a repair pass
+      # that lists what is actually on the server, and then verify-site.py, which
+      # fetches the delivered pages. Both measure the outcome instead of trusting
+      # the tool's opinion of it.
+      - name: Mirror the theme
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+          UPLOAD_SEED: ${{ inputs.upload_seed }}
         run: |
           set -uo pipefail
-          test -f grav/user/themes/coffeeshtob/blueprints.yaml \
-            || { echo "theme not found — refusing to deploy"; exit 1; }
-          # --delete is scoped to the theme directory ALONE. Grav's core, the
-          # client's pages and their media all live outside it and are never
-          # touched. Widening this path is how a deploy eats a client's work.
+          # --delete is scoped to the THEME directory alone. WordPress core, the
+          # plugins, wp-config.php and every uploaded photograph live outside it
+          # and are never touched. Widening this path is how a deploy eats a
+          # client's work.
+          #
+          # seed/ is excluded from --delete only while it is not in the upload
+          # set, so a seed uploaded for a fresh install survives until the client
+          # has actually used it; the seeder removes it afterwards.
+          EXCLUDE=""
+          if [ "${UPLOAD_SEED:-false}" != "true" ]; then
+            EXCLUDE="--exclude-glob seed/"
+          fi
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
             set ftp:ssl-protect-data false; set ssl:verify-certificate no;
             set net:max-retries 8; set net:timeout 40; set net:reconnect-interval-base 5;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --delete --no-perms --verbose --parallel=1 \
-              grav/user/themes/coffeeshtob/ '$REMOTE_DIR/user/themes/coffeeshtob';
-          " || echo "mirror exited non-zero — the repair below decides"
-          .github/scripts/ftp-repair.sh grav/user/themes/coffeeshtob \
-            "$REMOTE_DIR/user/themes/coffeeshtob"
+            mirror --reverse --delete --no-perms --verbose --parallel=1 $EXCLUDE \
+              _theme/ '$REMOTE_DIR/wp-content/themes/coffeeshtob';
+          " || echo "mirror exited non-zero — the repair and the URL checks decide"
 
-      # Files that have to sit at the web root rather than inside the theme,
-      # because something outside this site asks for them by absolute path:
-      # crawlers fetch /robots.txt, /sitemap.xml and /favicon.ico by convention,
-      # and Yandex fetches its verification token at a fixed URL.
+          .github/scripts/ftp-repair.sh _theme "$REMOTE_DIR/wp-content/themes/coffeeshtob"
+
+      # Files that must sit at the web root because something outside this site
+      # asks for them by absolute path: crawlers fetch /robots.txt and
+      # /favicon.ico by convention, Yandex fetches its verification token at a
+      # fixed URL, and .htaccess is Apache's.
       #
-      # NO --delete here, ever. This directory's neighbours are Grav's own core
-      # files — index.php, system/, vendor/, user/ — and a mirror that deleted
-      # what it did not recognise would remove the entire installation.
+      # NO --delete HERE, EVER. See the note at the top of this file.
       - name: Deploy the files that must live at the web root
-        if: env.MODE == 'grav'
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -546,36 +207,30 @@ jobs:
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -uo pipefail
-          test -d grav/root || { echo "grav/root missing"; exit 1; }
+          test -f web-root/.htaccess || { echo "web-root/.htaccess missing"; exit 1; }
           lftp -c "
             set ftp:ssl-allow true; set ftp:ssl-force true;
             set ftp:ssl-protect-data false; set ssl:verify-certificate no;
-            set net:max-retries 8; set net:timeout 40;
-            set cmd:fail-exit false;
+            set net:max-retries 8; set net:timeout 40; set cmd:fail-exit false;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --no-perms --verbose --parallel=1 \
-              grav/root/ '$REMOTE_DIR';
+              web-root/ '$REMOTE_DIR';
           " || echo "root mirror exited non-zero — the repair below decides"
 
-          # Same reason as staging: the mirror silently loses og-image.jpg on
-          # this host. Presence on the server is measured, and anything missing
-          # is retried over a different transport.
-          .github/scripts/ftp-repair.sh grav/root "$REMOTE_DIR"
+          .github/scripts/ftp-repair.sh web-root "$REMOTE_DIR"
 
-      # As in staging: lftp's exit code is not trusted on this host, so what the
-      # site actually serves is the gate. These are the URLs that existed on the
-      # static site and would otherwise disappear silently at cutover — a 404 on
-      # /privacy is a broken link in the footer of every page, and a 404 on the
-      # Yandex token quietly loses search verification.
-      # The same script the staging job runs, against production. It derives the
-      # routes from the page tree rather than listing them here, so a section
-      # added in the admin is covered from the next deploy — and the two jobs
-      # cannot drift into checking different things.
-      #
-      # It replaced a hand-written list that asserted a `.menu-item` on the home
-      # page. That was true of the single-page site and is false now: the menu
-      # lives on /kuhnya. Left alone it would have failed the cutover deploy for
-      # a reason that had nothing to do with the cutover.
-      - name: Confirm production renders every page
-        if: env.MODE == 'grav'
-        run: python3 .github/scripts/verify-site.py https://coffeeshtob.ru --run-id "$GITHUB_RUN_ID"
+      # The gate. Everything above is a transfer; this is the site.
+      - name: Confirm the site renders every page
+        run: python3 .github/scripts/verify-site.py "${{ vars.SITE_URL }}" --run-id "$GITHUB_RUN_ID"
+
+      - name: What to do next on a fresh install
+        if: ${{ inputs.upload_seed }}
+        run: |
+          {
+            echo "### Starting content uploaded"
+            echo
+            echo "Open **Инструменты → Наполнить сайт** in wp-admin and press the"
+            echo "button. It creates the eight pages, the cards and the photographs,"
+            echo "then removes itself. It refuses to run on a site that already has"
+            echo "pages, so it cannot overwrite the client's work."
+          } >> "$GITHUB_STEP_SUMMARY"

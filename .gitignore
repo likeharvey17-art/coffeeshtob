@@ -1,23 +1,6 @@
-# macOS
+# The local WordPress used to develop the theme. Rebuilt from scratch by
+# .github/scripts/wp-dev.sh, so nothing in it is worth keeping: WordPress core,
+# a SQLite database, and a symlink back to the theme in this tree.
+.wp-dev/
+
 .DS_Store
-
-# Editor / tooling state that is specific to one machine
-.claude/settings.local.json
-.vscode/
-.idea/
-
-# Dependencies — this project has no build step, but `npx decap-server`
-# can leave these behind if it is ever run with a local install
-node_modules/
-package-lock.json
-
-# Netlify CLI local state
-.netlify/
-
-# Logs
-*.log
-
-# Local Grav preview install (Grav core + a copy of the theme and pages).
-# Built by .github/scripts/grav-dev.sh. Never deployed: the static upload set
-# comes from `git ls-files`, which cannot list an ignored path.
-.grav-dev/

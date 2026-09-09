@@ -1,0 +1,149 @@
+# .htaccess for the WordPress install at coffeeshtob.ru
+#
+# THREE THINGS ABOUT BEGET THAT MAKE HALF THIS FILE INERT, AND ARE NOT OBVIOUS:
+#
+# 1. nginx sits in front of Apache. It serves static files itself and never
+#    consults .htaccess, so the compression and mime blocks below apply only on
+#    a host that doesn't do that. Measured on the old site: style.css came back
+#    with a week-long max-age where the file asked for an hour, and .js was
+#    served as application/x-javascript, a type no list here names. They are
+#    kept because they are correct and cost nothing.
+#
+# 2. Apache does not know it is behind TLS. nginx terminates HTTPS, so %{HTTPS}
+#    is never "on" inside .htaccess. The force-HTTPS rule therefore tests
+#    X-Forwarded-Proto as well, and WordPress is told the same thing in
+#    wp-config.php — without that it builds every canonical, og:url and sitemap
+#    entry as http:// on an https:// site.
+#
+# 3. Any R=301 rule added here must name the scheme explicitly. Written as
+#    /%1, Apache expands it using its own idea of the protocol and emits
+#    "Location: http://…", which the force rule then bounces back — two
+#    redirects and a plaintext hop per link. That was measured, not reasoned.
+#
+# A wrong directive in .htaccess is a 500 on EVERY page, not a skipped feature.
+# AddOutputFilterByType belongs to mod_filter, not mod_deflate; guarding it on
+# the wrong module passes on a server that has one and not the other and then
+# throws "Invalid command". Both guards are present below for that reason.
+
+# ---------------------------------------------------------------------------
+# Canonical host and scheme.
+#
+# THIS BLOCK MUST STAY ABOVE WORDPRESS'S. Placed after it, REQUEST_URI has
+# already been rewritten to /index.php, so https://www.coffeeshtob.ru/kuhnya/
+# would redirect to https://coffeeshtob.ru/index.php — every www visitor landing
+# on the front page whatever they asked for. That exact bug was caught against a
+# real Apache on the previous build; it is invisible by reading.
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# www -> bare. Beget serves www automatically and its certificate covers both
+# names, so without this the site answers on two hosts with identical pages.
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+# The ACME challenge must stay reachable over plain HTTP, or certificate
+# renewal breaks every 90 days in a way that looks nothing like a deploy.
+RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Hardening.
+#
+# This is a small café's site on shared hosting with one admin account. It will
+# be scanned for these paths within days of going live — that is not a
+# prediction, it is what happens to every WordPress on the public internet.
+# ---------------------------------------------------------------------------
+
+# wp-config.php holds the database password. Apache normally executes it rather
+# than serving it, but a misconfiguration that stops PHP running turns every
+# .php file into a plain-text download, and this is the one that matters.
+<Files wp-config.php>
+  Require all denied
+</Files>
+
+# Announce the exact WordPress version to anyone who asks.
+<FilesMatch "^(readme\.html|license\.txt|wp-config-sample\.php)$">
+  Require all denied
+</FilesMatch>
+
+# XML-RPC is disabled in the theme as well (inc/privacy.php). Blocked here too
+# because a filter only runs after WordPress has booted, and the point of
+# system.multicall as a brute-force amplifier is the hundreds of password
+# attempts it fits into one request.
+<Files xmlrpc.php>
+  Require all denied
+</Files>
+
+# Dotfiles, except the ACME challenge directory.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule (^|/)\.(?!well-known)  - [F]
+</IfModule>
+
+# THE UPLOADS DIRECTORY MUST NEVER EXECUTE PHP. It is the one place on the site
+# a logged-in user can write files to, so it is the destination of choice for
+# anything that gets through — an uploaded .php here is a shell on the server.
+# The media library has no reason to hold executable code.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^wp-content/uploads/.*\.(php|php[0-9]|phtml|phar|pl|py|cgi|sh|bat)$ - [F]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# WordPress. Everything below the BEGIN/END markers is WordPress's own block and
+# the admin may rewrite it when permalinks are saved — do not put anything of
+# ours between the markers, it will be lost.
+# ---------------------------------------------------------------------------
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+
+# ---------------------------------------------------------------------------
+# Everything below is inert on Beget (nginx serves static files) and correct
+# anywhere else.
+# ---------------------------------------------------------------------------
+Options -Indexes
+DirectoryIndex index.php index.html
+
+<IfModule mod_filter.c>
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+  # BOTH javascript types: Apache 2.4 serves .js as text/javascript, so a list
+  # naming only application/javascript silently compresses nothing.
+  AddOutputFilterByType DEFLATE text/javascript application/javascript
+  AddOutputFilterByType DEFLATE application/json application/manifest+json
+  AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
+</IfModule>
+
+# .webmanifest is not in Apache's default mime.types and was served with no
+# Content-Type at all on the first version of this site.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType font/woff2 .woff2
+  AddType image/svg+xml .svg
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css                  "access plus 1 year"
+  ExpiresByType text/javascript           "access plus 1 year"
+  ExpiresByType application/javascript    "access plus 1 year"
+  ExpiresByType font/woff2                "access plus 1 year"
+  ExpiresByType image/jpeg                "access plus 6 months"
+  ExpiresByType image/png                 "access plus 6 months"
+  ExpiresByType image/svg+xml             "access plus 6 months"
+  ExpiresByType text/html                 "access plus 0 seconds"
+</IfModule>
