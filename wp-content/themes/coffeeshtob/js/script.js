@@ -1,3 +1,19 @@
+/* The page-to-page crossfade (@view-transition in style.css) is the browser's
+   own, and when it is skipped — a hidden tab, a second click before the first
+   finished — its promises reject with "Transition was skipped" and the browser
+   reports them as uncaught errors. Skipping is harmless and expected, so it is
+   acknowledged here instead. Outside DOMContentLoaded on purpose: `pagereveal`
+   fires before the first render, and a listener added later would miss it. */
+const quietTransition = (event) => {
+  const vt = event.viewTransition;
+  if (!vt) return;
+  vt.ready.catch(() => {});
+  vt.finished.catch(() => {});
+  vt.updateCallbackDone.catch(() => {});
+};
+window.addEventListener('pagereveal', quietTransition);
+window.addEventListener('pageswap', quietTransition);
+
 document.addEventListener('DOMContentLoaded', () => {
   const header = document.querySelector('.site-header');
   const toTopBtn = document.getElementById('toTop');
@@ -296,52 +312,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* Scroll-reveal for content blocks.
+  /* Photographs develop as they scroll into view — see "Photographs develop"
+     in style.css for why this replaced the fade-and-rise on every card.
 
-     Written as a rescan rather than a one-off. On the static site that was
-     because render.js rebuilt the card grids from JSON *after* this ran, and
-     without a rescan the new elements kept `.reveal`'s opacity: 0 forever.
-     Grav renders server-side so nothing is rebuilt now, but the rescan and the
-     WeakSet stay: they cost nothing, and identity — not the `.reveal` class —
-     is the only safe marker for "already handled" if anything ever does inject
-     markup again. */
-  const REVEAL_SELECTOR = '.feature-card, .menu-item, .life-card, .info-card, .card-item, .about-text';
-  const supportsObserver = 'IntersectionObserver' in window;
+     Only photos BELOW THE FOLD when this runs are marked. One already on
+     screen was painted in colour before the script ran, and marking it would
+     flash it back to sepia; with JavaScript off, or reduced motion on, nothing
+     is marked and every photo is simply itself. That is the whole safety
+     model: the undeveloped state exists only where the script can finish it.
 
-  const revealObserver = supportsObserver
-    ? new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('is-visible');
-              revealObserver.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
-      )
-    : null;
-
-  /* Tracked by identity, not by the `.reveal` class. render.js rebuilds the
-     card grids by cloning the nodes already in the page — and by then those
-     nodes have been given `.reveal` here, so the clones arrive carrying it.
-     Using the class as the "already handled" marker therefore skipped every
-     rebuilt card: they kept `.reveal`'s opacity: 0, were never observed, and
-     stayed invisible for good. A WeakSet keys on the element itself, and a
-     clone is a different element. */
-  const revealSeen = new WeakSet();
-
-  const scanReveal = () => {
-    document.querySelectorAll(REVEAL_SELECTOR).forEach((el) => {
-      if (revealSeen.has(el)) return;
-      revealSeen.add(el);
-      el.classList.add('reveal');
-      if (revealObserver) revealObserver.observe(el);
-      else el.classList.add('is-visible');
+     Photos that arrive in the same batch — a row of three — are staggered by
+     140ms each, capped at three steps, so a row develops left to right instead
+     of all at once. */
+  if ('IntersectionObserver' in window && !prefersReducedMotion.matches) {
+    const developObserver = new IntersectionObserver(
+      (entries) => {
+        let step = 0;
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          el.style.setProperty('--develop-delay', `${Math.min(step++, 3) * 140}ms`);
+          el.classList.add('is-developed');
+          developObserver.unobserve(el);
+        });
+      },
+      { threshold: 0.3 }
+    );
+    document.querySelectorAll('.img-frame, .menu-thumb').forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight) return;
+      el.classList.add('develop');
+      developObserver.observe(el);
     });
-  };
-
-  scanReveal();
+  }
 
   /* The active-nav highlight used to be computed here by an IntersectionObserver
      over a hardcoded list of section ids. It is gone, and must not come back.

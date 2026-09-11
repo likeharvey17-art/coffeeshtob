@@ -68,11 +68,13 @@ add_action('wp_enqueue_scripts', 'shtob_assets');
  * uses both families immediately, so preloading the two Cyrillic subsets buys a
  * real first-paint win. The other subsets stay lazy — latin-ext exists for the
  * ruble sign and cyrillic-ext for a handful of glyphs, and preloading either
- * would download 85 KB most visitors never need.
+ * would download 20-37 KB per family that most visitors never need. The
+ * italic is not preloaded either: it only sets the section marks and notes,
+ * and swapping in late there costs nothing.
  */
 function shtob_preload_fonts() {
     $dir = get_template_directory_uri() . '/assets/fonts/';
-    foreach (['inter-cyrillic.woff2', 'playfair-display-cyrillic.woff2'] as $f) {
+    foreach (['commissioner-cyrillic.woff2', 'alegreya-cyrillic.woff2'] as $f) {
         printf('<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n",
             esc_url($dir . $f));
     }

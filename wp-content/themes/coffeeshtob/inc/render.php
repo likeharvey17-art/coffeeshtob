@@ -126,22 +126,59 @@ function shtob_tel($phone) {
  * footer. Written out twice once, they drifted — the footer gained a link the
  * header never got.
  */
-function shtob_social_links() {
-    $links = [
-        ['url' => shtob_opt('telegram'), 'label' => 'Telegram-канал',
-         'svg' => '<path d="M22 2 11 13"></path><path d="M22 2 15 22l-4-9-9-4 20-7z"></path>', 'w' => 2],
-        ['url' => shtob_opt('vk'), 'label' => 'ВКонтакте',
-         'svg' => '<rect x="2.5" y="2.5" width="19" height="19" rx="5.5"></rect><path d="M6.6 8.9l2.3 6.2 2.3-6.2"></path><path d="M14.3 8.9v6.2"></path><path d="M17.9 8.9l-3.6 3.1 3.6 3.1"></path>', 'w' => 1.7],
-        ['url' => shtob_opt('guide'), 'label' => 'Гид по Романову',
-         'svg' => '<circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"></path>', 'w' => 2],
+/**
+ * The business's channels, declared once. The footer and the header popover
+ * list all three; Контакты turns the two social ones into buttons. One list
+ * means a channel added here reaches every place it should appear.
+ */
+function shtob_socials() {
+    $all = [
+        'telegram' => ['url' => shtob_opt('telegram'), 'label' => 'Telegram-канал', 'name' => 'Telegram',
+            'svg' => '<path d="M22 2 11 13"></path><path d="M22 2 15 22l-4-9-9-4 20-7z"></path>', 'w' => 2],
+        'vk'       => ['url' => shtob_opt('vk'), 'label' => 'ВКонтакте', 'name' => 'ВКонтакте',
+            'svg' => '<rect x="2.5" y="2.5" width="19" height="19" rx="5.5"></rect><path d="M6.6 8.9l2.3 6.2 2.3-6.2"></path><path d="M14.3 8.9v6.2"></path><path d="M17.9 8.9l-3.6 3.1 3.6 3.1"></path>', 'w' => 1.7],
+        'guide'    => ['url' => shtob_opt('guide'), 'label' => 'Гид по Романову', 'name' => 'Гид по Романову',
+            'svg' => '<circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"></path>', 'w' => 2],
     ];
-    foreach ($links as $l) {
-        if (!$l['url']) continue;
-        printf(
-            '<a href="%s" target="_blank" rel="noopener">'
-            . '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">%s</svg>'
-            . ' %s</a>' . "\n",
-            esc_url($l['url']), esc_attr((string) $l['w']), $l['svg'], esc_html($l['label'])
-        );
+    return array_filter($all, fn($l) => (bool) $l['url']);
+}
+
+function shtob_social_svg($l, $size) {
+    return sprintf('<svg viewBox="0 0 24 24" width="%d" height="%d" fill="none" stroke="currentColor" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">%s</svg>',
+        $size, $size, esc_attr((string) $l['w']), $l['svg']);
+}
+
+function shtob_social_links() {
+    foreach (shtob_socials() as $l) {
+        printf('<a href="%s" target="_blank" rel="noopener">%s %s</a>' . "\n",
+            esc_url($l['url']), shtob_social_svg($l, 18), esc_html($l['label']));
     }
+}
+
+/**
+ * Where a social link actually goes, in the form people say it aloud:
+ * @coffeeshtob for Telegram, vk.com/coffeeshtob for VK. DERIVED from the URL in
+ * the Customiser, never typed separately, so the button cannot promise one
+ * address and open another. An address with no path gets no handle.
+ */
+function shtob_social_handle($key, $url) {
+    $path = trim((string) parse_url($url, PHP_URL_PATH), '/');
+    if ($path === '') return '';
+    return $key === 'telegram' ? '@' . $path : 'vk.com/' . $path;
+}
+
+/** Контакты' buttons: the two social channels only — the guide is not one. */
+function shtob_social_buttons() {
+    $buttons = array_intersect_key(shtob_socials(), ['telegram' => 1, 'vk' => 1]);
+    foreach ($buttons as $key => $l) {
+        $handle = shtob_social_handle($key, $l['url']);
+        printf('<a class="social-btn" href="%s" target="_blank" rel="noopener">'
+            . '<span class="social-btn-icon">%s</span>'
+            . '<span class="social-btn-text"><span class="social-btn-name">%s</span>%s</span>'
+            . '<svg class="social-btn-go" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>'
+            . '</a>' . "\n",
+            esc_url($l['url']), shtob_social_svg($l, 22), esc_html($l['name']),
+            $handle !== '' ? '<span class="social-btn-handle">' . esc_html($handle) . '</span>' : '');
+    }
+    return count($buttons);
 }

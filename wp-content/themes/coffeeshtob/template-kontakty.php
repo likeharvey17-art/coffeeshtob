@@ -45,6 +45,7 @@ $phone = shtob_opt('phone');
           <?php if ($note) : ?><p class="note"><?php echo esc_html($note); ?></p><?php endif; ?>
         </article>
 
+        <div class="info-stack">
         <article class="info-card">
           <h3><?php echo esc_html(get_post_meta($id, '_shtob_address_title', true) ?: 'Где мы находимся'); ?></h3>
           <p><?php echo esc_html(shtob_opt('address')); ?></p>
@@ -56,6 +57,18 @@ $phone = shtob_opt('phone');
             <a class="link-arrow" href="<?php echo esc_url(shtob_opt('maps_url')); ?>" target="_blank" rel="noopener">Открыть на Яндекс.Картах →</a>
           <?php endif; ?>
         </article>
+
+        <?php // Buttons, not a list: this is the page people open to reach
+              // the café, and on a phone a 62px pill is what a thumb finds.
+              // Renders only the channels set in the Customiser; with none
+              // set, the heading does not appear either. ?>
+        <?php if (array_intersect_key(shtob_socials(), ['telegram' => 1, 'vk' => 1])) : ?>
+          <article class="info-card">
+            <h3>Мы на связи</h3>
+            <div class="social-btns"><?php shtob_social_buttons(); ?></div>
+          </article>
+        <?php endif; ?>
+        </div>
 
         <?php if ($ferry_t || $ferry_x) : ?>
           <article class="info-card info-card--wide">

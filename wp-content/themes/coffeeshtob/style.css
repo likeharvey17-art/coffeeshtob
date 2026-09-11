@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.1.0
+Version: 1.2.0
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -20,89 +20,147 @@ Tags: custom-menu, custom-logo, translation-ready
    ───────────────────────────────────────────────────────────────────────── */
 
 /* ===== Fonts =====
-   Self-hosted, not loaded from Google. The site is for a Russian audience and
-   fonts.googleapis.com is unreliable there: the stylesheet <link> was
-   render-blocking in <head>, so when Google was slow the page showed nothing at
-   all until the request timed out, then fell back to system fonts. Serving the
-   files from our own origin removes a third party from the critical path
-   entirely — and removes the only thing on the public page that told an outside
-   company who was visiting, which is why privacy.html no longer has a "Шрифты"
-   section.
+   Self-hosted, never fetched from Google when a page is viewed:
+   fonts.googleapis.com is unreliable from Russia, and a render-blocking
+   stylesheet from it is what made the old static site hang and then settle
+   into the wrong fonts. There must never be a googleapis link on this site.
 
-   Both families are variable (one file per subset covers every weight we use)
-   and split by `unicode-range`, so a Russian page downloads only the cyrillic
-   and latin subsets — the others sit unused unless someone types a character
-   that needs them. Regenerate with the script in CLAUDE.md if the weights
-   change. Both are SIL Open Font License, which permits self-hosting. */
+   ALEGREYA (headings, the section marks in its true italic, the notes) and
+   COMMISSIONER (everything else) replaced Playfair Display and Inter in 1.2.0.
+   Playfair is the stock "coffee shop" serif and Inter the stock interface
+   sans. Alegreya is a book face drawn for literature — calligraphic, warm,
+   unhurried — which suits a merchant house of stories and crafts;
+   Commissioner is a humanist sans whose flared strokes sit beside it.
 
-/* Inter — latin */
+   CHOSEN BY RENDERING, NOT FROM A LIST: six pairings were set in real Cyrillic
+   copy from this site and compared. Alegreya Sans was the designed partner and
+   lost — its small x-height read cramped at body size. Old Standard TT was the
+   most period-correct for the house and read as a museum label.
+
+   Both are variable (one file per subset spans every weight) and split by
+   unicode-range exactly as Google serves them, so a Russian page downloads the
+   cyrillic and latin subsets and nothing else. latin-ext is not optional: the
+   ruble sign U+20BD lives there. SIL Open Font License, which permits
+   self-hosting. */
+
+/* Alegreya — latin */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Alegreya';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/inter-latin.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-latin.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Inter — cyrillic */
+/* Alegreya — cyrillic */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Alegreya';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/inter-cyrillic.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-cyrillic.woff2) format('woff2');
   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 
-/* Inter — latin-ext */
+/* Alegreya — latin-ext */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Alegreya';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/inter-latin-ext.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-latin-ext.woff2) format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Inter — cyrillic-ext */
+/* Alegreya — cyrillic-ext */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Alegreya';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/inter-cyrillic-ext.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-cyrillic-ext.woff2) format('woff2');
   unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
 }
 
-/* Playfair Display — latin */
+/* Alegreya italic — latin */
 @font-face {
-  font-family: 'Playfair Display';
-  font-style: normal;
-  font-weight: 600 800;
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/playfair-display-latin.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-italic-latin.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Playfair Display — cyrillic */
+/* Alegreya italic — cyrillic */
 @font-face {
-  font-family: 'Playfair Display';
-  font-style: normal;
-  font-weight: 600 800;
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/playfair-display-cyrillic.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-italic-cyrillic.woff2) format('woff2');
   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 
-/* Playfair Display — latin-ext */
+/* Alegreya italic — latin-ext */
 @font-face {
-  font-family: 'Playfair Display';
-  font-style: normal;
-  font-weight: 600 800;
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400 800;
   font-display: swap;
-  src: url(assets/fonts/playfair-display-latin-ext.woff2) format('woff2');
+  src: url(assets/fonts/alegreya-italic-latin-ext.woff2) format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Alegreya italic — cyrillic-ext */
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url(assets/fonts/alegreya-italic-cyrillic-ext.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* Commissioner — latin */
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(assets/fonts/commissioner-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Commissioner — cyrillic */
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(assets/fonts/commissioner-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* Commissioner — latin-ext */
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(assets/fonts/commissioner-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Commissioner — cyrillic-ext */
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(assets/fonts/commissioner-cyrillic-ext.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
 }
 
 /* ===== Tokens ===== */
@@ -144,6 +202,12 @@ Tags: custom-menu, custom-logo, translation-ready
      The default `ease` starts slowly, which on a hover reads as lag. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* The album corners that hold every photograph — see "Photos are mounted".
+     Kraft card, a shade darker than the page so it reads on the cream and on
+     the alternating sections alike, with a fold line along the diagonal. */
+  --mount: #d6c3a3;
+  --mount-edge: rgba(92, 70, 48, 0.42);
+
   /* THREE background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
      `body` and `.section-alt` only, so the white cards stay clean.
@@ -176,8 +240,8 @@ Tags: custom-menu, custom-logo, translation-ready
      itself. */
   --beans: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27344%27%20height%3D%27344%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%2343362c%27%20stroke-opacity%3D%270.068%27%20stroke-width%3D%271.15%27%3E%3Cg%20transform%3D%27translate%2845%2053%29%20rotate%28-24%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28198%2029%29%20rotate%2838%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28307%20127%29%20rotate%28-8%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28116%20169%29%20rotate%2864%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28259%20246%29%20rotate%28-46%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%2837%20283%29%20rotate%2816%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28167%20325%29%20rotate%28-30%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 
-  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Alegreya", Georgia, "Times New Roman", serif;
+  --font-sans: "Commissioner", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* The paper layer: slow cloudy tone variation with a scatter of fibres.
 
@@ -387,7 +451,7 @@ p { margin: 0; text-wrap: pretty; }
   flex-shrink: 0;
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.brand-text strong { font-family: var(--font-serif); font-size: 1.05rem; color: var(--ink); }
+.brand-text strong { font-family: var(--font-serif); font-size: 1.18rem; color: var(--ink); }
 .brand-text small { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 
 .main-nav {
@@ -637,12 +701,12 @@ p { margin: 0; text-wrap: pretty; }
 .badge svg { flex-shrink: 0; color: var(--accent-light); }
 
 .hero h1 {
-  font-size: clamp(2.4rem, 6.2vw, 4.35rem);
-  line-height: 1.06;
-  font-weight: 600;
+  font-size: clamp(2.5rem, 6.6vw, 4.6rem);
+  line-height: 1.04;
+  font-weight: 700;
   color: #fff;
   margin-bottom: 24px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .hero-lead {
   font-size: 1.15rem;
@@ -722,8 +786,8 @@ p { margin: 0; text-wrap: pretty; }
    At the browser's default 1.17em it came out barely larger than the mark
    above it, so the two read as one line of equal weight. */
 .section-head h3 {
-  font-size: clamp(1.5rem, 2.6vw, 1.85rem);
-  font-weight: 600;
+  font-size: clamp(1.6rem, 2.8vw, 1.95rem);
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.01em;
   margin-bottom: 10px;
@@ -742,11 +806,12 @@ p { margin: 0; text-wrap: pretty; }
   align-items: center;
   gap: 9px;
   font-family: var(--font-serif);
-  font-size: 1.06rem;
-  font-weight: 600;
+  font-style: italic; /* Alegreya's real italic, not a slanted roman */
+  font-size: 1.16rem;
+  font-weight: 500;
   line-height: 1.3;
   color: var(--accent-mid);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .eyebrow::before {
   content: "";
@@ -759,10 +824,10 @@ p { margin: 0; text-wrap: pretty; }
   transform: rotate(-22deg);
 }
 .section h2 {
-  font-size: clamp(1.95rem, 3.8vw, 2.7rem);
-  font-weight: 600;
-  line-height: 1.14;
-  letter-spacing: -0.015em;
+  font-size: clamp(2.05rem, 4vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
   margin-bottom: 14px;
 }
 .section-sub {
@@ -815,12 +880,15 @@ p { margin: 0; text-wrap: pretty; }
    The ::after must not intercept clicks — .card-link wraps a whole frame. */
 .img-frame {
   position: relative;
-  /* NOT overflow:hidden. The clip below has to overhang the top edge, and a
-     frame that clips its own children would cut it in half. The rounding moves
-     onto the image and the vignette instead, which is what overflow was doing
-     for them anyway. */
+  /* NOT overflow:hidden. The album corners run 3px past the print's edges,
+     and a frame that clipped its own children would cut them off. The
+     rounding sits on the image and the vignette instead.
+
+     6px, not the 14px of the site's other shapes: a print with fully rounded
+     corners tucked into square pockets reads as a phone screenshot pasted
+     into an album. */
   overflow: visible;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   background: var(--cream-alt);
   box-shadow:
     inset 0 0 0 1px rgba(123, 100, 80, 0.11),
@@ -906,11 +974,11 @@ p { margin: 0; text-wrap: pretty; }
   row-gap: 64px;
 }
 .feature-card h3, .life-card h3, .info-card h3, .card-item h3 {
-  font-size: 1.2rem;
+  font-size: 1.32rem;
   line-height: 1.25;
   margin-bottom: 10px;
 }
-.info-card h3 { font-size: 1.15rem; }
+.info-card h3 { font-size: 1.28rem; }
 .feature-card p, .life-card p, .info-card p, .card-item p {
   color: var(--ink-soft);
   font-size: 0.96rem;
@@ -998,7 +1066,7 @@ p { margin: 0; text-wrap: pretty; }
 }
 .menu-head .menu-price { order: 2; }
 .menu-item h3 {
-  font-size: 1.02rem;
+  font-size: 1.14rem;
   line-height: 1.3;
   margin: 0;
 }
@@ -1041,6 +1109,57 @@ p { margin: 0; text-wrap: pretty; }
   align-items: start;
 }
 .info-card--wide { grid-column: 1 / -1; }
+/* Контакты' right-hand column: where to find us, then how to reach us. */
+.info-stack { display: flex; flex-direction: column; gap: 40px; }
+
+/* ===== Social buttons =====
+   Real buttons on Контакты, where people look for them, rather than only a
+   list in the footer. Brown pills like every other button on the site, the
+   brand mark in cream and the handle underneath so you know where the tap
+   goes before you make it. Deliberately NOT Telegram blue and VK blue: the
+   marks carry the recognition, and two saturated brand colours would be the
+   loudest thing on the page. */
+.social-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.social-btn {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 10px 22px 10px 20px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 18px -10px rgba(36, 26, 19, 0.6);
+  transition: background-color 0.2s ease, transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+}
+.social-btn:hover {
+  background: var(--accent-dark);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 24px -12px rgba(36, 26, 19, 0.7);
+}
+.social-btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
+.social-btn:focus-visible { outline-offset: 4px; }
+.social-btn-icon { flex: none; display: inline-flex; color: #f4e8d8; }
+.social-btn-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.social-btn-name { font-weight: 600; font-size: 1rem; }
+.social-btn-handle {
+  font-size: 0.84rem;
+  color: var(--accent-light); /* 5.1:1 on --accent */
+  overflow-wrap: anywhere;
+}
+.social-btn-go {
+  flex: none;
+  margin-left: auto;
+  color: var(--accent-light);
+  transition: transform 0.3s var(--ease-out);
+}
+.social-btn:hover .social-btn-go { transform: translate(2px, -2px); }
 
 /* The one panel left on the page. It keeps a box because it is the only
    tabular thing here — people scan for opening hours, and the frame is what
@@ -1050,11 +1169,11 @@ p { margin: 0; text-wrap: pretty; }
   position: relative;
   background: var(--paper);
   border: 1px solid rgba(123, 100, 80, 0.14);
-  border-radius: var(--radius-lg);
+  border-radius: 6px;
   padding: 28px 30px;
-  /* It rests on the page the way the photos do, and carries their clip (see
-     the clip section): a note clipped to the paper, not a white box that
-     happens to be there. Still the only framed thing in <main>. */
+  /* It rests on the page the way the photos do, and is mounted in the same
+     album corners: a card tucked into the page, not a white box that happens
+     to be there. Still the only framed thing in <main>. */
   box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 14px 30px -16px rgba(58, 43, 30, 0.26);
 }
 .schedule-list {
@@ -1084,8 +1203,13 @@ p { margin: 0; text-wrap: pretty; }
   font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
 }
+/* Notes are set in the serif's italic — the one italic this site ships. The
+   sans has no italic file, and a browser-slanted roman is the tell of a font
+   that was never meant to lean. */
 .note {
-  font-size: 0.85rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.5;
   color: var(--muted);
   font-style: italic;
 }
@@ -1131,8 +1255,8 @@ p { margin: 0; text-wrap: pretty; }
    as the section marks, and for the same reason: tracked-out grey capitals are
    every footer on the web. */
 .footer-col h4 {
-  font-size: 1.12rem;
-  font-weight: 600;
+  font-size: 1.22rem;
+  font-weight: 700;
   color: #f2e6d8;
   margin-bottom: 16px;
 }
@@ -1205,18 +1329,18 @@ p { margin: 0; text-wrap: pretty; }
   padding: 0 24px;
 }
 .legal h1 {
-  font-size: clamp(1.9rem, 4.5vw, 2.6rem);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-size: clamp(2rem, 4.7vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.15;
   margin: 10px 0 14px;
 }
 .legal h2 {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   margin: 40px 0 12px;
 }
 .legal h3 {
-  font-size: 1.05rem;
+  font-size: 1.16rem;
   margin: 26px 0 8px;
 }
 .legal p {
@@ -1448,11 +1572,11 @@ body.is-legal .legal-footer { margin-top: auto; }
 }
 .page-banner .eyebrow { color: var(--accent-light); }
 .page-banner h1 {
-  font-size: clamp(2rem, 4.6vw, 3.1rem);
-  line-height: 1.12;
-  font-weight: 600;
+  font-size: clamp(2.15rem, 4.9vw, 3.3rem);
+  line-height: 1.08;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.01em;
 }
 .banner-lead {
   font-size: 1.06rem;
@@ -1461,13 +1585,30 @@ body.is-legal .legal-footer { margin-top: auto; }
   margin-top: 14px;
 }
 
-/* ===== Reveal animation ===== */
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.7s var(--ease-out), transform 0.9s var(--ease-out);
+/* ===== Photographs develop =====
+   The site's one scroll moment, and it replaced a fade-and-rise on every card.
+   That was the generic entrance — the same 16px lift on text, photos and the
+   hours panel alike, which kept every paragraph invisible until it was
+   already on screen. Text no longer moves at all: it is there when you get
+   there.
+
+   Instead each PHOTOGRAPH develops as it arrives, the way a print comes up in
+   the tray: it enters pale, warm-toned and a little soft, and resolves to its
+   own colour. On a site that mounts its pictures in album corners, that is the
+   only motion that belongs; it is also the only kind a reader cannot be kept
+   waiting by, because the picture is visible the whole time.
+
+   script.js adds .develop ONLY to photos that are below the fold when it runs,
+   so nothing already on screen flashes back to sepia, and with JavaScript off
+   (or reduced motion on) no photo is ever undeveloped. --develop-delay staggers
+   the photos in one row by 140ms each, capped. */
+.img-frame.develop img,
+.menu-thumb.develop img {
+  filter: sepia(0.62) saturate(0.4) contrast(0.84) brightness(1.12) blur(1.5px);
+  transition: filter 1.4s var(--ease-out) var(--develop-delay, 0ms);
 }
-.reveal.is-visible { opacity: 1; transform: translateY(0); }
+.img-frame.develop.is-developed img,
+.menu-thumb.develop.is-developed img { filter: saturate(0.94); }
 
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
@@ -1619,11 +1760,13 @@ body.is-legal .legal-footer { margin-top: auto; }
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .reveal { opacity: 1; transform: none; }
   .btn:hover, .to-top:hover { transform: none; }
   .card-link:hover .img-frame,
   .card-link:hover .link-arrow-mark,
-  .btn:active { transform: none; }
+  .btn:active,
+  .social-btn:hover,
+  .social-btn:active,
+  .social-btn:hover .social-btn-go { transform: none; }
 }
 
 /* ===== Page to page =====
@@ -1694,67 +1837,47 @@ body.is-legal .legal-footer { margin-top: auto; }
 }
 
 
-/* ── Photos are clipped to the page ──────────────────────────────────────────
-   Asked for directly: the paper texture wanted something holding the pictures
-   onto it.
+/* ── Photos are mounted in album corners ─────────────────────────────────────
+   THE THIRD ANSWER TO "clipped to the paper", and the first that is not an
+   object lying on top of the picture. A solid binder clip came first and read
+   as a handbag handle; a stroked paperclip came second and still read as an
+   icon stuck on a photograph. Album corners are the PAGE holding the
+   photograph, which was the idea all along — and every family album on a
+   Russian bookshelf holds its prints exactly this way. Two diagonal corners,
+   top-left and bottom-right, as a print is actually mounted.
 
-   A PAPERCLIP, STROKE-ONLY, AND THAT IS THE SECOND ATTEMPT. The first was a
-   solid binder clip straddling the top edge — the literal reading, and wrong
-   twice over: every other mark on this site is line art at stroke-width 2, so a
-   filled shape was the one heavy object on a page of outlines; and at the size
-   a 506px photo wants, its two levers merged into what read as a handbag
-   handle. A wire clip over the corner is unmistakable at any size, covers
-   almost none of the photograph, and speaks the same language as the icons.
+   Drawn with gradients rather than an SVG so the colours are custom
+   properties. Each corner is a hard stop at the diagonal: kraft card up to it,
+   a fold line on it, nothing past it. The ::before sits 3px outside the frame
+   so the pocket's outer edges run past the print onto the page, as a real
+   corner's do, and the drop-shadow is what makes the print look tucked UNDER
+   the card rather than printed with a triangle on it.
 
-   It sits on ::before because ::after is the vignette, and it needs .img-frame
-   to be overflow:visible — see the note there. pointer-events:none for the same
-   reason the vignette has it: .card-link wraps whole frames.
-
-   The frames gain a matching margin-top so the clip has somewhere to overhang
-   into and cannot collide with whatever sits above. */
+   It needs .img-frame to be overflow:visible (see there), and pointer-events
+   none because .card-link wraps whole frames. The empty placeholder frames
+   get corners too, deliberately: an empty album slot waiting for its print
+   is exactly what those cards are. */
 .img-frame::before,
 .info-card--panel::before {
+  --m: var(--mount-size, 36px);
   content: "";
   position: absolute;
-  top: -15px;
-  left: 26px;
-  width: 44px;
-  height: 44px;
+  inset: -3px;
   z-index: 2;
   pointer-events: none;
-  transform: rotate(-24deg);
-  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2044%2044%27%3E%3Cpath%20d%3D%27M15%2035.5V13.5a6.5%206.5%200%200%201%2013%200v19a4.2%204.2%200%200%201-8.4%200V16.5%27%20fill%3D%27none%27%20stroke%3D%27%233a2b1e%27%20stroke-opacity%3D%270.62%27%20stroke-width%3D%272.4%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
-  /* A wire clip casts a real shadow onto the paper — without it the clip looks
-     printed on the photograph rather than resting on top of it. */
-  filter: drop-shadow(0 1.5px 1.5px rgba(58, 43, 30, 0.3));
+  background:
+    linear-gradient(135deg, var(--mount) calc(50% - 1px), var(--mount-edge) calc(50% - 1px) 50%, transparent calc(50% + 0.6px))
+      top left / var(--m) var(--m) no-repeat,
+    linear-gradient(-45deg, var(--mount) calc(50% - 1px), var(--mount-edge) calc(50% - 1px) 50%, transparent calc(50% + 0.6px))
+      bottom right / var(--m) var(--m) no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(58, 43, 30, 0.22)) drop-shadow(0 3px 5px rgba(58, 43, 30, 0.12));
 }
-
-/* The hero has no frame, and the menu thumbnails are far too small to carry
-   one — a 44px clip on a 64px thumbnail is a joke rather than a detail. */
-.menu-thumb::before { content: none; }
-
-/* On the hours panel it goes top-RIGHT, leaning the other way: top-left it
-   landed on the first letters of «График работы». */
-.info-card--panel::before { left: auto; right: 30px; transform: rotate(18deg); }
-
-.img-frame--feature,
-.img-frame--about,
-.img-frame--wide,
-.img-frame--card { margin-top: 18px; }
+.img-frame--card { --mount-size: 32px; }
+.info-card--panel::before { inset: -2px; --mount-size: 34px; }
 
 @media (max-width: 640px) {
   .img-frame::before,
-  .info-card--panel::before {
-    top: -12px;
-    left: 18px;
-    width: 34px;
-    height: 34px;
-  }
-  .info-card--panel::before { left: auto; right: 22px; }
-  .img-frame--feature,
-  .img-frame--about,
-  .img-frame--wide,
-  .img-frame--card { margin-top: 14px; }
+  .info-card--panel::before { --mount-size: 28px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

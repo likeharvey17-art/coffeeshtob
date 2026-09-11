@@ -124,7 +124,8 @@ Three places, all native WordPress, all in Russian:
 
 - **Страницы** — section copy, the banner photo, the SEO title and description.
 - **Карточки** — the entries inside each section, and the menu with prices.
-- **Внешний вид → Настроить → Контакты Кофештаба** — address, phone, footer text.
+- **Внешний вид → Настроить → Контакты Кофештаба** — address, phone, footer text,
+  and the social links (which also become the buttons on Контакты).
 
 A dashboard note (`inc/admin-help.php`) says this on the first screen they see,
 because three things are genuinely not guessable: that cards are a separate
@@ -145,8 +146,9 @@ are gone, so **this is now the only record of the starting content**.
 
 `style.css` and `js/script.js` came across from the previous build unchanged
 apart from font paths and one appended WordPress-integration section at the
-bottom, and have since had one polish pass (1.1.0, below) that kept the layout,
-the palette tokens and every measured number. Everything below is still live.
+bottom, and have since had two passes — 1.1.0 (polish) and 1.2.0 (new faces,
+album corners, developing photographs, social buttons), both below — that kept
+the layout and the palette tokens. Everything below is still live.
 
 **Content is not boxed.** Entries in the About, Menu and card sections sit
 directly on the page — no background, border, radius, padding or hover lift. The
@@ -223,20 +225,24 @@ gets a plain dark band instead** (`.page-banner--plain`): the placeholder is a
 line-art picture frame, and blurred across a banner it reads as a broken image
 rather than as "a photo is coming".
 
-**Photos are clipped to the page**, with a stroke-only paperclip over the
-top-left corner (`.img-frame::before`). That is the SECOND attempt: the first was
-a solid binder clip straddling the top edge, which is the literal reading of
-"clip" and wrong twice over — every other mark on this site is line art at
-stroke-width 2, so a filled shape was the one heavy object on a page of
-outlines, and at the size a 506px photo wants its two levers merged into what
-read as a handbag handle. Judged by looking at it, which is the only way this
-kind of thing can be judged.
+**Photos are mounted in album corners** (`.img-frame::before`), top-left and
+bottom-right, in kraft card with a fold line. That is the THIRD answer to
+"clipped to the paper". A solid binder clip came first and read as a handbag
+handle; a stroked paperclip came second and still read as an icon stuck on a
+photograph. Both were objects lying ON the picture. Album corners are the page
+holding the picture, which was the idea — and it is how every family album on
+a Russian bookshelf holds its prints. Kraft beat cream (vanished on the page)
+and album black (the heaviest thing on screen), judged side by side on real
+photos on both backgrounds.
 
-The clip is why **`.img-frame` is `overflow: visible`**. The rounding moved onto
-the image and the vignette (`border-radius: inherit`), which is what overflow was
-doing for them anyway; a frame that clips its own children would cut the clip in
-half. The frames carry a matching `margin-top` so it has somewhere to overhang
-into.
+The corners are gradients, not an SVG, so `--mount` and `--mount-edge` are
+tokens. The pseudo-element sits 3px outside the frame so each pocket runs past
+the print's edges, as a real corner does, and that is why **`.img-frame` is
+`overflow: visible`**: the rounding sits on the image and the vignette
+(`border-radius: inherit`) instead. The prints went from 14px rounding to 6px
+with it — a fully rounded print in square pockets reads as a phone screenshot.
+The empty placeholder frames get corners too, on purpose: an empty album slot
+is exactly what they are.
 
 **Icons are named, never positional.** They were a `loop.index == 1..4` chain
 inherited from the first CMS: reordering cards silently swapped their icons and a
@@ -270,8 +276,8 @@ layout and content kept. What it changed, and the rule each one carries:
   that wraps gets no leader, because the first version's 18px minimum left a stub
   of dots floating in the gap a wrapped line leaves. `:has(.menu-price)` keeps an
   unpriced row from trailing dots to nothing.
-- **The hours panel wears the photos' clip**, top-RIGHT (top-left it lands on
-  «График работы»), and their resting shadow. Still the only box in `<main>`.
+- **The hours panel rests on the page like the photos** and, since 1.2.0, is
+  mounted in the same album corners. Still the only box in `<main>`.
 - **Links are real underlines**, faint at rest, full on hover — a
   `border-bottom` rules off the box, so a wrapped label was underlined beneath
   its last line only.
@@ -290,11 +296,39 @@ on `--dark` (now cream at 66%, 6.7:1), and the bottom line at 45% white was
 they are 6.2 and 6.0.
 
 **What it deliberately did not touch:** the nav's font weight (the 1000px
-breakpoint is measured against today's label widths), the fonts (the detector
-flags Inter as overused; replacing it means new self-hosted files and is a
-design decision, not polish), the photo treatment, and the texture layers —
+breakpoint is measured against today's label widths), the fonts (replaced in 1.2.0, when
+the owner asked), the photo treatment, and the texture layers —
 so the composited backgrounds, and every pairing measured on them, are
 unchanged.
+
+### 1.2.0: new faces, album corners, developing photographs, social buttons
+
+- **Alegreya and Commissioner replaced Playfair Display and Inter** — see
+  "Fonts are self-hosted" for why these two and how they were chosen. Alegreya
+  has a smaller x-height than Playfair, so every serif size went up 6-12% and
+  the display weight went back to 700; set at Playfair's sizes it read timid.
+  **The nav was re-measured with the wider Commissioner** and still fits the
+  1001-1200px band: the gap between the last link and «Соцсети» is 79px at
+  1060px and grows from there. Re-measure on any label change, as before.
+- **Notes (`.note`) are Alegreya's italic.** Commissioner ships no italic, and a
+  browser-slanted roman is what `font-style: italic` produced before.
+- **The fade-and-rise on every card is gone; photographs develop instead.**
+  Each photo enters pale, warm-toned and slightly soft and resolves to its own
+  colour over 1.4s, like a print in the tray — the one scroll moment, and the
+  only one that belongs on a site of mounted prints. Text never moves: it is
+  there when you get there. **The safety model is the point:** `script.js`
+  marks only photos BELOW the fold when it runs, so nothing already painted
+  flashes back to sepia, and with JavaScript off or reduced motion on no photo
+  is ever undeveloped. A row of three develops left to right, 140ms apart.
+- **Контакты has real social buttons** — Telegram and VK as 62px brown pills
+  with the mark, the name and the handle, under «Мы на связи». The handle is
+  DERIVED from the Customiser URL (`@coffeeshtob`, `vk.com/coffeeshtob`), never
+  typed, so the button cannot promise one address and open another. The
+  channel list now lives once, in `shtob_socials()`; the footer, the header
+  popover and the buttons all read it. Deliberately not Telegram blue and VK
+  blue: the marks carry the recognition, and two saturated brand colours would
+  be the loudest thing on the page. The guide is a link, not a social channel,
+  so it stays out of the buttons.
 
 ### Palette and texture
 
@@ -710,15 +744,27 @@ reported the site taking "forever" to load in Russia and then settling into the
 wrong fonts, which is exactly what a render-blocking Google Fonts stylesheet does
 when Google is slow or blocked.
 
-Both families are **variable** (one file per subset spans every weight) and split
-by `unicode-range`. Subsets kept: `latin`, `cyrillic`, `latin-ext` for both, plus
-`cyrillic-ext` for Inter. **`latin-ext` is not optional despite the name** — the
-ruble sign `₽` is U+20BD and falls in that range, so the menu prices pull it. It
-is 85 KB of Inter for effectively one glyph; subsetting it with `fonttools` is an
-easy win nobody has taken. Both are SIL Open Font License.
+**Alegreya** sets the headings, the section marks (in its true italic) and the
+notes; **Commissioner** sets everything else. They replaced Playfair Display and
+Inter in 1.2.0 — the stock "coffee shop" serif and the stock interface sans.
+Alegreya is a book face drawn for literature, calligraphic and warm, which suits
+a merchant house of stories and crafts; Commissioner is a humanist sans whose
+flared strokes sit beside it. **Chosen by rendering six pairings in real Cyrillic
+copy from this site**, not from a list: Alegreya Sans was the designed partner
+and lost on its small x-height at body size, and Old Standard TT was the most
+period-correct for the house and read as a museum label.
 
-The two Cyrillic subsets are preloaded; the others are not, because preloading
-`latin-ext` would download 85 KB most visitors never need.
+All three files (roman, italic, sans) are **variable** — one per subset spans
+every weight — and split by `unicode-range` exactly as Google serves them.
+Subsets kept: `latin`, `latin-ext`, `cyrillic`, `cyrillic-ext`; 20-43 KB each,
+twelve files. **`latin-ext` is not optional despite the name** — the ruble sign
+`₽` is U+20BD and lives there, so the menu prices pull it. Both families are SIL
+Open Font License. If they ever need regenerating: fetch the css2 URL for the
+family with a modern browser user agent, download each subset's woff2, keep
+Google's `unicode-range` lines verbatim.
+
+The two Cyrillic romans are preloaded; the italic and the other subsets are not,
+because they set little text and swapping in late there costs nothing.
 
 ## Things deliberately not built
 
@@ -768,9 +814,13 @@ Verification habits learned the hard way here:
 - **Assert expected counts before trusting an extraction.** A regex HTML edit
   once silently produced one item per list instead of four.
 - **In the Browser pane the tab can be hidden**, and then CSS transitions never
-  run (`.reveal` reads `opacity: 0` forever) and scrolled screenshots come back
-  blank. Check `document.hidden` before believing either. Inject
-  `*{transition:none}` plus `.reveal{opacity:1}`, and set `loading='eager'`.
+  run and scrolled screenshots come back blank — innerWidth even reads 0, so no
+  layout measurement means anything. Check `document.hidden` before believing
+  any of it. A small WKWebView program (`WKWebView.takeSnapshot`, compiled with
+  `swiftc`) screenshots and measures real WebKit at any width without the pane,
+  and was how 1.1.0 and 1.2.0 were verified. Photos below the fold carry
+  `.develop` until scrolled to: disable transitions, set `loading='eager'`, and
+  scroll before judging a photo's colour.
 
 ## Content still owed by the owner
 
