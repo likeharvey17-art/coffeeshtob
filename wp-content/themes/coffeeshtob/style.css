@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.0.0
+Version: 1.1.0
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -13,12 +13,12 @@ Tags: custom-menu, custom-logo, translation-ready
 */
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Everything below this line is the site's stylesheet, carried over from the
-   Grav theme unchanged. The font paths are the only edit: they were relative
-   to the theme root there and live under assets/fonts/ here.
+   The site's own stylesheet. It came across from the Grav theme with only its
+   font paths changed; 1.1.0 was a polish pass (warm light, the menu leaders,
+   the section marks, the finish on links and buttons) that kept the layout,
+   the palette tokens and every measured number as they were.
    ───────────────────────────────────────────────────────────────────────── */
 
-/* Deployed via Cloudflare Workers static assets, built from GitLab on push. */
 /* ===== Fonts =====
    Self-hosted, not loaded from Google. The site is for a Russian audience and
    fonts.googleapis.com is unreliable there: the stylesheet <link> was
@@ -133,6 +133,17 @@ Tags: custom-menu, custom-logo, translation-ready
   --dark: #221a12;
   --dark-soft: #33261b;
 
+  /* Warm light. Used as LIGHT only — the lamplight glow over the hero, banner
+     and footer, and the text selection — never as a colour anything is painted
+     in. That is what stops it drifting back toward the orange browns this
+     palette was deliberately desaturated away from. */
+  --glow: 214, 152, 88;   /* an rgb triplet, for rgba() */
+  --selection: #ecd7ba;
+
+  /* One curve for everything that arrives: quick off the mark, long settle.
+     The default `ease` starts slowly, which on a hover reads as lag. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
   /* THREE background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
      `body` and `.section-alt` only, so the white cards stay clean.
@@ -202,6 +213,11 @@ html {
   /* Keeps anchor targets clear of the sticky header. --header-h is measured
      live in script.js; the fallback in :root covers the no-JS case. */
   scroll-padding-top: calc(var(--header-h) + 14px);
+  /* The parts nobody draws ship in the browser's blue and grey otherwise —
+     the one place the palette would visibly stop. */
+  accent-color: var(--accent);
+  caret-color: var(--accent);
+  scrollbar-color: #bba88f transparent;
 }
 /* Safeguard against the absolutely-positioned hero background causing
    horizontal scroll on mobile. It must be `clip`, not `hidden`: `overflow-x:
@@ -241,8 +257,13 @@ body {
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 ul, dl { margin: 0; padding: 0; list-style: none; }
-h1, h2, h3, h4 { font-family: var(--font-serif); margin: 0; color: var(--ink); font-weight: 700; }
-p { margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-serif); margin: 0; color: var(--ink); font-weight: 700; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+
+::selection { background: var(--selection); color: var(--ink); }
+.hero ::selection,
+.page-banner ::selection,
+.site-footer ::selection { background: #6b513b; color: #fff; }
 
 .container {
   max-width: var(--container);
@@ -262,14 +283,30 @@ p { margin: 0; }
   font-size: 0.95rem;
   white-space: nowrap;
   border: 1px solid transparent;
-  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.25s var(--ease-out), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s var(--ease-out);
 }
 .btn:hover { transform: translateY(-1px); }
+/* Pressed reads as pressed. A phone has no hover, so without this a tap gave
+   no sign it had landed until the next page arrived. */
+.btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
 .btn-accent {
   background: var(--accent);
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 14px -8px rgba(36, 26, 19, 0.6);
 }
 .btn-accent:hover { background: var(--accent-dark); }
+
+/* OVER THE PHOTOGRAPH THE PRIMARY BUTTON IS CREAM, NOT BROWN. The roasted
+   brown is built for light pages; on the darkened hero it sank into the shadow
+   beside its own ghost sibling, so the one thing the hero asks you to do was
+   the least visible mark on it. Cream on dark is the lit window of the café.
+   The header's «Соцсети» is outside .hero and keeps the brown. */
+.hero .btn-accent {
+  background: #f4e8d8;
+  color: var(--ink);
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
+}
+.hero .btn-accent:hover { background: #fdf6ec; }
 .btn-ghost {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
@@ -318,16 +355,18 @@ p { margin: 0; }
   display: flex;
   align-items: center;
   gap: 24px;
-  background: rgba(255, 255, 255, 0.92);
+  /* Warm paper rather than screen white, so the pill belongs to the page it
+     floats over. The inset top highlight gives it an edge that catches light. */
+  background: rgba(253, 250, 245, 0.9);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   padding: 10px 12px 10px 16px;
-  box-shadow: 0 8px 24px rgba(43, 33, 25, 0.06);
-  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px rgba(43, 33, 25, 0.06);
+  backdrop-filter: blur(12px) saturate(1.15);
   transition: box-shadow 0.2s ease;
 }
 .site-header.is-scrolled .header-inner {
-  box-shadow: 0 10px 30px rgba(43, 33, 25, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 30px rgba(43, 33, 25, 0.12);
 }
 
 .brand {
@@ -547,12 +586,17 @@ p { margin: 0; }
      current one, a pale dusk sky. The stop is positioned in `calc()` off the
      measured header rather than as a percentage, so it tracks the header's real
      height instead of drifting with the hero's. */
-  background: linear-gradient(
-    180deg,
-    rgba(20, 13, 8, 0.74) 0,
-    rgba(26, 18, 11, 0.46) calc(var(--header-h) + 24px),
-    rgba(21, 14, 9, 0.84) 100%
-  );
+  background:
+    /* Lamplight. Low and to the left, where the gradient below is already at
+       its darkest, so it warms the photograph without lifting it under the
+       white lead text. */
+    radial-gradient(ellipse 70% 55% at 22% 88%, rgba(var(--glow), 0.13), transparent 72%),
+    linear-gradient(
+      180deg,
+      rgba(20, 13, 8, 0.74) 0,
+      rgba(26, 18, 11, 0.46) calc(var(--header-h) + 24px),
+      rgba(21, 14, 9, 0.84) 100%
+    );
   pointer-events: none;
 }
 .hero-inner {
@@ -593,11 +637,12 @@ p { margin: 0; }
 .badge svg { flex-shrink: 0; color: var(--accent-light); }
 
 .hero h1 {
-  font-size: clamp(2.4rem, 6vw, 4rem);
-  line-height: 1.1;
+  font-size: clamp(2.4rem, 6.2vw, 4.35rem);
+  line-height: 1.06;
+  font-weight: 600;
   color: #fff;
   margin-bottom: 24px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 .hero-lead {
   font-size: 1.15rem;
@@ -673,22 +718,63 @@ p { margin: 0; }
   text-align: center;
 }
 .section-head-sm { margin-bottom: 40px; }
+/* A subsection's heading (Кухня's drinks list) is an h3 under a section mark.
+   At the browser's default 1.17em it came out barely larger than the mark
+   above it, so the two read as one line of equal weight. */
+.section-head h3 {
+  font-size: clamp(1.5rem, 2.6vw, 1.85rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+}
+/* THE LABEL OVER A HEADING IS A CAFÉ-MENU SECTION MARK, NOT A WEB KICKER.
+   It was 0.78rem capitals tracked out to 0.14em — the stock landing-page
+   eyebrow, and the most generic line on the site. Now it is the display serif
+   at reading size, in sentence case, led by one bean drawn like the ones in the
+   background, so it could only belong here.
+
+   The bean is a MASK filled with currentColor, not a background image, so it
+   takes whatever colour the label has — --accent-mid on the page,
+   --accent-light on the banner — from one drawing. */
 .eyebrow {
-  display: inline-block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-serif);
+  font-size: 1.06rem;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--accent-mid);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+.eyebrow::before {
+  content: "";
+  flex: none;
+  width: 11px;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round'%3E%3Cellipse cx='8' cy='11' rx='6.1' ry='9.1'/%3E%3Cpath d='M8 3.5C10.6 7.5 10.6 14.5 8 18.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round'%3E%3Cellipse cx='8' cy='11' rx='6.1' ry='9.1'/%3E%3Cpath d='M8 3.5C10.6 7.5 10.6 14.5 8 18.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+  transform: rotate(-22deg);
 }
 .section h2 {
-  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  font-size: clamp(1.95rem, 3.8vw, 2.7rem);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.015em;
   margin-bottom: 14px;
 }
 .section-sub {
   font-size: 1.05rem;
   color: var(--muted);
+  max-width: 60ch;
+  margin-left: auto;
+  margin-right: auto;
 }
+/* shtob_paragraphs() emits one <p> per line, and with p's zero margin a
+   multi-paragraph lead ran together as one block. */
+.section-sub + .section-sub { margin-top: 12px; }
 
 .about-grid {
   display: grid;
@@ -867,21 +953,50 @@ p { margin: 0; }
   border-top: 1px solid var(--border);
 }
 
+/* The frames' treatment at thumbnail size. The 1px border was the last hard
+   cut-out edge on the site once the frames had lost theirs. The hairline is an
+   OUTLINE with a negative offset because an inset box-shadow paints beneath
+   the image and disappears; an outline paints on top of it. */
 .menu-thumb {
   aspect-ratio: 1 / 1;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--cream-alt);
-  border: 1px solid rgba(123, 100, 80, 0.22);
+  outline: 1px solid rgba(123, 100, 80, 0.12);
+  outline-offset: -1px;
+  box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 8px 18px -10px rgba(58, 43, 30, 0.24);
 }
-.menu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.menu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(0.94); }
 
 .menu-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
 }
+/* A dotted leader from the name to the price — the detail every printed café
+   menu has and no web template does. It is the row's own ::before (a flex
+   item like any other), ordered between the two, so it fills exactly the gap
+   space-between used to leave empty. Being empty, it baselines on its bottom
+   border, which is what puts the dots on the text line.
+
+   Only when there IS a price: an unpriced item would trail dots to nothing.
+   A browser without :has() shows no leader and loses nothing else.
+
+   IT TAKES ONLY FREE SPACE (basis 0, no minimum). A name that has to wrap
+   leaves none, so it gets no leader — the first version had an 18px minimum,
+   and on «Бутеры с фермерским сыром» that was a stub of dots floating in the
+   gap a wrapped line leaves, a long way from the word it belonged to. A
+   minimum would also force names to wrap earlier just to make room for it. */
+.menu-head:has(.menu-price)::before {
+  content: "";
+  order: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  border-bottom: 2px dotted rgba(116, 94, 75, 0.38);
+  transform: translateY(-0.3em);
+}
+.menu-head .menu-price { order: 2; }
 .menu-item h3 {
   font-size: 1.02rem;
   line-height: 1.3;
@@ -932,10 +1047,15 @@ p { margin: 0; }
    makes it findable at a glance. Being the sole boxed element is the point:
    it reads as emphasis rather than as the page's default container. */
 .info-card--panel {
+  position: relative;
   background: var(--paper);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(123, 100, 80, 0.14);
   border-radius: var(--radius-lg);
   padding: 28px 30px;
+  /* It rests on the page the way the photos do, and carries their clip (see
+     the clip section): a note clipped to the paper, not a white box that
+     happens to be there. Still the only framed thing in <main>. */
+  box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 14px 30px -16px rgba(58, 43, 30, 0.26);
 }
 .schedule-list {
   display: flex;
@@ -962,6 +1082,7 @@ p { margin: 0; }
   font-weight: 700;
   color: var(--ink);
   font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 .note {
   font-size: 0.85rem;
@@ -969,24 +1090,33 @@ p { margin: 0; }
   font-style: italic;
 }
 .info-card p + .note,
+.info-card .note + p,
 .info-card p + .link-arrow { margin-top: 14px; }
 .link-arrow {
   display: inline-block;
   max-width: 100%;
   font-weight: 600;
   color: var(--accent-dark);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease;
+  /* An underline, not a border-bottom: a border rules off the whole box, so a
+     label that wrapped was underlined beneath its last line only. Faint at
+     rest, so it reads as a link before anyone hovers it; full on hover. */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(116, 94, 75, 0.35);
+  transition: text-decoration-color 0.2s ease;
   /* Long labels («Туристический гид «Романов на Волге» →») must wrap inside
      the card rather than run past its edge on narrow screens. */
   white-space: normal;
   overflow-wrap: break-word;
 }
-.link-arrow:hover { border-color: var(--accent-dark); }
+.link-arrow:hover { text-decoration-color: currentColor; }
 
 /* ===== Footer ===== */
 .site-footer {
-  background: var(--dark);
+  background:
+    radial-gradient(ellipse 70% 90% at 12% 0%, rgba(var(--glow), 0.08), transparent 62%),
+    var(--dark);
   color: rgba(255, 255, 255, 0.75);
   padding-top: 72px;
 }
@@ -997,14 +1127,19 @@ p { margin: 0; }
   padding-bottom: 56px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+/* Column heads in the serif, sentence case, in the warm cream — the same move
+   as the section marks, and for the same reason: tracked-out grey capitals are
+   every footer on the web. */
 .footer-col h4 {
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 18px;
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: #f2e6d8;
+  margin-bottom: 16px;
 }
+/* .note is --muted, which is built for light pages: on --dark it measured
+   2.8:1, and the footer's «левый берег» line was the hardest text on the site
+   to read. */
+.site-footer .note { color: rgba(242, 230, 216, 0.66); }
 .footer-col p {
   margin-bottom: 10px;
   font-size: 0.92rem;
@@ -1027,8 +1162,8 @@ p { margin: 0; }
 }
 .social-links a:hover { color: #fff; }
 .social-links svg { color: var(--accent-light); flex-shrink: 0; }
-.footer-col .link-arrow { color: var(--accent-light); }
-.footer-col .link-arrow:hover { border-color: var(--accent-light); }
+.footer-col .link-arrow { color: var(--accent-light); text-decoration-color: rgba(198, 176, 154, 0.35); }
+.footer-col .link-arrow:hover { text-decoration-color: currentColor; }
 
 .footer-phone {
   display: inline-flex;
@@ -1052,7 +1187,7 @@ p { margin: 0; }
   gap: 6px 10px;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.58); /* 0.45 measured 4.4:1 on --dark, under AA at this size */
 }
 .dot { display: none; }
 .footer-legal-link {
@@ -1071,6 +1206,8 @@ p { margin: 0; }
 }
 .legal h1 {
   font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
   line-height: 1.15;
   margin: 10px 0 14px;
 }
@@ -1091,7 +1228,6 @@ p { margin: 0; }
 .legal-callout {
   background: var(--cream-alt);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent-mid);
   border-radius: var(--radius-md);
   padding: 20px 22px;
   margin-bottom: 8px;
@@ -1100,7 +1236,10 @@ p { margin: 0; }
 .legal-link {
   color: var(--accent-dark);
   font-weight: 600;
-  border-bottom: 1px solid var(--accent-mid);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent-mid);
 }
 /* 404 page: the section links, laid out as a simple wrapped list. Shares the
    .legal container so the two non-marketing pages stay visually consistent. */
@@ -1228,7 +1367,7 @@ body.is-legal .legal-footer { margin-top: auto; }
   color: inherit;
 }
 .card-link .img-frame {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out);
 }
 .card-link:hover .img-frame {
   transform: translateY(-4px);
@@ -1240,6 +1379,11 @@ body.is-legal .legal-footer { margin-top: auto; }
 .card-link h3 { transition: color 0.2s ease; }
 .card-link:hover h3 { color: var(--accent); }
 .card-link .link-arrow { margin-top: 10px; }
+.card-link:hover .link-arrow { text-decoration-color: currentColor; }
+/* The arrow is its own box so it can travel; the margin replaces a typed
+   space, which the underline ran on under and stopped short of the arrow. */
+.link-arrow-mark { display: inline-block; margin-left: 0.3em; transition: transform 0.4s var(--ease-out); }
+.card-link:hover .link-arrow-mark { transform: translateX(4px); }
 
 /* ===== Inner-page banner =====
 
@@ -1286,12 +1430,14 @@ body.is-legal .legal-footer { margin-top: auto; }
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(
-    180deg,
-    rgba(20, 13, 8, 0.74) 0,
-    rgba(26, 18, 11, 0.5) calc(var(--header-h) + 24px),
-    rgba(21, 14, 9, 0.8) 100%
-  );
+  background:
+    radial-gradient(ellipse 60% 90% at 16% 100%, rgba(var(--glow), 0.12), transparent 70%),
+    linear-gradient(
+      180deg,
+      rgba(20, 13, 8, 0.74) 0,
+      rgba(26, 18, 11, 0.5) calc(var(--header-h) + 24px),
+      rgba(21, 14, 9, 0.8) 100%
+    );
   pointer-events: none;
 }
 .banner-inner {
@@ -1304,8 +1450,9 @@ body.is-legal .legal-footer { margin-top: auto; }
 .page-banner h1 {
   font-size: clamp(2rem, 4.6vw, 3.1rem);
   line-height: 1.12;
+  font-weight: 600;
   color: #fff;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.018em;
 }
 .banner-lead {
   font-size: 1.06rem;
@@ -1317,8 +1464,8 @@ body.is-legal .legal-footer { margin-top: auto; }
 /* ===== Reveal animation ===== */
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(16px);
+  transition: opacity 0.7s var(--ease-out), transform 0.9s var(--ease-out);
 }
 .reveal.is-visible { opacity: 1; transform: translateY(0); }
 
@@ -1474,7 +1621,21 @@ body.is-legal .legal-footer { margin-top: auto; }
   }
   .reveal { opacity: 1; transform: none; }
   .btn:hover, .to-top:hover { transform: none; }
-  .card-link:hover .img-frame { transform: none; }
+  .card-link:hover .img-frame,
+  .card-link:hover .link-arrow-mark,
+  .btn:active { transform: none; }
+}
+
+/* ===== Page to page =====
+   Eight pages that are one place. A cross-document view transition turns the
+   blank flash between them into a short crossfade, with the header held still
+   across it, so going from Кухня to Контакты reads as walking into the next
+   room rather than loading another site. CSS only; a browser without support
+   navigates exactly as before. Off under reduced motion. */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-header; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
 }
 
 /* ===== About: alternating photo / text rows (desktop) ===== */
@@ -1551,7 +1712,8 @@ body.is-legal .legal-footer { margin-top: auto; }
 
    The frames gain a matching margin-top so the clip has somewhere to overhang
    into and cannot collide with whatever sits above. */
-.img-frame::before {
+.img-frame::before,
+.info-card--panel::before {
   content: "";
   position: absolute;
   top: -15px;
@@ -1571,18 +1733,24 @@ body.is-legal .legal-footer { margin-top: auto; }
    one — a 44px clip on a 64px thumbnail is a joke rather than a detail. */
 .menu-thumb::before { content: none; }
 
+/* On the hours panel it goes top-RIGHT, leaning the other way: top-left it
+   landed on the first letters of «График работы». */
+.info-card--panel::before { left: auto; right: 30px; transform: rotate(18deg); }
+
 .img-frame--feature,
 .img-frame--about,
 .img-frame--wide,
 .img-frame--card { margin-top: 18px; }
 
 @media (max-width: 640px) {
-  .img-frame::before {
+  .img-frame::before,
+  .info-card--panel::before {
     top: -12px;
     left: 18px;
     width: 34px;
     height: 34px;
   }
+  .info-card--panel::before { left: auto; right: 22px; }
   .img-frame--feature,
   .img-frame--about,
   .img-frame--wide,

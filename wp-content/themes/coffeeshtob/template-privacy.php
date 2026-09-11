@@ -30,7 +30,7 @@ $updated = get_post_meta(get_queried_object_id(), '_shtob_updated', true) ?: '5 
 ?>
 <main class="legal" id="content">
   <div class="legal-inner">
-    <span class="eyebrow">ПРАВОВАЯ ИНФОРМАЦИЯ</span>
+    <span class="eyebrow">Правовая информация</span>
     <h1>Политика конфиденциальности</h1>
     <p class="legal-updated">Обновлено <?php echo esc_html($updated); ?></p>
 

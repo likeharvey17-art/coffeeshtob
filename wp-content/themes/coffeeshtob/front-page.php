@@ -60,7 +60,7 @@ $about = get_post_meta($id, '_shtob_about_image', true);
   <section class="section">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">О ШТАБЕ</span>
+        <span class="eyebrow">О штабе</span>
         <h2><?php echo esc_html(get_post_meta($id, '_shtob_about_title', true)); ?></h2>
       </div>
 
@@ -77,7 +77,7 @@ $about = get_post_meta($id, '_shtob_about_image', true);
   <section class="section section-alt">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">РАЗДЕЛЫ</span>
+        <span class="eyebrow">Разделы</span>
         <h2><?php echo esc_html(get_post_meta($id, '_shtob_sections_title', true)); ?></h2>
         <?php $ssub = get_post_meta($id, '_shtob_sections_sub', true); ?>
         <?php if ($ssub) : ?><p class="section-sub"><?php echo esc_html($ssub); ?></p><?php endif; ?>
@@ -91,7 +91,7 @@ $about = get_post_meta($id, '_shtob_about_image', true);
             <?php shtob_frame(get_post_thumbnail_id($p->ID), 'shtob-card', 'img-frame--card', $p->post_title); ?>
             <h3><?php echo esc_html($p->post_title); ?></h3>
             <?php if ($teaser) : ?><p><?php echo esc_html($teaser); ?></p><?php endif; ?>
-            <span class="link-arrow" aria-hidden="true">Смотреть →</span>
+            <span class="link-arrow" aria-hidden="true">Смотреть<span class="link-arrow-mark">→</span></span>
           </a>
         <?php endforeach; ?>
       </div>

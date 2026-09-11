@@ -40,7 +40,7 @@ $privacy = get_page_by_path('privacy');
     </div>
 
     <div class="footer-col">
-      <h4>ГДЕ МЫ НАХОДИМСЯ</h4>
+      <h4>Где мы находимся</h4>
       <p><?php echo esc_html(shtob_opt('address')); ?></p>
       <p class="note"><?php echo esc_html(shtob_opt('address_note')); ?></p>
       <?php if (shtob_opt('maps_url')) : ?>
@@ -49,14 +49,14 @@ $privacy = get_page_by_path('privacy');
     </div>
 
     <div class="footer-col">
-      <h4>НАВИГАЦИЯ</h4>
+      <h4>Навигация</h4>
       <nav class="footer-nav" aria-label="Разделы сайта (подвал)">
         <?php shtob_nav(); ?>
       </nav>
     </div>
 
     <div class="footer-col" id="social">
-      <h4>МЫ НА СВЯЗИ</h4>
+      <h4>Мы на связи</h4>
       <?php
       // One setting drives both the label and the tel: target. Written as two
       // values, editing the number would change what the footer SHOWS while the

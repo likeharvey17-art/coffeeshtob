@@ -145,7 +145,8 @@ are gone, so **this is now the only record of the starting content**.
 
 `style.css` and `js/script.js` came across from the previous build unchanged
 apart from font paths and one appended WordPress-integration section at the
-bottom. Everything below is still live.
+bottom, and have since had one polish pass (1.1.0, below) that kept the layout,
+the palette tokens and every measured number. Everything below is still live.
 
 **Content is not boxed.** Entries in the About, Menu and card sections sit
 directly on the page — no background, border, radius, padding or hover lift. The
@@ -243,6 +244,57 @@ fifth card got none. Adding one means adding a case in `parts/icon.php` **and**
 an option in `shtob_icon_choices()` — the CI check fails if they disagree.
 Гостиная deliberately uses none: its entries are too varied, and an icon on only
 some cards in a row knocks the headings 21px out of line.
+
+### The 1.1.0 polish: warm light and printed-menu details
+
+Asked for as "more modern, warm and welcoming, not generic", with the feel,
+layout and content kept. What it changed, and the rule each one carries:
+
+- **The hero's primary button is cream, not brown.** `--accent` is built for
+  light pages; on the darkened photo it sank beside its own ghost sibling, so
+  the one thing the hero asks you to do was the least visible mark on it. Scoped
+  to `.hero .btn-accent` — the header's «Соцсети» keeps the brown.
+- **`--glow` is light, never paint.** A warm radial over the hero, banner and
+  footer, placed where each overlay is already darkest so it warms the photo
+  without lifting it under white text. Nothing is *coloured* with it; that is
+  what stops it drifting back to the orange browns the palette left behind.
+- **The label over a heading is a section mark, not a kicker.** It was 0.78rem
+  tracked capitals — the stock landing-page eyebrow. Now it is the serif at
+  reading size in sentence case, led by one bean drawn like the background ones,
+  as a `mask` filled with `currentColor` so it takes the label's colour on light
+  and on the banner. Six of the seven seeded banner labels were the page title
+  again in capitals, printing the same words twice; they are gone from the seed,
+  and the field's help text now says not to repeat the title.
+- **The menu has dotted leaders** from name to price, as the row's own
+  `::before` flex item. It takes only free space (basis 0, no minimum): a name
+  that wraps gets no leader, because the first version's 18px minimum left a stub
+  of dots floating in the gap a wrapped line leaves. `:has(.menu-price)` keeps an
+  unpriced row from trailing dots to nothing.
+- **The hours panel wears the photos' clip**, top-RIGHT (top-left it lands on
+  «График работы»), and their resting shadow. Still the only box in `<main>`.
+- **Links are real underlines**, faint at rest, full on hover — a
+  `border-bottom` rules off the box, so a wrapped label was underlined beneath
+  its last line only.
+- **Footer column heads** are the serif in sentence case, same reason as the
+  section marks.
+- **Pages crossfade** via `@view-transition { navigation: auto }` with the header
+  named so it holds still. CSS only, off under reduced motion, and a browser
+  without it navigates as before.
+- `text-wrap: balance` on headings and `pretty` on paragraphs; selection, caret,
+  scrollbar and form accents themed from the palette; one `--ease-out` curve.
+
+**Two contrast failures were found on the dark footer and fixed**, both outside
+the 19 light-background pairings: `.note` is `--muted`, which measured **2.8:1**
+on `--dark` (now cream at 66%, 6.7:1), and the bottom line at 45% white was
+**4.4:1** (now 58%, 6.5:1). Measured at the warm glow's centre as well, where
+they are 6.2 and 6.0.
+
+**What it deliberately did not touch:** the nav's font weight (the 1000px
+breakpoint is measured against today's label widths), the fonts (the detector
+flags Inter as overused; replacing it means new self-hosted files and is a
+design decision, not polish), the photo treatment, and the texture layers —
+so the composited backgrounds, and every pairing measured on them, are
+unchanged.
 
 ### Palette and texture
 
@@ -558,6 +610,12 @@ Builds a real WordPress in `.wp-dev/` on SQLite (no database server), symlinks
 the theme from the working tree, copies the docroot files in, and loads the
 starting content. Admin: `shtob` / `devpassword`. `.claude/launch.json` serves it
 on 8766.
+
+**The theme symlink is relative, and that is a fix.** It was absolute; when the
+repo moved from `~/Desktop/web-project` the link dangled, WordPress lost its
+active theme, and every page answered **200 with an empty body** — no error
+anywhere, and `verify-site.py` reported every route as missing its `<h1>`. If a
+dev install predates the fix, rerun the script or repoint the link.
 
 **`realpath_cache_size=0` is not decoration.** PHP caches path→inode for 120
 seconds, and an editor that saves atomically changes the inode. Without it, edits

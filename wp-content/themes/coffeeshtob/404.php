@@ -22,7 +22,7 @@ get_header('legal');
 ?>
 <main class="legal" id="content">
   <div class="legal-inner">
-    <span class="eyebrow">ОШИБКА 404</span>
+    <span class="eyebrow">Ошибка 404</span>
     <h1>Такой страницы нет</h1>
     <p>Возможно, она переехала или в адресе опечатка. А кофе на месте — заходите
     на главную и посмотрите, что у нас есть.</p>

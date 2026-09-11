@@ -101,7 +101,10 @@ PHP
 # The theme is a symlink to the working tree, so an edit is live on the next
 # request with no copy step to forget.
 rm -rf "$DEV/wp-content/themes/coffeeshtob"
-ln -s "$REPO/wp-content/themes/coffeeshtob" "$DEV/wp-content/themes/coffeeshtob"
+# RELATIVE, so it survives the project folder moving. It was absolute, and
+# after the repo moved from ~/Desktop/web-project the link dangled: WordPress
+# lost its active theme and every page answered 200 with an empty body.
+ln -s ../../../wp-content/themes/coffeeshtob "$DEV/wp-content/themes/coffeeshtob"
 
 # The docroot files, so a local run rehearses the real one rather than something
 # nearby: without them verify-site.py reports the Yandex token missing.
