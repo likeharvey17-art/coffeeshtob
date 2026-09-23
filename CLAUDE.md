@@ -407,9 +407,31 @@ Real, visible pages play normally.
 
 ### Palette and texture
 
-Warm off-white background (`--cream`, now `#f7f3ec`), soft cream alternating
-sections (`--cream-alt`), true-white cards (`--paper`), espresso text (`--ink`),
-dark roast hero/footer (`--dark`).
+**Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:
+neutral greys (`--cream` #f9f9f9 background, `--cream-alt` #efefef muted,
+`--paper` #fff card, `--border` #d8d8d8, `--tint` #e8e8e8 hover), `--ink`
+#202020, `--muted` #646464, primary brown `--accent` #644a40, peach secondary
+`--secondary` #ffdfb5 with `--secondary-ink` #582d1d, and `--destructive`
+#e54d2e. Radius is Caffeine's 0.5rem (`--radius`) on buttons, nav items and
+popovers; the header bar and the social buttons use `--radius-lg`.
+
+- **Peach is the secondary, used as a fill in three places only**: the current
+  nav item, the hero's primary button, and the album corners (`--mount`
+  #f3cc97, a step deeper so they read on grey). On `--dark` it is also the
+  footer heads and links (`--accent-light`).
+- **The red is rationed to two marks and must stay there**: the pin in the
+  hero and the rule drawn under a front-page index row on hover. The owner
+  asked for little red; more of it would read as an error state.
+- `--dark` (#1f1a18) is Caffeine's foreground warmed a step toward the
+  primary, so the footer and the plain banner belong to the brown.
+
+Measured on the composited backgrounds after the change (canvas, all three
+texture layers): `--cream` renders as rgb(241,241,241), `--cream-alt` as
+rgb(233,233,233). Tightest pairings: `--muted` on `--cream-alt` 4.86:1,
+`--accent-mid` on `--cream-alt` 4.91:1; all 21 clear 4.6.
+
+The paragraphs below record how the textures and the contrast method were
+arrived at under the previous cream palette; the method still applies.
 
 The accent runs as a three-step brown ramp, picked by the background it sits on.
 Getting this wrong is the easy mistake — the primary brown vanishes on the
