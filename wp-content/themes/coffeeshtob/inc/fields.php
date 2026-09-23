@@ -114,8 +114,6 @@ function shtob_field_groups() {
             'screen' => ['template-cards.php', 'template-kuhnya.php', 'template-kontakty.php'],
             'help'   => 'Фото шапки — блок «Изображение записи» справа. Без фото шапка станет тёмной полосой, и это нормально: размытая заглушка выглядит как сломанная картинка.',
             'fields' => [
-                'eyebrow' => ['type' => 'text', 'label' => 'Надпись над заголовком',
-                    'help' => 'Необязательно. Короткая подпись обычными буквами, например «Как нас найти». Не повторяйте название страницы — оно стоит крупно прямо под ней.'],
                 'intro'   => ['type' => 'textarea', 'label' => 'Строка под заголовком', 'rows' => 2],
                 'card_teaser' => ['type' => 'textarea', 'label' => 'Описание на главной', 'rows' => 2,
                     'help' => 'Одна строка под названием раздела в плитке на главной странице.'],
@@ -150,7 +148,6 @@ function shtob_field_groups() {
                 'menu_sub'      => ['type' => 'text', 'label' => 'Подзаголовок меню'],
                 'drinks_title'  => ['type' => 'text', 'label' => 'Заголовок второго списка'],
                 'drinks_sub'    => ['type' => 'text', 'label' => 'Подзаголовок второго списка'],
-                'items_eyebrow' => ['type' => 'text', 'label' => 'Надпись над карточками'],
                 'items_title'   => ['type' => 'text', 'label' => 'Заголовок карточек'],
                 'items_sub'     => ['type' => 'text', 'label' => 'Подзаголовок карточек'],
             ],
@@ -198,8 +195,7 @@ function shtob_field_groups() {
                 'about_image' => ['type' => 'image', 'label' => 'Фотография «О штабе»'],
                 'about_text'  => ['type' => 'textarea', 'label' => 'Текст «О штабе»', 'rows' => 8,
                     'help' => 'Пустая строка начинает новый абзац.'],
-                'sections_title' => ['type' => 'text', 'label' => 'Заголовок плитки разделов'],
-                'sections_sub'   => ['type' => 'text', 'label' => 'Подзаголовок плитки разделов'],
+                'sections_title' => ['type' => 'text', 'label' => 'Заголовок списка разделов'],
             ],
         ],
     ];

@@ -33,7 +33,7 @@ $phone = shtob_opt('phone');
       <div class="info-grid">
 
         <article class="info-card info-card--panel">
-          <h3><?php echo esc_html(get_post_meta($id, '_shtob_hours_title', true) ?: 'График работы'); ?></h3>
+          <h2><?php echo esc_html(get_post_meta($id, '_shtob_hours_title', true) ?: 'График работы'); ?></h2>
           <dl class="schedule-list">
             <?php foreach ($hours as $row) : ?>
               <div>
@@ -47,7 +47,7 @@ $phone = shtob_opt('phone');
 
         <div class="info-stack">
         <article class="info-card">
-          <h3><?php echo esc_html(get_post_meta($id, '_shtob_address_title', true) ?: 'Где мы находимся'); ?></h3>
+          <h2><?php echo esc_html(get_post_meta($id, '_shtob_address_title', true) ?: 'Где мы находимся'); ?></h2>
           <p><?php echo esc_html(shtob_opt('address')); ?></p>
           <p class="note"><?php echo esc_html(shtob_opt('address_note')); ?></p>
           <?php if ($phone) : ?>
@@ -64,7 +64,7 @@ $phone = shtob_opt('phone');
               // set, the heading does not appear either. ?>
         <?php if (array_intersect_key(shtob_socials(), ['telegram' => 1, 'vk' => 1])) : ?>
           <article class="info-card">
-            <h3>Мы на связи</h3>
+            <h2>Мы на связи</h2>
             <div class="social-btns"><?php shtob_social_buttons(); ?></div>
           </article>
         <?php endif; ?>
@@ -72,7 +72,7 @@ $phone = shtob_opt('phone');
 
         <?php if ($ferry_t || $ferry_x) : ?>
           <article class="info-card info-card--wide">
-            <?php if ($ferry_t) : ?><h3><?php echo esc_html($ferry_t); ?></h3><?php endif; ?>
+            <?php if ($ferry_t) : ?><h2><?php echo esc_html($ferry_t); ?></h2><?php endif; ?>
             <?php if ($ferry_x) : ?><p><?php echo esc_html($ferry_x); ?></p><?php endif; ?>
           </article>
         <?php endif; ?>

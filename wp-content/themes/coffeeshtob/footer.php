@@ -1,8 +1,14 @@
 <?php
 /**
- * The footer. Its navigation comes from shtob_nav(), the same function the
- * header calls, so the two can no longer disagree — they were separate
- * hardcoded lists once and had already drifted.
+ * The footer: who we are, where and when, how to reach us.
+ *
+ * It carries NO SITEMAP. The «Навигация» column repeated the header's seven
+ * links a screen below them, and the header comes back on any upward scroll.
+ * The hardcoded address in the bottom line is gone too — it was a second copy
+ * of the Customiser address that would not have followed an edit.
+ *
+ * The hours are here because they are what a visitor looks for at the end of
+ * a page, and on weekdays the café opens at 15:15, which nobody guesses.
  *
  * #social stays as an id: it is the no-JS fallback target for the header's
  * «Соцсети» button, which is a dialog trigger when JavaScript is running.
@@ -15,7 +21,10 @@
  */
 if (!defined('ABSPATH')) exit;
 
-$privacy = get_page_by_path('privacy');
+$privacy     = get_page_by_path('privacy');
+$hours       = shtob_hours_rows();
+// Контакты shows the address and hours itself, directly above.
+$on_contacts = is_page_template('template-kontakty.php');
 ?>
 <footer class="site-footer">
   <div class="container footer-grid">
@@ -33,30 +42,31 @@ $privacy = get_page_by_path('privacy');
         </span>
         <span class="brand-text">
           <strong>Кофештаб</strong>
-          <small>РОМАНОВ НА ВОЛГЕ</small>
+          <small>Романов на Волге</small>
         </span>
       </a>
       <p><?php echo esc_html(shtob_opt('footer_about')); ?></p>
     </div>
 
+    <?php if (!$on_contacts) : ?>
     <div class="footer-col">
-      <h4>Где мы находимся</h4>
+      <h2>Где мы находимся</h2>
       <p><?php echo esc_html(shtob_opt('address')); ?></p>
-      <p class="note"><?php echo esc_html(shtob_opt('address_note')); ?></p>
+      <?php if ($hours) : ?>
+        <dl class="footer-hours">
+          <?php foreach ($hours as $row) : ?>
+            <div><dt><?php echo esc_html($row['label']); ?></dt><dd><?php echo esc_html($row['time']); ?></dd></div>
+          <?php endforeach; ?>
+        </dl>
+      <?php endif; ?>
       <?php if (shtob_opt('maps_url')) : ?>
-        <a class="link-arrow" href="<?php echo esc_url(shtob_opt('maps_url')); ?>" target="_blank" rel="noopener">Открыть на Яндекс.Картах →</a>
+        <a class="link-arrow" href="<?php echo esc_url(shtob_opt('maps_url')); ?>" target="_blank" rel="noopener">Яндекс.Карты<span class="link-arrow-mark" aria-hidden="true">→</span></a>
       <?php endif; ?>
     </div>
-
-    <div class="footer-col">
-      <h4>Навигация</h4>
-      <nav class="footer-nav" aria-label="Разделы сайта (подвал)">
-        <?php shtob_nav(); ?>
-      </nav>
-    </div>
+    <?php endif; ?>
 
     <div class="footer-col" id="social">
-      <h4>Мы на связи</h4>
+      <h2>Мы на связи</h2>
       <?php
       // One setting drives both the label and the tel: target. Written as two
       // values, editing the number would change what the footer SHOWS while the
@@ -79,10 +89,7 @@ $privacy = get_page_by_path('privacy');
   <div class="footer-bottom">
     <div class="container footer-bottom-inner">
       <span>© <?php echo esc_html(wp_date('Y')); ?> «Кофештаб»</span>
-      <span class="dot">·</span>
-      <span>Волжская набережная, 19 · Ярославская область, Тутаев, левый берег</span>
       <?php if ($privacy) : ?>
-        <span class="dot">·</span>
         <a class="footer-legal-link" href="<?php echo esc_url(get_permalink($privacy)); ?>">Политика конфиденциальности</a>
       <?php endif; ?>
     </div>

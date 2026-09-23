@@ -7,6 +7,13 @@
 const quietTransition = (event) => {
   const vt = event.viewTransition;
   if (!vt) return;
+  /* Arriving through a view transition, the page title is already travelling
+     into place from the row that was clicked; the banner's own rise-in would
+     play underneath it as a second entrance. style.css skips it on this. */
+  if (event.type === 'pagereveal') {
+    document.documentElement.classList.add('vt-arrival');
+    vt.finished.finally(() => document.documentElement.classList.remove('vt-arrival'));
+  }
   vt.ready.catch(() => {});
   vt.finished.catch(() => {});
   vt.updateCallbackDone.catch(() => {});
@@ -341,6 +348,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.img-frame, .menu-thumb').forEach((el) => {
       if (el.getBoundingClientRect().top < window.innerHeight) return;
       el.classList.add('develop');
+      developObserver.observe(el);
+    });
+    /* Menu rows ride the same observer: their dotted leaders draw in, name to
+       price, as the row arrives (style.css, `.menu-item.draw`). Same rule —
+       only rows below the fold, so nothing already read is undrawn. */
+    document.querySelectorAll('.menu-item').forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight) return;
+      el.classList.add('draw');
       developObserver.observe(el);
     });
   }

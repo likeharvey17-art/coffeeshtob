@@ -16,7 +16,6 @@ if (!defined('ABSPATH')) exit;
 
 $page_id = get_queried_object_id();
 $banner  = get_post_thumbnail_id($page_id);
-$eyebrow = get_post_meta($page_id, '_shtob_eyebrow', true);
 $intro   = get_post_meta($page_id, '_shtob_intro', true);
 $has_img = $banner && wp_attachment_is_image($banner);
 ?>
@@ -32,8 +31,10 @@ $has_img = $banner && wp_attachment_is_image($banner);
     <div class="banner-overlay"></div>
   <?php endif; ?>
   <div class="container banner-inner">
-    <?php if ($eyebrow) : ?><span class="eyebrow"><?php echo esc_html($eyebrow); ?></span><?php endif; ?>
-    <h1><?php echo esc_html(get_the_title($page_id)); ?></h1>
+    <?php // Named to match this page's row in the front page's index, so on a
+          // browser with cross-document view transitions the title you clicked
+          // travels up into place instead of being replaced. ?>
+    <h1 style="view-transition-name: page-title-<?php echo (int) $page_id; ?>"><?php echo esc_html(get_the_title($page_id)); ?></h1>
     <?php if ($intro) : ?><p class="banner-lead"><?php echo esc_html($intro); ?></p><?php endif; ?>
   </div>
 </section>

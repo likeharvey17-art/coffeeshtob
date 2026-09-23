@@ -2,9 +2,9 @@
 /**
  * The front page: hero, a short introduction, and a way in to each section.
  *
- * THE SECTION TILES ARE GENERATED FROM THE PAGES, not typed out. Each section
+ * THE SECTION INDEX IS GENERATED FROM THE PAGES, not typed out. Each section
  * supplies its own photo (its featured image) and one-line teaser, so renaming a
- * page, reordering them or adding an eighth updates this grid with no edit here
+ * page, reordering them or adding an eighth updates this index with no edit here
  * — and the front page can never advertise a section that no longer exists.
  * It is the same list the navigation uses, for the same reason.
  */
@@ -21,19 +21,6 @@ $about = get_post_meta($id, '_shtob_about_image', true);
   <section class="hero">
     <?php shtob_bare_image($hero, 'shtob-hero', 'hero-bg'); ?>
     <div class="hero-overlay"></div>
-
-    <div class="hero-top">
-      <?php $badge = get_post_meta($id, '_shtob_hero_badge', true); ?>
-      <?php if ($badge) : ?>
-        <p class="badge">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path>
-            <circle cx="12" cy="9.5" r="2.3"></circle>
-          </svg>
-          <?php echo esc_html($badge); ?>
-        </p>
-      <?php endif; ?>
-    </div>
 
     <div class="hero-inner">
       <h1><?php echo esc_html(get_post_meta($id, '_shtob_hero_title', true) ?: get_bloginfo('name')); ?></h1>
@@ -54,13 +41,26 @@ $about = get_post_meta($id, '_shtob_about_image', true);
           <a href="<?php echo esc_url($href); ?>" class="btn <?php echo esc_attr($class); ?>"><?php echo esc_html($text); ?></a>
         <?php endforeach; ?>
       </div>
+
+      <?php // The address, as a plain line at the foot of the photograph. It was
+            // a frosted pill at the top, which read as a badge rather than as
+            // the one fact a first-time visitor needs from this screen. ?>
+      <?php $badge = get_post_meta($id, '_shtob_hero_badge', true); ?>
+      <?php if ($badge) : ?>
+        <p class="hero-place">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path>
+            <circle cx="12" cy="9.5" r="2.3"></circle>
+          </svg>
+          <?php echo esc_html($badge); ?>
+        </p>
+      <?php endif; ?>
     </div>
   </section>
 
   <section class="section">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">О штабе</span>
         <h2><?php echo esc_html(get_post_meta($id, '_shtob_about_title', true)); ?></h2>
       </div>
 
@@ -76,25 +76,36 @@ $about = get_post_meta($id, '_shtob_about_image', true);
 
   <section class="section section-alt">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Разделы</span>
-        <h2><?php echo esc_html(get_post_meta($id, '_shtob_sections_title', true)); ?></h2>
-        <?php $ssub = get_post_meta($id, '_shtob_sections_sub', true); ?>
-        <?php if ($ssub) : ?><p class="section-sub"><?php echo esc_html($ssub); ?></p><?php endif; ?>
-      </div>
+      <?php $stitle = get_post_meta($id, '_shtob_sections_title', true); ?>
+      <?php if ($stitle) : ?>
+        <div class="section-head"><h2><?php echo esc_html($stitle); ?></h2></div>
+      <?php endif; ?>
 
-      <div class="card-grid section-grid">
+      <?php // An index, not a tile grid. Seven tiles in threes left one alone on
+            // the last row, and a section still waiting for its photo showed an
+            // empty frame on the page every visitor sees first. As rows, any
+            // number of sections lays out cleanly and a missing photo simply
+            // leaves the row without a thumbnail. The whole row is the link, so
+            // it carries no «Смотреть» of its own. ?>
+      <ol class="section-index">
         <?php foreach (shtob_nav_pages() as $p) :
             $teaser = get_post_meta($p->ID, '_shtob_card_teaser', true);
+            $thumb  = get_post_thumbnail_id($p->ID);
         ?>
-          <a class="card-item card-link" href="<?php echo esc_url(get_permalink($p)); ?>">
-            <?php shtob_frame(get_post_thumbnail_id($p->ID), 'shtob-card', 'img-frame--card', $p->post_title); ?>
-            <h3><?php echo esc_html($p->post_title); ?></h3>
-            <?php if ($teaser) : ?><p><?php echo esc_html($teaser); ?></p><?php endif; ?>
-            <span class="link-arrow" aria-hidden="true">Смотреть<span class="link-arrow-mark">→</span></span>
-          </a>
+          <li>
+            <a class="index-row" href="<?php echo esc_url(get_permalink($p)); ?>">
+              <span class="index-text">
+                <span class="index-title" style="view-transition-name: page-title-<?php echo (int) $p->ID; ?>"><?php echo esc_html($p->post_title); ?></span>
+                <?php if ($teaser) : ?><span class="index-teaser"><?php echo esc_html($teaser); ?></span><?php endif; ?>
+              </span>
+              <?php if ($thumb && wp_attachment_is_image($thumb)) : ?>
+                <?php shtob_frame($thumb, 'shtob-card', 'img-frame--index', ''); ?>
+              <?php endif; ?>
+              <svg class="index-go" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+            </a>
+          </li>
         <?php endforeach; ?>
-      </div>
+      </ol>
     </div>
   </section>
 

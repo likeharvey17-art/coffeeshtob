@@ -4,3 +4,4 @@
 .wp-dev/
 
 .DS_Store
+dist/

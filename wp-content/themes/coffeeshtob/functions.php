@@ -22,7 +22,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('SHTOB_VERSION', '1.2.0');
+define('SHTOB_VERSION', '1.3.0');
 
 require_once __DIR__ . '/inc/setup.php';
 require_once __DIR__ . '/inc/cards.php';

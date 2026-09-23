@@ -221,7 +221,13 @@ def main():
         if re.search(r'href="#(about|menu|life|schedule|guests|contacts)"', src):
             problems.append(f'{os.path.relpath(p, THEME)} contains an in-page nav '
                             'anchor — the sections are real pages now')
-        if os.path.basename(p) in ('header.php', 'footer.php', '404.php'):
+        # The footer carries no navigation since 1.3.0; what must never come
+        # back anywhere is a section link typed out by hand.
+        if re.search(r'href="[^"]*/(okrestnosti|kuhnya|gostinaya|komanda|mastera|skazki|kontakty)/?"',
+                     strip_comments(src)):
+            problems.append(f'{os.path.relpath(p, THEME)} links a section by a '
+                            'hardcoded URL — is the navigation hardcoded again?')
+        if os.path.basename(p) in ('header.php', '404.php'):
             if 'shtob_nav(' not in strip_comments(src):
                 problems.append(f'{os.path.relpath(p, THEME)} does not call '
                                 'shtob_nav() — is the navigation hardcoded again?')

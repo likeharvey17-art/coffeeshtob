@@ -104,8 +104,10 @@ field is one entry; nothing else needs editing.
 ### The navigation is generated, and must stay that way
 
 Built from the published top-level pages, minus the front page and anything
-ticked «Не показывать в меню». Header, footer and the 404 all call
-`shtob_nav()`.
+ticked «Не показывать в меню». The header and the 404 call `shtob_nav()`; the
+front page's section index reads the same `shtob_nav_pages()`. The footer has
+carried no navigation since 1.3.0, and `check-fields.py` now fails on any
+section linked by a hardcoded URL anywhere in the theme.
 
 It was hardcoded three times on the static site — header, footer, 404 — and had
 already drifted. A WordPress menu (Внешний вид → Меню) is the native answer and
@@ -224,6 +226,12 @@ colour and a faint inner vignette, and `filter: saturate(0.94)` on the image.
 None of it works alone. The `::after` must keep `pointer-events: none` —
 `.card-link` wraps whole frames.
 
+**Since 1.3.0 a card with no photo in the alternating layout is NOT given a
+placeholder frame** — consecutive photo-less cards collect into one hairline
+`.text-list` in their place (see 1.3.0 below), and a menu row with no photo has
+no thumbnail. The paragraph that follows is still true for the other layouts
+and the single frames (About, `wide`, `grid`).
+
 **A missing photo falls back to `assets/images/placeholder.svg`, and that is
 load-bearing.** Several sections are still waiting on the owner's photographs,
 and each of those cards needs a correctly-proportioned frame or the row collapses
@@ -336,6 +344,66 @@ unchanged.
   blue: the marks carry the recognition, and two saturated brand colours would
   be the loudest thing on the page. The guide is a link, not a social channel,
   so it stays out of the buttons.
+
+### 1.3.0: distilled, and one authored arrival
+
+Asked for as "more minimal, no unnecessary text, smoother animation, keep all
+the content". Critiqued first (design review + detector, run independently),
+then changed. Nothing in the database was touched; everything below is theme.
+
+- **Every label over a heading is gone** («О штабе», «Разделы», «Чем
+  угощаем», «Другие напитки», the banner label). They restated the heading
+  under them. The `eyebrow`, `items_eyebrow` and `sections_sub` fields were
+  removed with them (and from the seed); values already stored in the database
+  are simply no longer read. Section heads are **left-aligned** now, sharing an
+  edge with the rows beneath.
+- **The front page's tiles became an index**: one row per section, title and
+  teaser left, the section's print small on the right, a hairline between.
+  Seven tiles in threes left «Контакты» orphaned and showed empty frames for
+  sections without photos; rows take any count and a missing photo is a row
+  without a thumbnail. No «Смотреть →» — the row is the link. Every row has
+  the same minimum height so a text-only row is not a thin one.
+- **Cards without a photo collect into `.text-list`** (parts/cards-list.php),
+  in order, instead of a 4:3 placeholder frame beside one heading each.
+  Окрестности went from four screens of empty frames to one short list. A card
+  moves into the zig-zag the moment its photo is added. The alternation counts
+  photo rows only (`:nth-child(odd of .feature-card)`), so a list between them
+  does not flip the sides.
+- **The hero address is a plain ruled line at the foot of the photo**, not a
+  frosted pill at the top; the copy sits as one group in the lower half.
+- **The footer lost its sitemap column and the hardcoded address** in its
+  bottom line (a second copy of the Customiser value that would not have
+  followed an edit), and **gained the opening hours**, read from the Контакты
+  textarea via `shtob_hours_rows()` — still typed once. On Контакты itself the
+  footer's address column is omitted; the page shows it directly above.
+- Headings no longer skip levels (detector finding): card titles are `h2` when
+  the page has no lead heading, Контакты's blocks and the footer heads are `h2`.
+- «РОМАНОВ НА ВОЛГЕ» (9.9px tracked caps) is set as Alegreya italic sentence
+  case; the hours labels are *set* in sentence case with `text-transform`, the
+  client's capitals left as typed.
+
+**Motion, and where the "text never moves" rule now stands.** Scrolled text
+still never moves. What was added:
+- **Arrival** — the one authored entrance: on load the hero/banner photo pulls
+  into focus (blur 14px → 4px) while the headline rises out of a clip mask and
+  the lead, buttons and address follow. CSS only, `backwards` fill so the
+  normal rules (including the hero scroll drift) own the end state. Skipped
+  under reduced motion, and the banner title's rise is skipped when arriving
+  through a view transition (`html.vt-arrival`, set on `pagereveal`).
+- **The index row's title and the banner h1 share `view-transition-name:
+  page-title-{ID}`**, so in browsers with cross-document view transitions the
+  title you click travels into place. Names are per page ID and unique.
+- **Prints are laid in as they develop** — a 10px settle and the album corners
+  pressed on a beat later — and **menu leaders draw in** name-to-price. Both
+  ride the develop observer and its safety model (below-the-fold only).
+- Index-row hover (title steps in, rule draws, print tilts 1.2°), a cascade
+  on the ☰ panel's links.
+
+**Snapshotting caveat:** an offscreen WKWebView reports `visibilityState:
+hidden` and freezes every animation at 0ms — so the arrival's `backwards`
+state (headline clipped, photo blurred) is what it captures. Call
+`document.getAnimations().forEach(a => a.finish())` before judging a frame.
+Real, visible pages play normally.
 
 ### Palette and texture
 

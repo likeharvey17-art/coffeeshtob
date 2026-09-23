@@ -182,3 +182,13 @@ function shtob_social_buttons() {
     }
     return count($buttons);
 }
+
+/**
+ * The opening hours as they are set on Контакты — for the footer, which shows
+ * them on every page. Read from the same textarea the hours panel and the
+ * structured data use, so there is still exactly one place they are typed.
+ */
+function shtob_hours_rows() {
+    $kontakty = get_page_by_path('kontakty');
+    return $kontakty ? shtob_parse_hours(get_post_meta($kontakty->ID, '_shtob_hours', true)) : [];
+}

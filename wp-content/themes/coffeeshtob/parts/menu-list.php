@@ -11,8 +11,8 @@
  * (auto-fill, minmax(272px, 1fr)), so items can be added and removed in the
  * admin without anything in CSS ever needing to change.
  *
- * Price and description are both optional and omit their element — that is what
- * stops an unpriced item leaving a stray gap.
+ * Price, description and photo are all optional and omit their element — that
+ * is what stops an unpriced or unphotographed item leaving a stray gap.
  */
 if (!defined('ABSPATH')) exit;
 
@@ -26,16 +26,16 @@ if (!$cards) return;
       $body  = trim($card->post_content);
       $thumb = get_post_thumbnail_id($card);
   ?>
-    <article class="menu-item">
-      <div class="menu-thumb">
-        <?php if ($thumb && wp_attachment_is_image($thumb)) :
-            echo wp_get_attachment_image($thumb, 'shtob-thumb', false,
-                ['alt' => $title, 'loading' => 'lazy', 'decoding' => 'async']);
-        else : ?>
-            <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/placeholder.svg'); ?>"
-                 alt="<?php echo esc_attr($title); ?>" loading="lazy" decoding="async">
-        <?php endif; ?>
-      </div>
+    <?php // No photo, no thumbnail: a placeholder square beside a price read as
+          // a missing picture on a menu, where a plain row reads as a menu. ?>
+    <?php $has_thumb = $thumb && wp_attachment_is_image($thumb); ?>
+    <article class="menu-item<?php echo $has_thumb ? '' : ' menu-item--plain'; ?>">
+      <?php if ($has_thumb) : ?>
+        <div class="menu-thumb">
+          <?php echo wp_get_attachment_image($thumb, 'shtob-thumb', false,
+              ['alt' => $title, 'loading' => 'lazy', 'decoding' => 'async']); ?>
+        </div>
+      <?php endif; ?>
       <div class="menu-body">
         <div class="menu-head">
           <h3><?php echo esc_html($title); ?></h3>

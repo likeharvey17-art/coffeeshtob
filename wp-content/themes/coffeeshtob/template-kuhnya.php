@@ -24,7 +24,6 @@ $items  = shtob_cards_for($id, 'main');
   <section class="section">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">Чем угощаем</span>
         <h2><?php echo esc_html(get_post_meta($id, '_shtob_menu_title', true)); ?></h2>
         <?php $sub = get_post_meta($id, '_shtob_menu_sub', true); ?>
         <?php if ($sub) : ?><p class="section-sub"><?php echo esc_html($sub); ?></p><?php endif; ?>
@@ -35,7 +34,6 @@ $items  = shtob_cards_for($id, 'main');
       <?php if ($drinks) : ?>
         <div class="subsection">
           <div class="section-head section-head-sm">
-            <span class="eyebrow">Другие напитки</span>
             <h3><?php echo esc_html(get_post_meta($id, '_shtob_drinks_title', true)); ?></h3>
             <?php $dsub = get_post_meta($id, '_shtob_drinks_sub', true); ?>
             <?php if ($dsub) : ?><p class="section-sub"><?php echo esc_html($dsub); ?></p><?php endif; ?>
@@ -50,7 +48,6 @@ $items  = shtob_cards_for($id, 'main');
     <section class="section section-alt">
       <div class="container">
         <div class="section-head">
-          <span class="eyebrow"><?php echo esc_html(get_post_meta($id, '_shtob_items_eyebrow', true) ?: 'Что ещё'); ?></span>
           <h2><?php echo esc_html(get_post_meta($id, '_shtob_items_title', true)); ?></h2>
           <?php $isub = get_post_meta($id, '_shtob_items_sub', true); ?>
           <?php if ($isub) : ?><p class="section-sub"><?php echo esc_html($isub); ?></p><?php endif; ?>

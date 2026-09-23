@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) exit;
       </span>
       <span class="brand-text">
         <strong>Кофештаб</strong>
-        <small>РОМАНОВ НА ВОЛГЕ</small>
+        <small>Романов на Волге</small>
       </span>
     </a>
     <a class="btn btn-accent nav-social-btn" href="<?php echo esc_url(home_url('/')); ?>">На главную</a>
