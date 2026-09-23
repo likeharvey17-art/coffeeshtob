@@ -138,6 +138,13 @@ the eight pages, thirty-one cards and sixteen photographs from
 page already exists** — the dangerous version of this feature is the one that
 runs a second time on a site the client has been editing for a month.
 
+**A brand-new WordPress trips that guard**, which is worth knowing before it
+looks like a bug: the install ships «Пример страницы» published and «Политика
+конфиденциальности» as a draft, the guard counts drafts, and so the button is
+refused on the emptiest site there is. Move both to the корзина first — trashed
+pages are not counted, and the seeder deletes those two by slug anyway once it
+runs.
+
 `seed/content.php` was generated from the previous build's page files, not typed:
 the Russian copy, the prices and the filenames are the client's. The old files
 are gone, so **this is now the only record of the starting content**.
@@ -551,6 +558,14 @@ for an hour, and `.js` was served as `application/x-javascript`. The rewrites,
 `Files` denials and `ErrorDocument` *do* work, because those run in Apache. The
 cache block is kept because it is correct and costs nothing.
 
+**The denials work only for what Apache is asked to serve, and `.txt` is not.**
+On a rebuilt install `verify-site.py` failed on `/license.txt (200)` while
+`readme.html` and `wp-config.php` returned 403 from the very same `FilesMatch` —
+nginx serves `.txt` itself and Apache never sees the request. So the fix is to
+delete `public_html/license.txt`, not to edit `.htaccess`: no rule there can
+reach a file Apache is never asked about. **A WordPress core update restores
+that file**, so expect this check to fail again after one, and delete it again.
+
 The consequence is that **asset caching is out of our hands, so the URL carries a
 version instead**: `SHTOB_VERSION` in `functions.php` is appended to `style.css`
 and `script.js`. **Bump it whenever either changes** — with nginx caching CSS for
@@ -633,6 +648,45 @@ cutover is an A-record change there.
 **If the site is being moved with content already in it**, skip steps 4–5 and
 migrate the database and `wp-content/uploads/` instead — the seed refuses to run
 on a site that has pages, by design.
+
+### Rebuilding in place, and what 24.09.2026 established
+
+Beget's one-click CMS installer was run against the live site folder by
+accident. It installed a fresh WordPress over the existing one and reused
+`tryphopx_coffee`, leaving `wp_posts` at 5 default rows: the pages, the cards
+and the media library were gone in one action.
+
+**Beget's automatic backups did not save it, and that is the part to plan
+around.** The only copy on offer was 10.09.2026 00:42, from before WordPress
+existed on the server, and its **Базы данных** tab said «Нет данных» — a file
+archive with no database beside it. The automatic copies are not a safety net
+for this site; **Backup по требованию before anything structural** is.
+
+The rebuild, which is the procedure if it happens again:
+
+1. Check first, wipe second. phpMyAdmin says whether the content survived —
+   `SELECT post_type, COUNT(*) FROM wp_posts GROUP BY post_type` returns roughly
+   31 `shtob_card`, 9 `page` and 16 `attachment` on a live site, and five rows
+   in total on a fresh one. Download `wp-content/uploads/` before deleting
+   anything.
+2. Empty `coffeeshtob.ru/public_html/` but keep the folder — the domain is bound
+   to it and `REMOTE_DIR` points inside it. Drop the database, install
+   WordPress into the same folder, add the two `wp-config.php` lines.
+3. Ship the theme. The workflow is the normal route, but it failed on FTP that
+   day, and **the theme installs by hand just as well**: zip
+   `wp-content/themes/coffeeshtob` (with `seed/` in it, which the workflow
+   excludes) and upload it at Внешний вид → Темы → Загрузить тему; the four
+   `web-root/` files go into the document root through the file manager, hidden
+   files shown so `.htaccess` actually lands. WordPress's own `.htaccess` is
+   meant to be overwritten by ours.
+4. Then the usual: activate the theme, trash WordPress's two default pages,
+   Наполнить сайт, check the permalinks, re-enter the Customiser contacts,
+   delete whatever plugin the installer added.
+5. `verify-site.py https://coffeeshtob.ru` is what says it worked, and it is
+   worth running even when the deploy could not.
+
+What the seed cannot bring back is anything the client changed after the site
+was first filled. **Ask them what they edited before declaring it finished.**
 
 ## Local development
 
