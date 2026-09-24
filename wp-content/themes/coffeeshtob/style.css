@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.3
+Version: 1.3.4
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -212,11 +212,6 @@ Tags: custom-menu, custom-logo, translation-ready
      The default `ease` starts slowly, which on a hover reads as lag. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* The album corners that hold every photograph — see "Photos are mounted".
-     Kraft card, a shade darker than the page so it reads on the cream and on
-     the alternating sections alike, with a fold line along the diagonal. */
-  --mount: #3b2922;       /* espresso card since 1.3.3 (was peach) */
-  --mount-edge: rgba(0, 0, 0, 0.4);
 
   /* TWO background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
@@ -1169,9 +1164,8 @@ p { margin: 0; text-wrap: pretty; }
   border: 1px solid rgba(40, 32, 28, 0.14);
   border-radius: 6px;
   padding: 28px 30px;
-  /* It rests on the page the way the photos do, and is mounted in the same
-     album corners: a card tucked into the page, not a white box that happens
-     to be there. Still the only framed thing in <main>. */
+  /* It rests on the page the way the photos do. Still the only framed thing
+     in <main>. */
   box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 14px 30px -16px rgba(58, 43, 30, 0.26);
 }
 .schedule-list {
@@ -1540,7 +1534,6 @@ body.is-legal .legal-footer { margin-top: auto; }
   transition: transform 0.5s var(--ease-out) 0.03s;
 }
 .img-frame--index {
-  --mount-size: 22px;
   width: 164px;
   aspect-ratio: 4 / 3;
   transition: transform 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
@@ -1658,8 +1651,8 @@ body.is-legal .legal-footer { margin-top: auto; }
 
    Instead each PHOTOGRAPH develops as it arrives, the way a print comes up in
    the tray: it enters pale, warm-toned and a little soft, and resolves to its
-   own colour. On a site that mounts its pictures in album corners, that is the
-   only motion that belongs; it is also the only kind a reader cannot be kept
+   own colour. On a site of printed photographs, that is the only motion that
+   belongs; it is also the only kind a reader cannot be kept
    waiting by, because the picture is visible the whole time.
 
    script.js adds .develop ONLY to photos that are below the fold when it runs,
@@ -1674,22 +1667,14 @@ body.is-legal .legal-footer { margin-top: auto; }
 .img-frame.develop.is-developed img,
 .menu-thumb.develop.is-developed img { filter: saturate(0.94); }
 
-/* The print is laid into the album as it develops: it arrives a few pixels
-   low and a hair small, the corners are pressed on a beat later. Only the
-   photograph moves — text still never does. Same safety model as the colour:
+/* The print is laid in as it develops: it arrives a few pixels low and a
+   hair small. Only the photograph moves — text still never does. Same safety model as the colour:
    nothing is marked unless script.js is there to finish it. */
 .img-frame.develop {
   transform: translateY(10px) scale(0.985);
   transition: transform 1.1s var(--ease-out) var(--develop-delay, 0ms);
 }
-.img-frame.develop::before {
-  opacity: 0;
-  transform: scale(1.14);
-  transition: opacity 0.5s ease calc(var(--develop-delay, 0ms) + 0.35s),
-              transform 0.7s var(--ease-out) calc(var(--develop-delay, 0ms) + 0.35s);
-}
 .img-frame.develop.is-developed { transform: none; }
-.img-frame.develop.is-developed::before { opacity: 1; transform: none; }
 
 /* The menu's dotted leaders are drawn in, name to price, as the rows arrive —
    a pen running along a printed menu. Marked by script.js below the fold only. */
@@ -1701,32 +1686,20 @@ body.is-legal .legal-footer { margin-top: auto; }
 .menu-item.draw.is-developed .menu-head::before { transform: translateY(-0.3em) scaleX(1); }
 
 /* ===== Arrival =====
-   The one authored entrance: the photograph comes into focus as the headline
-   rises out of a mask, the way eyes adjust coming in from the dusk. CSS only,
-   so it plays before any script and with none; every state it animates FROM
-   is held by `backwards` fill only, so when the animation is done the ordinary
-   rules — including the hero's scroll drift — are back in charge. Under a
-   page-to-page view transition the headline is already travelling into place,
-   so html.vt-arrival (script.js) skips the rise. */
-@keyframes rise-in {
-  from { clip-path: inset(0 0 100% 0); transform: translateY(0.42em); }
-  to   { clip-path: inset(0 0 -0.3em 0); transform: none; }
-}
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-}
+   On load the hero/banner photograph comes into focus. CSS only, `backwards`
+   fill, so the ordinary rules (including the hero's scroll drift) own the
+   end state.
+
+   THE TEXT DOES NOT ANIMATE IN, since 1.3.4, at the owner's request. The
+   headline used to rise out of a clip mask with the lead, buttons and address
+   fading up after it, and the title travelled between pages in a view
+   transition; on every page load that read as the heading arriving late.
+   The headings are simply there now. */
 @keyframes focus-pull {
   from { filter: blur(14px); transform: scale(1.2); }
 }
-.hero-inner h1,
-.page-banner h1 { animation: rise-in 1s var(--ease-out) 0.1s backwards; }
-.hero-lead,
-.banner-lead { animation: fade-up 0.9s var(--ease-out) 0.36s backwards; }
-.hero-actions { animation: fade-up 0.9s var(--ease-out) 0.5s backwards; }
-.hero-place { animation: fade-up 0.9s var(--ease-out) 0.66s backwards; }
 .hero-bg,
 .banner-bg { animation: focus-pull 1.8s var(--ease-out) backwards; }
-html.vt-arrival .page-banner h1 { animation: none; }
 
 /* The ☰ panel's links come in as a short cascade rather than all at once. */
 @keyframes nav-in {
@@ -1859,7 +1832,7 @@ html.vt-arrival .page-banner h1 { animation: none; }
   .hero-place { padding-bottom: 8px; font-size: 0.86rem; }
   .index-row { grid-template-columns: 1fr auto; gap: 18px; padding: 18px 0; min-height: 116px; }
   .index-go { display: none; }
-  .img-frame--index { width: 104px; --mount-size: 16px; }
+  .img-frame--index { width: 104px; }
   .index-title { font-size: 1.42rem; }
   .index-teaser { font-size: 0.92rem; }
   .hero-actions .btn { width: 100%; }
@@ -1892,8 +1865,7 @@ html.vt-arrival .page-banner h1 { animation: none; }
     scroll-behavior: auto !important;
   }
   .btn:hover, .to-top:hover { transform: none; }
-  .hero-inner h1, .page-banner h1, .hero-lead, .banner-lead,
-  .hero-actions, .hero-place, .hero-bg, .banner-bg,
+  .hero-bg, .banner-bg,
   .main-nav.is-open a { animation: none; }
   .index-row:hover .img-frame--index,
   .index-row:hover .index-title,
@@ -1982,48 +1954,8 @@ html.vt-arrival .page-banner h1 { animation: none; }
 }
 
 
-/* ── Photos are mounted in album corners ─────────────────────────────────────
-   THE THIRD ANSWER TO "clipped to the paper", and the first that is not an
-   object lying on top of the picture. A solid binder clip came first and read
-   as a handbag handle; a stroked paperclip came second and still read as an
-   icon stuck on a photograph. Album corners are the PAGE holding the
-   photograph, which was the idea all along — and every family album on a
-   Russian bookshelf holds its prints exactly this way. Two diagonal corners,
-   top-left and bottom-right, as a print is actually mounted.
-
-   Drawn with gradients rather than an SVG so the colours are custom
-   properties. Each corner is a hard stop at the diagonal: kraft card up to it,
-   a fold line on it, nothing past it. The ::before sits 3px outside the frame
-   so the pocket's outer edges run past the print onto the page, as a real
-   corner's do, and the drop-shadow is what makes the print look tucked UNDER
-   the card rather than printed with a triangle on it.
-
-   It needs .img-frame to be overflow:visible (see there), and pointer-events
-   none because an index row wraps whole frames. The empty placeholder frames
-   get corners too, deliberately: an empty album slot waiting for its print
-   is exactly what those cards are. */
-.img-frame::before,
-.info-card--panel::before {
-  --m: var(--mount-size, 36px);
-  content: "";
-  position: absolute;
-  inset: -3px;
-  z-index: 2;
-  pointer-events: none;
-  background:
-    linear-gradient(135deg, var(--mount) calc(50% - 1px), var(--mount-edge) calc(50% - 1px) 50%, transparent calc(50% + 0.6px))
-      top left / var(--m) var(--m) no-repeat,
-    linear-gradient(-45deg, var(--mount) calc(50% - 1px), var(--mount-edge) calc(50% - 1px) 50%, transparent calc(50% + 0.6px))
-      bottom right / var(--m) var(--m) no-repeat;
-  filter: drop-shadow(0 1px 1px rgba(58, 43, 30, 0.22)) drop-shadow(0 3px 5px rgba(58, 43, 30, 0.12));
-}
-.img-frame--card { --mount-size: 32px; }
-.info-card--panel::before { inset: -2px; --mount-size: 34px; }
-
-@media (max-width: 640px) {
-  .img-frame::before,
-  .info-card--panel::before { --mount-size: 28px; }
-}
+/* Album corners (.img-frame::before) were removed in 1.3.4 at the owner's
+   request; prints now sit on the page with only their shadow and hairline. */
 
 /* ─────────────────────────────────────────────────────────────────────────
    WORDPRESS INTEGRATION

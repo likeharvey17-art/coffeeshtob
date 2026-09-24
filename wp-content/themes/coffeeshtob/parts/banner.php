@@ -31,10 +31,7 @@ $has_img = $banner && wp_attachment_is_image($banner);
     <div class="banner-overlay"></div>
   <?php endif; ?>
   <div class="container banner-inner">
-    <?php // Named to match this page's row in the front page's index, so on a
-          // browser with cross-document view transitions the title you clicked
-          // travels up into place instead of being replaced. ?>
-    <h1 style="view-transition-name: page-title-<?php echo (int) $page_id; ?>"><?php echo esc_html(get_the_title($page_id)); ?></h1>
+    <h1><?php echo esc_html(get_the_title($page_id)); ?></h1>
     <?php if ($intro) : ?><p class="banner-lead"><?php echo esc_html($intro); ?></p><?php endif; ?>
   </div>
 </section>
