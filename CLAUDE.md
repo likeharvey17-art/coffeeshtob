@@ -420,6 +420,30 @@ Real, visible pages play normally.
   `:hover` stuck, so the row you came from sat tilted and red-underlined when
   you pressed Back. Keyboard focus keeps the treatment everywhere.
 
+### 1.3.3: darker accents
+
+Asked for as "darker browns and black/grey, no lighter brown or beige". Every
+light-brown, peach and cream accent is gone; the layout, greys and textures
+are unchanged.
+
+- `--accent` #644a40 → espresso **#3b2922** (hover #271a15); `--accent-mid`
+  → #4a3a33, a dark brown-grey.
+- The peach `--secondary` is now **charcoal #262626 with white text** — the
+  current nav item.
+- The hero's primary button is **white** with ink text (was cream).
+- Album corners (`--mount`) are **espresso** with a black fold line — the
+  album-black option 1.2.0 set aside, now the owner's call.
+- On `--dark` (now #181413): footer heads, links and the social-button handles
+  use light grey `--accent-light` #d9d9d9; `--on-dark` is white at 70% (was
+  cream). `--glow` is a dim roast-brown light instead of peach; selection is
+  grey; `theme-color` and the manifest match `--cream`.
+- Measured: `--accent` on `--cream-alt` 11.75:1, `--accent-mid` 9.23:1,
+  `--accent-light` on `--dark` 12.96:1, `--on-dark` 9.26:1. The tightest pairing
+  is still `--muted` on `--cream-alt`, 5.05:1.
+
+The Palette section below describes 1.3.1; where it names peach or cream
+accents, 1.3.3 replaced them as listed here.
+
 ### Palette and texture
 
 **Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:

@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.2
+Version: 1.3.3
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -181,27 +181,32 @@ Tags: custom-menu, custom-logo, translation-ready
   --muted: #646464;       /* muted-foreground. Measure against the COMPOSITED
                              --cream-alt before changing either (see below) */
   --border: #d8d8d8;
-  --accent: #644a40;      /* primary — buttons, links */
-  --accent-dark: #52392f; /* primary, hover */
-  --accent-mid: #7a5d51;  /* primary, lighter — small accents on light */
-  --accent-light: #ffdfb5;/* secondary (peach) — the only accent legible on --dark */
-  --secondary: #ffdfb5;
-  --secondary-ink: #582d1d; /* secondary-foreground */
-  --secondary-hover: #ffe9cc;
+  /* 1.3.3: darker accents, at the owner's request. The primary went from
+     Caffeine's #644a40 to espresso, the peach secondary to charcoal, and the
+     light accents on --dark from peach/cream to plain light grey — no light
+     brown or beige is painted anywhere now. */
+  --accent: #3b2922;      /* primary (espresso) — buttons, links */
+  --accent-dark: #271a15; /* primary, hover */
+  --accent-mid: #4a3a33;  /* small accents on light — a dark brown-grey */
+  --accent-light: #d9d9d9;/* light grey — the accent legible on --dark */
+  --secondary: #262626;   /* charcoal — the current nav item */
+  --secondary-ink: #ffffff; /* secondary-foreground */
+  --secondary-hover: #3a3a3a;
   --tint: #e8e8e8;        /* accent — the neutral hover fill */
   --destructive: #e54d2e;
-  --dark: #1f1a18;        /* the footer and the plain banner: Caffeine's
+  --dark: #181413;        /* the footer and the plain banner: Caffeine's
                              foreground, warmed a step toward the primary so
                              the dark bands belong to the brown */
-  --dark-soft: #2d2522;
-  --on-dark: rgba(255, 239, 220, 0.72); /* secondary text on --dark */
+  --dark-soft: #26201e;
+  --on-dark: rgba(255, 255, 255, 0.7); /* secondary text on --dark */
 
   /* Warm light. Used as LIGHT only — the lamplight glow over the hero, banner
      and footer, and the text selection — never as a colour anything is painted
      in. That is what stops it drifting back toward the orange browns this
      palette was deliberately desaturated away from. */
-  --glow: 255, 186, 120;  /* an rgb triplet, for rgba() — peach light */
-  --selection: #ffdfb5;
+  --glow: 120, 86, 70;    /* an rgb triplet, for rgba() — a dim roast-brown
+                             light since 1.3.3; it was peach */
+  --selection: #d4d4d4;
 
   /* One curve for everything that arrives: quick off the mark, long settle.
      The default `ease` starts slowly, which on a hover reads as lag. */
@@ -210,9 +215,8 @@ Tags: custom-menu, custom-logo, translation-ready
   /* The album corners that hold every photograph — see "Photos are mounted".
      Kraft card, a shade darker than the page so it reads on the cream and on
      the alternating sections alike, with a fold line along the diagonal. */
-  --mount: #f3cc97;       /* peach card, a step deeper than --secondary so it
-                             reads on the grey page */
-  --mount-edge: rgba(100, 74, 64, 0.45);
+  --mount: #3b2922;       /* espresso card since 1.3.3 (was peach) */
+  --mount-edge: rgba(0, 0, 0, 0.4);
 
   /* TWO background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
@@ -284,7 +288,7 @@ html {
      the one place the palette would visibly stop. */
   accent-color: var(--accent);
   caret-color: var(--accent);
-  scrollbar-color: #b3a39c transparent;
+  scrollbar-color: #8c8c8c transparent;
 }
 /* Safeguard against the absolutely-positioned hero background causing
    horizontal scroll on mobile. It must be `clip`, not `hidden`: `overflow-x:
@@ -366,17 +370,17 @@ p { margin: 0; text-wrap: pretty; }
 }
 .btn-accent:hover { background: var(--accent-dark); }
 
-/* OVER THE PHOTOGRAPH THE PRIMARY BUTTON IS CREAM, NOT BROWN. The roasted
+/* OVER THE PHOTOGRAPH THE PRIMARY BUTTON IS WHITE, NOT BROWN. The espresso
    brown is built for light pages; on the darkened hero it sank into the shadow
    beside its own ghost sibling, so the one thing the hero asks you to do was
-   the least visible mark on it. Cream on dark is the lit window of the café.
-   The header's «Соцсети» is outside .hero and keeps the brown. */
+   the least visible mark on it. (It was cream until 1.3.3.) The header's
+   «Соцсети» is outside .hero and keeps the brown. */
 .hero .btn-accent {
-  background: var(--secondary);
-  color: var(--secondary-ink);
+  background: #fff;
+  color: var(--ink);
   box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
 }
-.hero .btn-accent:hover { background: var(--secondary-hover); }
+.hero .btn-accent:hover { background: #e6e6e6; }
 .btn-ghost {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
@@ -500,8 +504,7 @@ p { margin: 0; text-wrap: pretty; }
   .main-nav a { padding: 10px 9px; font-size: 0.88rem; }
   .header-inner { gap: 16px; }
 }
-/* The current page wears the secondary: besides the album corners, the one
-   place peach is a fill on the light pages. */
+/* The current page wears the charcoal secondary (peach until 1.3.3). */
 .main-nav a.is-active { background: var(--secondary); color: var(--secondary-ink); }
 
 .nav-social-btn {
@@ -649,9 +652,9 @@ p { margin: 0; text-wrap: pretty; }
   margin-top: calc(-1 * var(--header-h));
   padding: calc(var(--header-h) + 26px) 0 0;
   background:
-    radial-gradient(ellipse at top right, rgba(255, 223, 181, 0.12), transparent 55%),
-    radial-gradient(ellipse at 10% 90%, rgba(100, 74, 64, 0.34), transparent 60%),
-    linear-gradient(180deg, #2a2320 0%, #1f1a18 60%, #161211 100%);
+    radial-gradient(ellipse at top right, rgba(var(--glow), 0.14), transparent 55%),
+    radial-gradient(ellipse at 10% 90%, rgba(59, 41, 34, 0.4), transparent 60%),
+    linear-gradient(180deg, #221c1a 0%, #181413 60%, #100d0c 100%);
   overflow: hidden;
 }
 .hero-overlay {
@@ -702,9 +705,9 @@ p { margin: 0; text-wrap: pretty; }
   gap: 8px;
   margin-top: clamp(40px, 9svh, 96px);
   padding: 16px 0 34px;
-  border-top: 1px solid rgba(255, 239, 220, 0.16);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
   font-size: 0.9rem;
-  color: rgba(255, 239, 220, 0.8);
+  color: rgba(255, 255, 255, 0.8);
 }
 .hero-place svg { flex-shrink: 0; color: var(--destructive); } /* red, ration 1 of 2 */
 
@@ -867,7 +870,7 @@ p { margin: 0; text-wrap: pretty; }
   border-radius: 6px;
   background: var(--cream-alt);
   box-shadow:
-    inset 0 0 0 1px rgba(123, 100, 80, 0.11),
+    inset 0 0 0 1px rgba(40, 32, 28, 0.11),
     0 1px 2px rgba(58, 43, 30, 0.05),
     0 10px 24px -12px rgba(58, 43, 30, 0.22);
 }
@@ -1024,7 +1027,7 @@ p { margin: 0; text-wrap: pretty; }
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--cream-alt);
-  outline: 1px solid rgba(123, 100, 80, 0.12);
+  outline: 1px solid rgba(40, 32, 28, 0.12);
   outline-offset: -1px;
   box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 8px 18px -10px rgba(58, 43, 30, 0.24);
 }
@@ -1055,7 +1058,7 @@ p { margin: 0; text-wrap: pretty; }
   order: 1;
   flex: 1 1 0;
   min-width: 0;
-  border-bottom: 2px dotted rgba(100, 74, 64, 0.4);
+  border-bottom: 2px dotted rgba(59, 41, 34, 0.45);
   transform: translateY(-0.3em);
 }
 .menu-head .menu-price { order: 2; }
@@ -1140,12 +1143,12 @@ p { margin: 0; text-wrap: pretty; }
 }
 .social-btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
 .social-btn:focus-visible { outline-offset: 4px; }
-.social-btn-icon { flex: none; display: inline-flex; color: var(--secondary); }
+.social-btn-icon { flex: none; display: inline-flex; color: #fff; }
 .social-btn-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .social-btn-name { font-weight: 600; font-size: 1rem; }
 .social-btn-handle {
   font-size: 0.84rem;
-  color: var(--accent-light); /* peach on the primary */
+  color: var(--accent-light); /* light grey on the primary */
   overflow-wrap: anywhere;
 }
 .social-btn-go {
@@ -1163,7 +1166,7 @@ p { margin: 0; text-wrap: pretty; }
 .info-card--panel {
   position: relative;
   background: var(--paper);
-  border: 1px solid rgba(123, 100, 80, 0.14);
+  border: 1px solid rgba(40, 32, 28, 0.14);
   border-radius: 6px;
   padding: 28px 30px;
   /* It rests on the page the way the photos do, and is mounted in the same
@@ -1227,7 +1230,7 @@ p { margin: 0; text-wrap: pretty; }
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
-  text-decoration-color: rgba(100, 74, 64, 0.35);
+  text-decoration-color: rgba(59, 41, 34, 0.35);
   transition: text-decoration-color 0.2s ease;
   /* Long labels («Туристический гид «Романов на Волге» →») must wrap inside
      the card rather than run past its edge on narrow screens. */
@@ -1256,13 +1259,13 @@ p { margin: 0; text-wrap: pretty; }
   padding-bottom: 56px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-/* Column heads in the serif, sentence case, in the warm cream — the same move
+/* Column heads in the serif, sentence case, in light grey — the same move
    as the section marks, and for the same reason: tracked-out grey capitals are
    every footer on the web. */
 .footer-col h2 {
   font-size: 1.22rem;
   font-weight: 700;
-  color: var(--secondary);
+  color: var(--accent-light);
   margin-bottom: 16px;
 }
 /* .note is --muted, which is built for light pages: on --dark it measured
@@ -1293,7 +1296,7 @@ p { margin: 0; text-wrap: pretty; }
 }
 .social-links a:hover { color: #fff; }
 .social-links svg { color: var(--accent-light); flex-shrink: 0; }
-.footer-col .link-arrow { color: var(--accent-light); text-decoration-color: rgba(255, 223, 181, 0.35); }
+.footer-col .link-arrow { color: var(--accent-light); text-decoration-color: rgba(255, 255, 255, 0.35); }
 .footer-col .link-arrow:hover { text-decoration-color: currentColor; }
 
 .footer-phone {
@@ -1564,7 +1567,7 @@ body.is-legal .legal-footer { margin-top: auto; }
   .index-row:hover .img-frame--index {
     transform: rotate(-1.2deg) translateY(-3px);
     box-shadow:
-      inset 0 0 0 1px rgba(123, 100, 80, 0.11),
+      inset 0 0 0 1px rgba(40, 32, 28, 0.11),
       0 2px 4px rgba(58, 43, 30, 0.06),
       0 18px 30px -14px rgba(58, 43, 30, 0.34);
   }
