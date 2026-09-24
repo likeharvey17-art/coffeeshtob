@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.4
+Version: 1.3.5
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -332,9 +332,10 @@ p { margin: 0; text-wrap: pretty; }
 .site-footer ::selection { background: var(--accent); color: #fff; }
 
 .container {
+  --gutter: 24px;
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--gutter);
 }
 
 /* ===== Buttons ===== */
@@ -1124,17 +1125,22 @@ p { margin: 0; text-wrap: pretty; }
   align-items: center;
   gap: 14px;
   min-height: 62px;
-  padding: 10px 22px 10px 20px;
-  border-radius: var(--radius-lg);
+  padding: 10px 26px 10px 24px; /* clear of the round ends */
+  border-radius: var(--radius-full); /* pills, like the header */
   background: var(--accent);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 18px -10px rgba(36, 26, 19, 0.6);
   transition: background-color 0.2s ease, transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
 }
-.social-btn:hover {
-  background: var(--accent-dark);
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 24px -12px rgba(36, 26, 19, 0.7);
+.social-btn:hover { background: var(--accent-dark); }
+/* The lift is pointer-only, like .btn's: on a phone it stuck to the tapped
+   button when coming back from Telegram. */
+@media (hover: hover) {
+  .social-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 24px -12px rgba(36, 26, 19, 0.7);
+  }
+  .social-btn:hover .social-btn-go { transform: translate(2px, -2px); }
 }
 .social-btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
 .social-btn:focus-visible { outline-offset: 4px; }
@@ -1152,7 +1158,6 @@ p { margin: 0; text-wrap: pretty; }
   color: var(--accent-light);
   transition: transform 0.3s var(--ease-out);
 }
-.social-btn:hover .social-btn-go { transform: translate(2px, -2px); }
 
 /* The one panel left on the page. It keeps a box because it is the only
    tabular thing here — people scan for opening hours, and the frame is what
@@ -1251,7 +1256,11 @@ p { margin: 0; text-wrap: pretty; }
   column-gap: 56px;
   gap: 40px;
   padding-bottom: 56px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  /* The rule above the bottom line, drawn inside the gutters. As a border on
+     this .container it spanned the padding too, and ran 24px past the text
+     on both sides. */
+  background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1))
+    center bottom / calc(100% - 2 * var(--gutter)) 1px no-repeat;
 }
 /* Column heads in the serif, sentence case, in light grey — the same move
    as the section marks, and for the same reason: tracked-out grey capitals are
@@ -1274,6 +1283,12 @@ p { margin: 0; text-wrap: pretty; }
 }
 .footer-brand .brand-footer { margin-bottom: 18px; }
 .footer-brand .brand-text strong { color: #fff; }
+/* Espresso on --dark is 1.3:1 — the round mark all but vanished once the
+   accent went dark in 1.3.3. A faint light disc brings it back. */
+.footer-brand .brand-icon {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 .footer-brand .brand-text small { color: var(--on-dark); }
 .footer-brand p { max-width: 36ch; }
 .footer-hours { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 16px; }
@@ -1386,7 +1401,7 @@ p { margin: 0; text-wrap: pretty; }
   text-align: center;
   padding: 9px 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-full); /* pills, like the header's nav items */
   font-size: 0.92rem;
   font-weight: 500;
   color: var(--ink-soft);
@@ -1394,12 +1409,17 @@ p { margin: 0; text-wrap: pretty; }
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 .notfound-nav a:hover {
-  border-color: var(--accent-mid);
+  border-color: var(--ink);
   color: var(--ink);
 }
 
 .legal-back { margin-top: 40px; }
-.legal-footer { padding-top: 0; }
+/* The one-line footer takes .footer-bottom's padding and nothing else. It had
+   none of its own: 0px top and bottom on desktop, and on phones the ≤640px
+   `.site-footer { padding-top: 48px }` won over this rule, so the text sat
+   48px down with the address touching the bottom edge. Two classes, so no
+   width rule can override it. */
+.site-footer.legal-footer { padding-top: 0; }
 
 /* THE 404 AND THE POLICY ARE SHORTER THAN THE SCREEN, and without this their
    one-line footer floated wherever the text happened to end, with a field of
@@ -1790,7 +1810,7 @@ body.is-legal .legal-footer { margin-top: auto; }
 }
 
 @media (max-width: 640px) {
-  .container { padding: 0 18px; }
+  .container { --gutter: 18px; }
   /* Matches the hero's own ≤640 padding: the pull-up and the top padding cancel
      exactly, so both have to move together or the banner's content box shifts. */
   .page-banner {
@@ -1871,6 +1891,9 @@ body.is-legal .legal-footer { margin-top: auto; }
   .index-row:hover .index-title,
   .index-row:hover .index-teaser,
   .index-row:hover .index-go,
+  .index-row:focus-visible .index-title,
+  .index-row:focus-visible .index-teaser,
+  .index-row:focus-visible .index-go,
   .link-arrow:hover .link-arrow-mark,
   .btn:active,
   .social-btn:hover,

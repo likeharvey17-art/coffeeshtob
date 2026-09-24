@@ -455,6 +455,34 @@ accents, 1.3.3 replaced them as listed here.
   Kept: the photo's focus-pull on load, the page crossfade with the header held
   still, the hero copy's scroll fade, and photos developing on scroll.
 
+### 1.3.5: tidy-up after a full-site sweep
+
+Swept all nine routes and the 404 at 390/768/1280px on a real local WordPress:
+no script errors, no horizontal overflow, `verify-site.py` green. Fixed:
+
+- **The legal pages' footer had no padding of its own** — 0px on desktop, and
+  on phones the ≤640px `.site-footer` padding won, leaving the address touching
+  the bottom edge. `footer-legal.php` now uses `.footer-bottom`, and the
+  override is `.site-footer.legal-footer`.
+- **The footer logo vanished** after 1.3.3 (espresso on `--dark`, 1.3:1). It
+  has a faint light disc there now.
+- **The footer's divider ran 24px past the text** on both sides (a border on a
+  `.container` spans its padding). It is a background line inset by
+  `--gutter`, the container's padding as a custom property (24px, 18px ≤640).
+- **The 404's section links and the Telegram/VK buttons are pills**, matching
+  the header; the social buttons' lift is pointer-only like `.btn`'s.
+- Reduced motion also stills the index row's keyboard-focus shift.
+
+**When wordpress.org is unreachable** (it is from some sandboxes), `wp-dev.sh`
+works from npm instead: `@wp-playground/wordpress-builds@0.9.19` ships a WP 6.5
+zip at `src/wordpress/wp-6.5.zip` (delete its prebuilt
+`wp-content/database/.ht.sqlite`), and `@wp-playground/cli` ships
+`sqlite-database-integration.zip` (rename its folder from
+`plugin-sqlite-database-integration`). Put them in the script's cache as
+`wordpress.tar.gz` (top folder `wordpress/`) and `sqlite.zip`. WP 6.5 on PHP
+8.4 prints core deprecations, so run with `WP_DEBUG` off and
+`error_reporting(E_ALL & ~E_DEPRECATED)` in a mu-plugin.
+
 ### Palette and texture
 
 **Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:
