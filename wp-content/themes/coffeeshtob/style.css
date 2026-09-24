@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.1
+Version: 1.3.3
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -181,27 +181,32 @@ Tags: custom-menu, custom-logo, translation-ready
   --muted: #646464;       /* muted-foreground. Measure against the COMPOSITED
                              --cream-alt before changing either (see below) */
   --border: #d8d8d8;
-  --accent: #644a40;      /* primary — buttons, links */
-  --accent-dark: #52392f; /* primary, hover */
-  --accent-mid: #7a5d51;  /* primary, lighter — small accents on light */
-  --accent-light: #ffdfb5;/* secondary (peach) — the only accent legible on --dark */
-  --secondary: #ffdfb5;
-  --secondary-ink: #582d1d; /* secondary-foreground */
-  --secondary-hover: #ffe9cc;
+  /* 1.3.3: darker accents, at the owner's request. The primary went from
+     Caffeine's #644a40 to espresso, the peach secondary to charcoal, and the
+     light accents on --dark from peach/cream to plain light grey — no light
+     brown or beige is painted anywhere now. */
+  --accent: #3b2922;      /* primary (espresso) — buttons, links */
+  --accent-dark: #271a15; /* primary, hover */
+  --accent-mid: #4a3a33;  /* small accents on light — a dark brown-grey */
+  --accent-light: #d9d9d9;/* light grey — the accent legible on --dark */
+  --secondary: #262626;   /* charcoal — the current nav item */
+  --secondary-ink: #ffffff; /* secondary-foreground */
+  --secondary-hover: #3a3a3a;
   --tint: #e8e8e8;        /* accent — the neutral hover fill */
   --destructive: #e54d2e;
-  --dark: #1f1a18;        /* the footer and the plain banner: Caffeine's
+  --dark: #181413;        /* the footer and the plain banner: Caffeine's
                              foreground, warmed a step toward the primary so
                              the dark bands belong to the brown */
-  --dark-soft: #2d2522;
-  --on-dark: rgba(255, 239, 220, 0.72); /* secondary text on --dark */
+  --dark-soft: #26201e;
+  --on-dark: rgba(255, 255, 255, 0.7); /* secondary text on --dark */
 
   /* Warm light. Used as LIGHT only — the lamplight glow over the hero, banner
      and footer, and the text selection — never as a colour anything is painted
      in. That is what stops it drifting back toward the orange browns this
      palette was deliberately desaturated away from. */
-  --glow: 255, 186, 120;  /* an rgb triplet, for rgba() — peach light */
-  --selection: #ffdfb5;
+  --glow: 120, 86, 70;    /* an rgb triplet, for rgba() — a dim roast-brown
+                             light since 1.3.3; it was peach */
+  --selection: #d4d4d4;
 
   /* One curve for everything that arrives: quick off the mark, long settle.
      The default `ease` starts slowly, which on a hover reads as lag. */
@@ -210,17 +215,21 @@ Tags: custom-menu, custom-logo, translation-ready
   /* The album corners that hold every photograph — see "Photos are mounted".
      Kraft card, a shade darker than the page so it reads on the cream and on
      the alternating sections alike, with a fold line along the diagonal. */
-  --mount: #f3cc97;       /* peach card, a step deeper than --secondary so it
-                             reads on the grey page */
-  --mount-edge: rgba(100, 74, 64, 0.45);
+  --mount: #3b2922;       /* espresso card since 1.3.3 (was peach) */
+  --mount-edge: rgba(0, 0, 0, 0.4);
 
-  /* THREE background LAYERS, never overlay elements — an overlay would need a
+  /* TWO background LAYERS, never overlay elements — an overlay would need a
      stacking position and could paint over the cards. Both are applied to
      `body` and `.section-alt` only, so the white cards stay clean.
 
      Alpha is baked into each SVG (stroke-opacity / rect opacity), not set in
      CSS, so there is one place to adjust each. Order matters where they are
-     used: beans on top, then --fibers, then --grain underneath.
+     used: --fibers on top, --grain underneath.
+
+     There used to be a third, --beans: seven outlined coffee beans on a 344px
+     tile. Removed in 1.3.2 at the owner's request: the page reads cleaner as
+     plain paper. Removing a layer lightens the composite, so contrast only
+     improves — but re-measure anyway if anything else here changes.
 
      EACH LAYER DARKENS THE COMPOSITE, AND THAT MOVES THE CONTRAST MATHS. The
      paper layer took --muted and --accent-mid from 4.62:1 to 4.53:1 against
@@ -234,17 +243,8 @@ Tags: custom-menu, custom-logo, translation-ready
      baseFrequency went 0.65 -> 0.5 to coarsen the noise — lower frequency means
      larger speckle, which is what reads as "rough" rather than "dithered".
 
-     Both were dialled back from a first attempt that was too strong: the beans
-     sat at 13% on a 200px tile and read as wallpaper, with the repeat visible
-     as rows. 10% on a 260px tile is sparser and quieter. The grain went the
-     other way, 0.1 -> 0.13, because at 0.1 it was doing nothing at all. */
+     The grain went 0.1 -> 0.13, because at 0.1 it was doing nothing at all. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.13'/%3E%3C/svg%3E");
-  /* Seven coffee beans scattered across a 200px tile at irregular positions and
-     angles. Irregularity is the whole job: an evenly spaced motif reads as
-     wallpaper, and the repeat becomes obvious the moment you notice one. At
-     13% stroke opacity it is a texture you find rather than one that announces
-     itself. */
-  --beans: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27344%27%20height%3D%27344%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%2343362c%27%20stroke-opacity%3D%270.068%27%20stroke-width%3D%271.15%27%3E%3Cg%20transform%3D%27translate%2845%2053%29%20rotate%28-24%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28198%2029%29%20rotate%2838%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28307%20127%29%20rotate%28-8%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28116%20169%29%20rotate%2864%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28259%20246%29%20rotate%28-46%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%2837%20283%29%20rotate%2816%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%28167%20325%29%20rotate%28-30%29%27%3E%3Cellipse%20rx%3D%2710.6%27%20ry%3D%2715.2%27%2F%3E%3Cpath%20d%3D%27M0%20-12.6C4.4%20-5.9%204.4%205.9%200%2012.6%27%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 
   --font-serif: "Alegreya", Georgia, "Times New Roman", serif;
   --font-sans: "Commissioner", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -288,7 +288,7 @@ html {
      the one place the palette would visibly stop. */
   accent-color: var(--accent);
   caret-color: var(--accent);
-  scrollbar-color: #b3a39c transparent;
+  scrollbar-color: #8c8c8c transparent;
 }
 /* Safeguard against the absolutely-positioned hero background causing
    horizontal scroll on mobile. It must be `clip`, not `hidden`: `overflow-x:
@@ -304,7 +304,7 @@ html, body { overflow-x: hidden; }
 body {
   margin: 0;
   background-color: var(--cream);
-  background-image: var(--beans), var(--fibers), var(--grain);
+  background-image: var(--fibers), var(--grain);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.6;
@@ -356,7 +356,10 @@ p { margin: 0; text-wrap: pretty; }
   border: 1px solid transparent;
   transition: transform 0.25s var(--ease-out), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s var(--ease-out);
 }
-.btn:hover { transform: translateY(-1px); }
+/* Pointer only: on touch the lift stuck to the tapped button. */
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px); }
+}
 /* Pressed reads as pressed. A phone has no hover, so without this a tap gave
    no sign it had landed until the next page arrived. */
 .btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
@@ -367,17 +370,17 @@ p { margin: 0; text-wrap: pretty; }
 }
 .btn-accent:hover { background: var(--accent-dark); }
 
-/* OVER THE PHOTOGRAPH THE PRIMARY BUTTON IS CREAM, NOT BROWN. The roasted
+/* OVER THE PHOTOGRAPH THE PRIMARY BUTTON IS WHITE, NOT BROWN. The espresso
    brown is built for light pages; on the darkened hero it sank into the shadow
    beside its own ghost sibling, so the one thing the hero asks you to do was
-   the least visible mark on it. Cream on dark is the lit window of the café.
-   The header's «Соцсети» is outside .hero and keeps the brown. */
+   the least visible mark on it. (It was cream until 1.3.3.) The header's
+   «Соцсети» is outside .hero and keeps the brown. */
 .hero .btn-accent {
-  background: var(--secondary);
-  color: var(--secondary-ink);
+  background: #fff;
+  color: var(--ink);
   box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
 }
-.hero .btn-accent:hover { background: var(--secondary-hover); }
+.hero .btn-accent:hover { background: #e6e6e6; }
 .btn-ghost {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
@@ -427,11 +430,16 @@ p { margin: 0; text-wrap: pretty; }
   align-items: center;
   gap: 24px;
   /* Warm paper rather than screen white, so the pill belongs to the page it
-     floats over. The inset top highlight gives it an edge that catches light. */
+     floats over. The inset top highlight gives it an edge that catches light.
+
+     A true pill since 1.3.2, and everything at its two ends is round with it:
+     the brand mark and «Соцсети» sit concentric with the end caps, which is
+     what the padding is measured for (8px round the button, ~11px round the
+     38px mark). A round end next to a square button reads as a mistake. */
   background: rgba(252, 252, 252, 0.88);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius-full);
+  padding: 8px 8px 8px 12px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px rgba(43, 33, 25, 0.06);
   backdrop-filter: blur(12px) saturate(1.15);
   transition: box-shadow 0.2s ease;
@@ -452,7 +460,7 @@ p { margin: 0; text-wrap: pretty; }
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: var(--radius);
+  border-radius: 50%;
   background: var(--accent);
   color: #fff;
   flex-shrink: 0;
@@ -478,7 +486,7 @@ p { margin: 0; text-wrap: pretty; }
 }
 .main-nav a {
   padding: 10px 14px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-full);
   font-size: 0.92rem;
   font-weight: 500;
   color: var(--ink-soft);
@@ -496,11 +504,15 @@ p { margin: 0; text-wrap: pretty; }
   .main-nav a { padding: 10px 9px; font-size: 0.88rem; }
   .header-inner { gap: 16px; }
 }
-/* The current page wears the secondary: besides the album corners, the one
-   place peach is a fill on the light pages. */
+/* The current page wears the charcoal secondary (peach until 1.3.3). */
 .main-nav a.is-active { background: var(--secondary); color: var(--secondary-ink); }
 
-.nav-social-btn { padding: 10px 22px; font-size: 0.9rem; flex-shrink: 0; }
+.nav-social-btn {
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
 
 /* Legal pages (privacy.html, 404.html) carry a two-item header — brand, then a
    single "На главную" button — so there is no .main-nav in between to take up
@@ -553,7 +565,7 @@ p { margin: 0; text-wrap: pretty; }
   padding: 10px;
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: 0 14px 34px rgba(43, 33, 25, 0.16);
   animation: pop-in 0.16s ease-out;
 }
@@ -563,7 +575,7 @@ p { margin: 0; text-wrap: pretty; }
   content: "";
   position: absolute;
   top: -7px;
-  right: 34px;
+  right: 48px;
   width: 12px;
   height: 12px;
   background: var(--paper);
@@ -575,8 +587,8 @@ p { margin: 0; text-wrap: pretty; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 13px;
-  border-radius: var(--radius);
+  padding: 11px 14px;
+  border-radius: var(--radius-full);
   font-size: 0.92rem;
   font-weight: 500;
   color: var(--ink-soft);
@@ -640,9 +652,9 @@ p { margin: 0; text-wrap: pretty; }
   margin-top: calc(-1 * var(--header-h));
   padding: calc(var(--header-h) + 26px) 0 0;
   background:
-    radial-gradient(ellipse at top right, rgba(255, 223, 181, 0.12), transparent 55%),
-    radial-gradient(ellipse at 10% 90%, rgba(100, 74, 64, 0.34), transparent 60%),
-    linear-gradient(180deg, #2a2320 0%, #1f1a18 60%, #161211 100%);
+    radial-gradient(ellipse at top right, rgba(var(--glow), 0.14), transparent 55%),
+    radial-gradient(ellipse at 10% 90%, rgba(59, 41, 34, 0.4), transparent 60%),
+    linear-gradient(180deg, #221c1a 0%, #181413 60%, #100d0c 100%);
   overflow: hidden;
 }
 .hero-overlay {
@@ -693,9 +705,9 @@ p { margin: 0; text-wrap: pretty; }
   gap: 8px;
   margin-top: clamp(40px, 9svh, 96px);
   padding: 16px 0 34px;
-  border-top: 1px solid rgba(255, 239, 220, 0.16);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
   font-size: 0.9rem;
-  color: rgba(255, 239, 220, 0.8);
+  color: rgba(255, 255, 255, 0.8);
 }
 .hero-place svg { flex-shrink: 0; color: var(--destructive); } /* red, ration 1 of 2 */
 
@@ -771,7 +783,7 @@ p { margin: 0; text-wrap: pretty; }
 }
 .section-alt {
   background-color: var(--cream-alt);
-  background-image: var(--beans), var(--fibers), var(--grain);
+  background-image: var(--fibers), var(--grain);
 }
 
 /* Left-aligned since 1.3.0. A centred label-heading-subtitle stack over every
@@ -858,7 +870,7 @@ p { margin: 0; text-wrap: pretty; }
   border-radius: 6px;
   background: var(--cream-alt);
   box-shadow:
-    inset 0 0 0 1px rgba(123, 100, 80, 0.11),
+    inset 0 0 0 1px rgba(40, 32, 28, 0.11),
     0 1px 2px rgba(58, 43, 30, 0.05),
     0 10px 24px -12px rgba(58, 43, 30, 0.22);
 }
@@ -1015,7 +1027,7 @@ p { margin: 0; text-wrap: pretty; }
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--cream-alt);
-  outline: 1px solid rgba(123, 100, 80, 0.12);
+  outline: 1px solid rgba(40, 32, 28, 0.12);
   outline-offset: -1px;
   box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 8px 18px -10px rgba(58, 43, 30, 0.24);
 }
@@ -1046,7 +1058,7 @@ p { margin: 0; text-wrap: pretty; }
   order: 1;
   flex: 1 1 0;
   min-width: 0;
-  border-bottom: 2px dotted rgba(100, 74, 64, 0.4);
+  border-bottom: 2px dotted rgba(59, 41, 34, 0.45);
   transform: translateY(-0.3em);
 }
 .menu-head .menu-price { order: 2; }
@@ -1131,12 +1143,12 @@ p { margin: 0; text-wrap: pretty; }
 }
 .social-btn:active { transform: translateY(0) scale(0.98); transition-duration: 0.08s; }
 .social-btn:focus-visible { outline-offset: 4px; }
-.social-btn-icon { flex: none; display: inline-flex; color: var(--secondary); }
+.social-btn-icon { flex: none; display: inline-flex; color: #fff; }
 .social-btn-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .social-btn-name { font-weight: 600; font-size: 1rem; }
 .social-btn-handle {
   font-size: 0.84rem;
-  color: var(--accent-light); /* peach on the primary */
+  color: var(--accent-light); /* light grey on the primary */
   overflow-wrap: anywhere;
 }
 .social-btn-go {
@@ -1154,7 +1166,7 @@ p { margin: 0; text-wrap: pretty; }
 .info-card--panel {
   position: relative;
   background: var(--paper);
-  border: 1px solid rgba(123, 100, 80, 0.14);
+  border: 1px solid rgba(40, 32, 28, 0.14);
   border-radius: 6px;
   padding: 28px 30px;
   /* It rests on the page the way the photos do, and is mounted in the same
@@ -1218,7 +1230,7 @@ p { margin: 0; text-wrap: pretty; }
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
-  text-decoration-color: rgba(100, 74, 64, 0.35);
+  text-decoration-color: rgba(59, 41, 34, 0.35);
   transition: text-decoration-color 0.2s ease;
   /* Long labels («Туристический гид «Романов на Волге» →») must wrap inside
      the card rather than run past its edge on narrow screens. */
@@ -1247,13 +1259,13 @@ p { margin: 0; text-wrap: pretty; }
   padding-bottom: 56px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-/* Column heads in the serif, sentence case, in the warm cream — the same move
+/* Column heads in the serif, sentence case, in light grey — the same move
    as the section marks, and for the same reason: tracked-out grey capitals are
    every footer on the web. */
 .footer-col h2 {
   font-size: 1.22rem;
   font-weight: 700;
-  color: var(--secondary);
+  color: var(--accent-light);
   margin-bottom: 16px;
 }
 /* .note is --muted, which is built for light pages: on --dark it measured
@@ -1284,7 +1296,7 @@ p { margin: 0; text-wrap: pretty; }
 }
 .social-links a:hover { color: #fff; }
 .social-links svg { color: var(--accent-light); flex-shrink: 0; }
-.footer-col .link-arrow { color: var(--accent-light); text-decoration-color: rgba(255, 223, 181, 0.35); }
+.footer-col .link-arrow { color: var(--accent-light); text-decoration-color: rgba(255, 255, 255, 0.35); }
 .footer-col .link-arrow:hover { text-decoration-color: currentColor; }
 
 .footer-phone {
@@ -1539,20 +1551,26 @@ body.is-legal .legal-footer { margin-top: auto; }
   opacity: 0.35;
   transition: transform 0.5s var(--ease-out), opacity 0.3s ease, color 0.2s ease;
 }
-.index-row:hover::after,
+/* Hover only where there is a real pointer. On a phone a tap leaves :hover
+   stuck on the row that was touched, so the row you came from sat tilted and
+   underlined in red when you pressed Back — the page looked half-clicked.
+   Keyboard focus keeps the same treatment at every width. */
 .index-row:focus-visible::after { transform: scaleX(1); }
-.index-row:hover .index-title,
 .index-row:focus-visible .index-title { transform: translateX(8px); color: var(--accent); }
-.index-row:hover .index-teaser,
 .index-row:focus-visible .index-teaser { transform: translateX(8px); }
-.index-row:hover .index-go,
 .index-row:focus-visible .index-go { opacity: 1; transform: translateX(4px); color: var(--accent); }
-.index-row:hover .img-frame--index {
-  transform: rotate(-1.2deg) translateY(-3px);
-  box-shadow:
-    inset 0 0 0 1px rgba(123, 100, 80, 0.11),
-    0 2px 4px rgba(58, 43, 30, 0.06),
-    0 18px 30px -14px rgba(58, 43, 30, 0.34);
+@media (hover: hover) {
+  .index-row:hover::after { transform: scaleX(1); }
+  .index-row:hover .index-title { transform: translateX(8px); color: var(--accent); }
+  .index-row:hover .index-teaser { transform: translateX(8px); }
+  .index-row:hover .index-go { opacity: 1; transform: translateX(4px); color: var(--accent); }
+  .index-row:hover .img-frame--index {
+    transform: rotate(-1.2deg) translateY(-3px);
+    box-shadow:
+      inset 0 0 0 1px rgba(40, 32, 28, 0.11),
+      0 2px 4px rgba(58, 43, 30, 0.06),
+      0 18px 30px -14px rgba(58, 43, 30, 0.34);
+  }
 }
 .index-row:active .index-title { transform: translateX(4px); transition-duration: 0.1s; }
 
@@ -1747,7 +1765,7 @@ html.vt-arrival .page-banner h1 { animation: none; }
   .header-inner {
     justify-content: space-between;
     gap: 10px;
-    padding: 8px 10px 8px 12px;
+    padding: 7px 14px 7px 10px;
   }
 
   .main-nav {
@@ -1764,7 +1782,7 @@ html.vt-arrival .page-banner h1 { animation: none; }
     padding: 10px;
     background: var(--paper);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: 0 14px 34px rgba(43, 33, 25, 0.16);
     animation: pop-in 0.16s ease-out;
   }
@@ -1777,8 +1795,8 @@ html.vt-arrival .page-banner h1 { animation: none; }
   .main-nav.is-open a:nth-child(6) { animation-delay: 125ms; }
   .main-nav.is-open a:nth-child(n+7) { animation-delay: 150ms; }
   .main-nav a {
-    padding: 12px 14px;
-    border-radius: var(--radius);
+    padding: 12px 16px;
+    border-radius: var(--radius-full);
     font-size: 0.95rem;
     white-space: normal;
   }

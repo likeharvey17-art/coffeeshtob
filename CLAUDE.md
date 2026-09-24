@@ -405,6 +405,45 @@ state (headline clipped, photo blurred) is what it captures. Call
 `document.getAnimations().forEach(a => a.finish())` before judging a frame.
 Real, visible pages play normally.
 
+### 1.3.2: pill header, plain paper, two motion fixes
+
+- **The header is a pill** (see Palette). Re-measured in Chromium: the gap
+  between the last nav link and «Соцсети» is 105px at 1060px and 75px at
+  1001px, nothing overflows at 1000px or down to 320px.
+- **The bean texture is gone** from `body` and `.section-alt` (see Palette).
+- **A developed photo hands back to its ordinary rules.** `script.js` removes
+  `.develop`/`.is-developed` 1.5s after the print develops. Left on, their
+  `transform: none` and transition outranked the front-page index's hover, so
+  rows that had scrolled in never tilted while rows above the fold did.
+- **Hover effects that move things are pointer-only** (`@media (hover: hover)`):
+  the index row's tilt/underline and the `.btn` lift. On a phone a tap left
+  `:hover` stuck, so the row you came from sat tilted and red-underlined when
+  you pressed Back. Keyboard focus keeps the treatment everywhere.
+
+### 1.3.3: darker accents
+
+Asked for as "darker browns and black/grey, no lighter brown or beige". Every
+light-brown, peach and cream accent is gone; the layout, greys and textures
+are unchanged.
+
+- `--accent` #644a40 → espresso **#3b2922** (hover #271a15); `--accent-mid`
+  → #4a3a33, a dark brown-grey.
+- The peach `--secondary` is now **charcoal #262626 with white text** — the
+  current nav item.
+- The hero's primary button is **white** with ink text (was cream).
+- Album corners (`--mount`) are **espresso** with a black fold line — the
+  album-black option 1.2.0 set aside, now the owner's call.
+- On `--dark` (now #181413): footer heads, links and the social-button handles
+  use light grey `--accent-light` #d9d9d9; `--on-dark` is white at 70% (was
+  cream). `--glow` is a dim roast-brown light instead of peach; selection is
+  grey; `theme-color` and the manifest match `--cream`.
+- Measured: `--accent` on `--cream-alt` 11.75:1, `--accent-mid` 9.23:1,
+  `--accent-light` on `--dark` 12.96:1, `--on-dark` 9.26:1. The tightest pairing
+  is still `--muted` on `--cream-alt`, 5.05:1.
+
+The Palette section below describes 1.3.1; where it names peach or cream
+accents, 1.3.3 replaced them as listed here.
+
 ### Palette and texture
 
 **Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:
@@ -412,8 +451,11 @@ neutral greys (`--cream` #f9f9f9 background, `--cream-alt` #efefef muted,
 `--paper` #fff card, `--border` #d8d8d8, `--tint` #e8e8e8 hover), `--ink`
 #202020, `--muted` #646464, primary brown `--accent` #644a40, peach secondary
 `--secondary` #ffdfb5 with `--secondary-ink` #582d1d, and `--destructive`
-#e54d2e. Radius is Caffeine's 0.5rem (`--radius`) on buttons, nav items and
-popovers; the header bar and the social buttons use `--radius-lg`.
+#e54d2e. Radius is Caffeine's 0.5rem (`--radius`) on buttons and rows; the
+popovers and the social buttons use `--radius-lg`. **Since 1.3.2 the header is a
+pill** (`--radius-full`), and everything at its ends is round with it: the brand
+mark is a circle and «Соцсети», the nav items and the popover rows are pills,
+padded so the mark and the button sit concentric with the end caps.
 
 - **Peach is the secondary, used as a fill in three places only**: the current
   nav item, the hero's primary button, and the album corners (`--mount`
@@ -439,21 +481,18 @@ footer, and the light one is unreadable on white. `--accent`/`--accent-dark` for
 buttons and links on light; `--accent-mid` for small accents on light; and
 `--accent-light` is **the only one legible on `--dark`**.
 
-`--grain`, `--beans` and `--fibers` are three inline-SVG textures applied as
-extra *background layers* on `body` and `.section-alt` — never as overlay
-elements, which would risk painting over cards. `--beans` is the motif (7 beans
-on a 344px tile at 6.8% stroke opacity), `--grain` the tooth (baseFrequency 0.5
+`--grain` and `--fibers` are two inline-SVG textures applied as extra
+*background layers* on `body` and `.section-alt` — never as overlay elements,
+which would risk painting over cards. `--grain` is the tooth (baseFrequency 0.5
 at 13%), `--fibers` the paper (low-frequency mottling at 0.011 plus 70 hairlines
 on a 700px tile).
 
-The beans have been resized twice and both times the tile moved with them: 13%
-on a 200px tile read as wallpaper with the repeat visible in rows, and the
-current 344px tile came with the beans being enlarged and simultaneously faded
-(0.10 → 0.068) — larger shapes at a lighter weight, which is what "bigger but
-blending in more" resolves to. **Generate the data URI rather than hand-editing
-it**: it is a one-line URL-encoded string with seven transform groups in it, and
-nudging coordinates by hand is how a bean ends up half off the tile with nothing
-to show it.
+**The coffee-bean layer (`--beans`) was removed in 1.3.2 at the owner's
+request** — seven outlined beans on a 344px tile, resized twice before that.
+Plain paper reads cleaner. Re-measured after: `--cream` composites to
+rgb(242,242,242), `--cream-alt` to rgb(237,237,237); `--muted` on `--cream-alt`
+is now 5.05:1 and `--accent-mid` 5.11:1 (from 4.86 and 4.91). If a motif is ever
+wanted back, generate its data URI rather than hand-editing one.
 
 **The paper layer's first version was invisible, and that was measured rather
 than argued about.** 18 hairlines on a 340px tile is ~0.4% of pixels at 5% alpha

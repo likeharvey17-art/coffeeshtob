@@ -47,7 +47,7 @@ function shtob_head_meta() {
     $url   = is_front_page() ? home_url('/') : get_permalink(get_queried_object_id());
     $og    = $dir . 'og-image.jpg';
     ?>
-<meta name="theme-color" content="#f7f3ec">
+<meta name="theme-color" content="#f9f9f9">
 <link rel="icon" href="<?php echo esc_url($dir . 'favicon.ico'); ?>" sizes="any">
 <link rel="icon" href="<?php echo esc_url($dir . 'favicon.svg'); ?>" type="image/svg+xml">
 <link rel="apple-touch-icon" href="<?php echo esc_url($dir . 'apple-touch-icon.png'); ?>">

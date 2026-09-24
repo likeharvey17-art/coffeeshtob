@@ -338,9 +338,23 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           const el = entry.target;
-          el.style.setProperty('--develop-delay', `${Math.min(step++, 3) * 140}ms`);
+          const delay = Math.min(step++, 3) * 140;
+          el.style.setProperty('--develop-delay', `${delay}ms`);
           el.classList.add('is-developed');
           developObserver.unobserve(el);
+          /* Once developed, hand the print back to its ordinary rules. Left
+             in place, `.develop.is-developed { transform: none }` and the
+             develop transition outrank the front-page index's hover, so a
+             row that had scrolled in never tilted and lost its shadow easing
+             — while the rows above the fold did. Every property the develop
+             classes set ends equal to the base rule, so removing them is
+             invisible. 1.5s outlasts the longest of them (the 1.4s filter). */
+          if (el.classList.contains('develop')) {
+            setTimeout(() => {
+              el.classList.remove('develop', 'is-developed');
+              el.style.removeProperty('--develop-delay');
+            }, delay + 1500);
+          }
         });
       },
       { threshold: 0.3 }
