@@ -444,6 +444,17 @@ are unchanged.
 The Palette section below describes 1.3.1; where it names peach or cream
 accents, 1.3.3 replaced them as listed here.
 
+### 1.3.4: no photo corners, headings don't animate in
+
+- **The album corners are gone** (`.img-frame::before`, the hours panel's too,
+  and the `--mount*` tokens). Prints sit on the page with their hairline and
+  shadow only. Where this file still describes the corners, it is history.
+- **Heading text no longer animates.** The hero/banner `h1` rise-in, the
+  lead/buttons/address fade-up, and the page-to-page title travel
+  (`view-transition-name: page-title-{ID}`, `html.vt-arrival`) are removed.
+  Kept: the photo's focus-pull on load, the page crossfade with the header held
+  still, the hero copy's scroll fade, and photos developing on scroll.
+
 ### Palette and texture
 
 **Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:

@@ -95,7 +95,7 @@ $about = get_post_meta($id, '_shtob_about_image', true);
           <li>
             <a class="index-row" href="<?php echo esc_url(get_permalink($p)); ?>">
               <span class="index-text">
-                <span class="index-title" style="view-transition-name: page-title-<?php echo (int) $p->ID; ?>"><?php echo esc_html($p->post_title); ?></span>
+                <span class="index-title"><?php echo esc_html($p->post_title); ?></span>
                 <?php if ($teaser) : ?><span class="index-teaser"><?php echo esc_html($teaser); ?></span><?php endif; ?>
               </span>
               <?php if ($thumb && wp_attachment_is_image($thumb)) : ?>

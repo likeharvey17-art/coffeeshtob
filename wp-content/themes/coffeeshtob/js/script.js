@@ -7,13 +7,6 @@
 const quietTransition = (event) => {
   const vt = event.viewTransition;
   if (!vt) return;
-  /* Arriving through a view transition, the page title is already travelling
-     into place from the row that was clicked; the banner's own rise-in would
-     play underneath it as a second entrance. style.css skips it on this. */
-  if (event.type === 'pagereveal') {
-    document.documentElement.classList.add('vt-arrival');
-    vt.finished.finally(() => document.documentElement.classList.remove('vt-arrival'));
-  }
   vt.ready.catch(() => {});
   vt.finished.catch(() => {});
   vt.updateCallbackDone.catch(() => {});
