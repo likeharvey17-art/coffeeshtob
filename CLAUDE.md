@@ -483,6 +483,18 @@ zip at `src/wordpress/wp-6.5.zip` (delete its prebuilt
 8.4 prints core deprecations, so run with `WP_DEBUG` off and
 `error_reporting(E_ALL & ~E_DEPRECATED)` in a mu-plugin.
 
+### 1.3.6: photos printed on the page
+
+Asked for as "the images look put on top and don't mix in; keep it minimal".
+The cause was the drop shadow: it declares the photo a separate object above
+the paper. Now **no photo casts a shadow**, and every photo (rows, About, index
+thumbnails, menu) shares one treatment in `::after`: the page's own `--fibers`
+and `--grain` running across the print, a 7% hairline, a faint vignette, and a
+matte finish, `--photo-filter` (`saturate(.88) contrast(.95) brightness(1.02)`),
+which is also the develop animation's end state. The only shadow left is the
+index thumbnail's hover lift. This replaces the shadow described under "Photos
+sit IN the page" above.
+
 ### Palette and texture
 
 **Since 1.3.1 the palette is shadcn/ui's "Caffeine", the owner's choice**:
