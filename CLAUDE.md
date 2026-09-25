@@ -491,7 +491,10 @@ the paper. Now **no photo casts a shadow**, and every photo (rows, About, index
 thumbnails, menu) shares one treatment in `::after`: the page's own `--fibers`
 and `--grain` running across the print, a 7% hairline, a faint vignette, and a
 matte finish, `--photo-filter` (`saturate(.88) contrast(.95) brightness(1.02)`),
-which is also the develop animation's end state. The only shadow left is the
+which is also the develop animation's end state. 1.3.7 took it a small step
+more matte: `saturate(.86) contrast(.935) brightness(1.02)`, no wash. The owner
+judged `.8/.88/1.03` with an 8% page-colour wash "too much", and `.84/.92`
+with a 4% wash "still too much" — the wash is what reads as washed-out. The only shadow left is the
 index thumbnail's hover lift. This replaces the shadow described under "Photos
 sit IN the page" above.
 

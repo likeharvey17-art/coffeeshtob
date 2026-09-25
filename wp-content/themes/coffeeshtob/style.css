@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.6
+Version: 1.3.7
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -213,7 +213,7 @@ Tags: custom-menu, custom-logo, translation-ready
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* The matte print finish every photograph shares — see .img-frame. */
-  --photo-filter: saturate(0.88) contrast(0.95) brightness(1.02);
+  --photo-filter: saturate(0.86) contrast(0.935) brightness(1.02);
 
 
   /* TWO background LAYERS, never overlay elements — an overlay would need a
