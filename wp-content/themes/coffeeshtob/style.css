@@ -213,7 +213,7 @@ Tags: custom-menu, custom-logo, translation-ready
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* The matte print finish every photograph shares — see .img-frame. */
-  --photo-filter: saturate(0.84) contrast(0.92) brightness(1.02);
+  --photo-filter: saturate(0.86) contrast(0.935) brightness(1.02);
 
 
   /* TWO background LAYERS, never overlay elements — an overlay would need a
@@ -895,9 +895,7 @@ p { margin: 0; text-wrap: pretty; }
   background:
     var(--fibers),
     var(--grain),
-    radial-gradient(120% 100% at 50% 45%, rgba(32, 32, 32, 0) 60%, rgba(32, 32, 32, 0.1) 100%),
-    /* a thin wash of the page colour: lifts the blacks, the matte-print tell */
-    linear-gradient(rgba(242, 242, 242, 0.04), rgba(242, 242, 242, 0.04));
+    radial-gradient(120% 100% at 50% 45%, rgba(32, 32, 32, 0) 60%, rgba(32, 32, 32, 0.1) 100%);
 }
 /* Was --square at 1:1, when these sat two-across as small thumbnails. As a
    half-width row beside a short paragraph a square is far too tall and leaves
