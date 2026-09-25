@@ -4,8 +4,8 @@
 if (!defined('ABSPATH')) exit;
 ?>
 <footer class="site-footer legal-footer">
-  <div class="container">
-    <div class="footer-bottom-inner">
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
       <span>© <?php echo esc_html(wp_date('Y')); ?> «Кофештаб»</span>
       <span><?php echo esc_html(shtob_opt('address')); ?></span>
     </div>
