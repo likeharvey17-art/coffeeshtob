@@ -3,7 +3,7 @@ Theme Name: Кофештаб
 Theme URI: https://coffeeshtob.ru
 Author: Кофештаб
 Description: Тема сайта кофейни «Кофештаб» в Романове (Тутаев). Восемь разделов, карточки, меню и график работы редактируются в админке. Дизайн зафиксирован темой — вёрстку править не нужно.
-Version: 1.3.5
+Version: 1.3.6
 Requires at least: 6.5
 Requires PHP: 8.0
 License: GPL-2.0-or-later
@@ -211,6 +211,9 @@ Tags: custom-menu, custom-logo, translation-ready
   /* One curve for everything that arrives: quick off the mark, long settle.
      The default `ease` starts slowly, which on a hover reads as lag. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The matte print finish every photograph shares — see .img-frame. */
+  --photo-filter: saturate(0.88) contrast(0.95) brightness(1.02);
 
 
   /* TWO background LAYERS, never overlay elements — an overlay would need a
@@ -853,22 +856,25 @@ p { margin: 0; text-wrap: pretty; }
       saturation is enough to stop them shouting without looking washed out.
 
    The ::after must not intercept clicks — an index row wraps a whole frame. */
+/* PHOTOS ARE PRINTED ON THE PAGE, NOT LAID ON IT (1.3.6). They used to
+   carry a drop shadow, which is exactly what made them float: a shadow says
+   "this is a separate object above the paper". Now there is none, and three
+   quiet things tie the print to the page instead:
+
+   - the page's own paper texture (--fibers, --grain) runs across the photo
+     in ::after, so print and page share one surface;
+   - a matte finish (--photo-filter) takes the digital snap off the colour
+     and brings it toward the site's muted greys;
+   - a hairline and a faint vignette give light photos an edge, drawn in
+     ::after because an inset shadow on the frame paints under the image.
+
+   Every photo — section rows, the About block, the index thumbnails, the menu
+   — takes the same treatment. */
 .img-frame {
   position: relative;
-  /* NOT overflow:hidden. The album corners run 3px past the print's edges,
-     and a frame that clipped its own children would cut them off. The
-     rounding sits on the image and the vignette instead.
-
-     6px, not the 14px of the site's other shapes: a print with fully rounded
-     corners tucked into square pockets reads as a phone screenshot pasted
-     into an album. */
   overflow: visible;
   border-radius: 6px;
-  background: var(--cream-alt);
-  box-shadow:
-    inset 0 0 0 1px rgba(40, 32, 28, 0.11),
-    0 1px 2px rgba(58, 43, 30, 0.05),
-    0 10px 24px -12px rgba(58, 43, 30, 0.22);
+  background: var(--cream-alt); /* the slot, until the image arrives */
 }
 .img-frame img {
   width: 100%;
@@ -876,17 +882,20 @@ p { margin: 0; text-wrap: pretty; }
   object-fit: cover;
   display: block;
   border-radius: inherit;
-  filter: saturate(0.94);
+  filter: var(--photo-filter);
 }
-.img-frame::after {
+.img-frame::after,
+.menu-thumb::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(32, 32, 32, 0.07);
   background:
-    radial-gradient(115% 95% at 50% 45%, rgba(58, 43, 30, 0) 58%, rgba(58, 43, 30, 0.13) 100%),
-    linear-gradient(rgba(249, 249, 249, 0.07), rgba(249, 249, 249, 0.07));
+    var(--fibers),
+    var(--grain),
+    radial-gradient(120% 100% at 50% 45%, rgba(32, 32, 32, 0) 60%, rgba(32, 32, 32, 0.1) 100%);
 }
 /* Was --square at 1:1, when these sat two-across as small thumbnails. As a
    half-width row beside a short paragraph a square is far too tall and leaves
@@ -1013,21 +1022,17 @@ p { margin: 0; text-wrap: pretty; }
   border-top: 1px solid var(--border);
 }
 
-/* The frames' treatment at thumbnail size. The 1px border was the last hard
-   cut-out edge on the site once the frames had lost theirs. The hairline is an
-   OUTLINE with a negative offset because an inset box-shadow paints beneath
-   the image and disappears; an outline paints on top of it. */
+/* The frames' treatment at thumbnail size: no shadow, and the same paper
+   layer, hairline and matte finish in ::after (shared with .img-frame). */
 .menu-item--plain { grid-template-columns: 1fr; }
 .menu-thumb {
+  position: relative; /* anchors the paper layer in ::after */
   aspect-ratio: 1 / 1;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--cream-alt);
-  outline: 1px solid rgba(40, 32, 28, 0.12);
-  outline-offset: -1px;
-  box-shadow: 0 1px 2px rgba(58, 43, 30, 0.05), 0 8px 18px -10px rgba(58, 43, 30, 0.24);
 }
-.menu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(0.94); }
+.menu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; filter: var(--photo-filter); }
 
 .menu-head {
   display: flex;
@@ -1578,11 +1583,9 @@ body.is-legal .legal-footer { margin-top: auto; }
   .index-row:hover .index-teaser { transform: translateX(8px); }
   .index-row:hover .index-go { opacity: 1; transform: translateX(4px); color: var(--accent); }
   .index-row:hover .img-frame--index {
+    /* The one moment a print leaves the page: picked up under the pointer. */
     transform: rotate(-1.2deg) translateY(-3px);
-    box-shadow:
-      inset 0 0 0 1px rgba(40, 32, 28, 0.11),
-      0 2px 4px rgba(58, 43, 30, 0.06),
-      0 18px 30px -14px rgba(58, 43, 30, 0.34);
+    box-shadow: 0 14px 24px -14px rgba(32, 32, 32, 0.3);
   }
 }
 .index-row:active .index-title { transform: translateX(4px); transition-duration: 0.1s; }
@@ -1685,7 +1688,7 @@ body.is-legal .legal-footer { margin-top: auto; }
   transition: filter 1.4s var(--ease-out) var(--develop-delay, 0ms);
 }
 .img-frame.develop.is-developed img,
-.menu-thumb.develop.is-developed img { filter: saturate(0.94); }
+.menu-thumb.develop.is-developed img { filter: var(--photo-filter); }
 
 /* The print is laid in as it develops: it arrives a few pixels low and a
    hair small. Only the photograph moves — text still never does. Same safety model as the colour:
