@@ -492,8 +492,9 @@ thumbnails, menu) shares one treatment in `::after`: the page's own `--fibers`
 and `--grain` running across the print, a 7% hairline, a faint vignette, and a
 matte finish, `--photo-filter` (`saturate(.88) contrast(.95) brightness(1.02)`),
 which is also the develop animation's end state. 1.3.7 took it a step more
-matte at the owner's request: `saturate(.8) contrast(.88) brightness(1.03)`,
-plus an 8% wash of the page colour in `::after` to lift the blacks. The only shadow left is the
+matte at the owner's request: `saturate(.84) contrast(.92) brightness(1.02)`,
+plus a 4% wash of the page colour in `::after` to lift the blacks. (A first
+try at `.8/.88/1.03` with an 8% wash was "too much".) The only shadow left is the
 index thumbnail's hover lift. This replaces the shadow described under "Photos
 sit IN the page" above.
 
